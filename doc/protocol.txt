@@ -1,0 +1,38 @@
+
+
+Forwarding table  []Entry
+-------------------------
+  PeerID
+  NextHop
+  HopCount
+  LastSeen
+
+PeerFilter
+----------
+* pf = Bloom(self + ∀ PeerID, rnd)
+* broadcasted regularily as LEARN
+
+LEARN message
+-------------
+  Sender
+  PeerFilter
+
+This is what I know (PeerFilter), want to learn more...
+
+On LEARN receive:
+-----------------
+∀ PeerID not in PeerFilter:
+  add FWT entry to TEACH response
+
+* number can be size limited (MTU); if limited sorted by LastSeen (desc) 
+
+TEACH message
+-------------
+  Sender
+  []Entry
+
+On TEACH receive:
+-----------------
+* add/update entries in FWT
+
+
