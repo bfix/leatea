@@ -29,6 +29,7 @@ type Network struct {
 	nodes  map[string]*SimNode
 	queue  chan core.Message
 	reach2 float64
+	active bool
 }
 
 func NewNetwork(numNodes int, width, length, r2 float64) *Network {
@@ -49,18 +50,22 @@ func NewNetwork(numNodes int, width, length, r2 float64) *Network {
 }
 
 func (n *Network) Run() {
-	for msg := range n.queue {
-		//log.Printf("broadcasted message %v", msg)
+	n.active = true
+	for n.active {
+		msg := <-n.queue
 		if sender, ok := n.nodes[msg.Sender().Key()]; ok {
 			for _, node := range n.nodes {
 				dist2 := node.pos.Distance2(sender.pos)
 				if dist2 < n.reach2 && !node.PeerID().Equal(sender.PeerID()) {
 					go node.Receive(msg)
-					//log.Printf("[%s] received message %v", node.PeerID().Short(), msg)
 				}
 			}
 		}
 	}
+}
+
+func (n *Network) Stop() {
+	n.active = false
 }
 
 func (n *Network) Coverage() float64 {

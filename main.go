@@ -24,6 +24,9 @@ import (
 	"flag"
 	"leatea/sim"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -43,9 +46,25 @@ func main() {
 	log.Println("Running network...")
 	go netw.Run()
 
-	tick := time.NewTicker(30 * time.Second)
+	sigCh := make(chan os.Signal, 5)
+	signal.Notify(sigCh)
+
+	tick := time.NewTicker(10 * time.Second)
+loop:
 	for {
-		t := <-tick.C
-		log.Printf("%s: %f%%\n", t.String(), netw.Coverage())
+		select {
+		case t := <-tick.C:
+			cover := netw.Coverage()
+			log.Printf("%s: %.2f%%\n", t.Format(time.RFC1123), cover)
+		case sig := <-sigCh:
+			switch sig {
+			case syscall.SIGKILL, syscall.SIGINT, syscall.SIGTERM:
+				break loop
+			default:
+			}
+		}
 	}
+
+	netw.Stop()
+	log.Println("Done")
 }

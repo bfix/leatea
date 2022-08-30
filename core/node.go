@@ -23,97 +23,15 @@ package core
 import (
 	"fmt"
 	"sort"
-	"sync"
 	"time"
-
-	"github.com/bfix/gospel/data"
 )
-
-type Entry struct {
-	Peer     *PeerID
-	NextHop  *PeerID
-	Hops     uint16 `size:"big"`
-	LastSeen *Time
-}
-
-func (e *Entry) Clone() *Entry {
-	return &Entry{
-		Peer:     e.Peer,
-		NextHop:  e.NextHop,
-		Hops:     e.Hops,
-		LastSeen: e.LastSeen,
-	}
-}
-
-type ForwardTable struct {
-	sync.RWMutex
-	list map[string]*Entry
-}
-
-func NewForwardTable() *ForwardTable {
-	return &ForwardTable{
-		list: make(map[string]*Entry),
-	}
-}
-
-func (t *ForwardTable) Add(e *Entry) {
-	t.Lock()
-	defer t.Unlock()
-	t.list[e.Peer.Key()] = e
-}
-
-func (t *ForwardTable) Filter() *data.BloomFilter {
-	t.RLock()
-	defer t.RUnlock()
-	pf := data.NewBloomFilter(1000, 1e-3)
-	for _, e := range t.list {
-		pf.Add(e.Peer.Bytes())
-	}
-	return pf
-}
-
-func (t *ForwardTable) Candidates(m *LearnMsg) (list []*Entry) {
-	t.Lock()
-	defer t.Unlock()
-	for _, e := range t.list {
-		if !m.Filter.Contains(e.Peer.Bytes()) && !m.Sender().Equal(e.NextHop) {
-			list = append(list, e.Clone())
-		}
-	}
-	return
-}
-
-func (t *ForwardTable) Learn(m *TeachMsg) {
-	t.Lock()
-	defer t.Unlock()
-	for _, e := range m.Announce {
-		fwt, ok := t.list[e.Peer.Key()]
-		if ok {
-			// already known: shorter path?
-			if fwt.Hops > e.Hops+1 {
-				// update with shorter path
-				fwt.Hops = e.Hops + 1
-				fwt.NextHop = m.Sender()
-				fwt.LastSeen = TimeNow()
-			}
-		} else {
-			// not yet known: add to table
-			t.list[e.Peer.Key()] = &Entry{
-				Peer:     e.Peer,
-				NextHop:  m.Sender(),
-				Hops:     e.Hops + 1,
-				LastSeen: TimeNow(),
-			}
-		}
-	}
-}
 
 type Node struct {
 	prv  *PeerPrivate
 	pub  *PeerID
 	rt   *ForwardTable
-	recv chan Message
-	send chan Message
+	recv chan Message // channel for incoming messages
+	send chan Message // channel for outgoing messages
 }
 
 func NewNode(prv *PeerPrivate, in, out chan Message) *Node {
