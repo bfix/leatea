@@ -18,9 +18,13 @@
 // SPDX-License-Identifier: AGPL3.0-or-later
 //----------------------------------------------------------------------
 
-package main
+package core
 
-import "github.com/bfix/gospel/data"
+import (
+	"fmt"
+
+	"github.com/bfix/gospel/data"
+)
 
 const (
 	MSG_LEARN = 1 // LEARN message type
@@ -29,40 +33,69 @@ const (
 
 // Message interface
 type Message interface {
-	Type() int
-	Sender() *Node
+	Size() uint16
+	Type() uint16
+	Sender() *PeerID
+	String() string
 }
 
 type MessageImpl struct {
-	sender *Node
+	MsgSize uint16 `order:"big"`
+	MsgType uint16 `order:"big"`
 }
 
-func (m *MessageImpl) Sender() *Node {
-	return m.sender
+func (m *MessageImpl) Size() uint16 {
+	return m.MsgSize
+}
+
+func (m *MessageImpl) Type() uint16 {
+	return m.MsgType
 }
 
 //----------------------------------------------------------------------
 
 type LearnMsg struct {
 	MessageImpl
-	pf *data.BloomFilter
+
+	Sender_ *PeerID
+	Filter  *data.BloomFilter
 }
 
-func (m *LearnMsg) Type() int {
+func (m *LearnMsg) Type() uint16 {
 	return MSG_LEARN
+}
+
+func (m *LearnMsg) Sender() *PeerID {
+	return m.Sender_
+}
+
+func (m *LearnMsg) String() string {
+	return fmt.Sprintf("Learn{%s}", m.Sender_.Short())
 }
 
 //----------------------------------------------------------------------
 
 type TeachMsg struct {
 	MessageImpl
-	announce []*Entry
+
+	Sender_  *PeerID
+	Announce []*Entry
 }
 
 func (m *TeachMsg) Add(e *Entry) {
-	m.announce = append(m.announce, e)
+	m.Announce = append(m.Announce, e)
 }
 
-func (m *TeachMsg) Type() int {
+func (m *TeachMsg) Type() uint16 {
 	return MSG_TEACH
 }
+
+func (m *TeachMsg) Sender() *PeerID {
+	return m.Sender_
+}
+
+func (m *TeachMsg) String() string {
+	return fmt.Sprintf("Teach{%s:%d}", m.Sender_.Short(), len(m.Announce))
+}
+
+const maxTeachs = 5

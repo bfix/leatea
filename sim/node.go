@@ -18,34 +18,32 @@
 // SPDX-License-Identifier: AGPL3.0-or-later
 //----------------------------------------------------------------------
 
-package main
+package sim
 
 import (
-	"flag"
-	"leatea/sim"
-	"log"
-	"time"
+	"fmt"
+	"leatea/core"
 )
 
-func main() {
-	var (
-		width, length, reach2 float64
-		numNode               int
-	)
-	flag.Float64Var(&width, "w", 100., "width")
-	flag.Float64Var(&length, "l", 100., "length")
-	flag.Float64Var(&reach2, "r", 49., "reach^2")
-	flag.IntVar(&numNode, "n", 500, "number of nodes")
-	flag.Parse()
+type SimNode struct {
+	core.Node
+	pos  *Position
+	recv chan core.Message
+}
 
-	log.Println("Building network...")
-	netw := sim.NewNetwork(numNode, width, length, reach2)
-	log.Println("Running network...")
-	go netw.Run()
-
-	tick := time.NewTicker(30 * time.Second)
-	for {
-		t := <-tick.C
-		log.Printf("%s: %f%%\n", t.String(), netw.Coverage())
+func NewSimNode(prv *core.PeerPrivate, out chan core.Message, pos *Position) *SimNode {
+	recv := make(chan core.Message)
+	return &SimNode{
+		Node: *core.NewNode(prv, recv, out),
+		pos:  pos,
+		recv: recv,
 	}
+}
+
+func (n *SimNode) Receive(msg core.Message) {
+	n.recv <- msg
+}
+
+func (n *SimNode) String() string {
+	return fmt.Sprintf("SimNode{%s @ %s}", n.PeerID().Short(), n.pos)
 }

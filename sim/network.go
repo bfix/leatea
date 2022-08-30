@@ -18,57 +18,56 @@
 // SPDX-License-Identifier: AGPL3.0-or-later
 //----------------------------------------------------------------------
 
-package main
+package sim
 
 import (
+	"leatea/core"
 	"math/rand"
 )
 
 type Network struct {
-	nodes []*Node
-	queue []Message
+	nodes  map[string]*SimNode
+	queue  chan core.Message
+	reach2 float64
 }
 
-func NewNetwork() *Network {
+func NewNetwork(numNodes int, width, length, r2 float64) *Network {
 	n := new(Network)
-	n.queue = make([]Message, 0)
-	n.nodes = make([]*Node, numNode)
-	for i := 0; i < numNode; i++ {
-		n.nodes[i] = NewNode(n, &Position{
+	n.queue = make(chan core.Message, 10)
+	n.nodes = make(map[string]*SimNode)
+	n.reach2 = r2
+	for i := 0; i < numNodes; i++ {
+		prv := core.NewPeerPrivate()
+		node := NewSimNode(prv, n.queue, &Position{
 			x: rand.Float64() * width,
 			y: rand.Float64() * length,
 		})
+		n.nodes[node.PeerID().Key()] = node
+		go node.Run()
 	}
 	return n
 }
 
-type Callback func(int, int, int, int, int)
-
-func (n *Network) Run(num int, cb Callback) {
-	for e := 1; e < num; e++ {
-		queue := n.queue
-		n.queue = make([]Message, 0)
-		learned := 0
-		total := 0
-		for _, node := range n.nodes {
-			for _, msg := range queue {
-				if node.pos.Distance2(msg.Sender().pos) < reach2 {
-					node.Receive(msg)
+func (n *Network) Run() {
+	for msg := range n.queue {
+		//log.Printf("broadcasted message %v", msg)
+		if sender, ok := n.nodes[msg.Sender().Key()]; ok {
+			for _, node := range n.nodes {
+				dist2 := node.pos.Distance2(sender.pos)
+				if dist2 < n.reach2 && !node.PeerID().Equal(sender.PeerID()) {
+					go node.Receive(msg)
+					//log.Printf("[%s] received message %v", node.PeerID().Short(), msg)
 				}
 			}
-			learned += node.Epoch()
-			total += len(node.rt)
 		}
-		cb(e, len(queue), learned, total, len(n.queue))
-		/*
-			if len(queue) > 0 && learned == 0 {
-				log.Printf("Complete at epoch #%d", e)
-				break
-			}
-		*/
 	}
 }
 
-func (n *Network) Broadcast(msg Message) {
-	n.queue = append(n.queue, msg)
+func (n *Network) Coverage() float64 {
+	total := 0
+	num := len(n.nodes) - 1
+	for _, node := range n.nodes {
+		total += node.Forwards()
+	}
+	return float64(100*total) / float64(num*num)
 }

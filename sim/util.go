@@ -18,34 +18,20 @@
 // SPDX-License-Identifier: AGPL3.0-or-later
 //----------------------------------------------------------------------
 
-package main
+package sim
 
-import (
-	"flag"
-	"leatea/sim"
-	"log"
-	"time"
-)
+import "fmt"
 
-func main() {
-	var (
-		width, length, reach2 float64
-		numNode               int
-	)
-	flag.Float64Var(&width, "w", 100., "width")
-	flag.Float64Var(&length, "l", 100., "length")
-	flag.Float64Var(&reach2, "r", 49., "reach^2")
-	flag.IntVar(&numNode, "n", 500, "number of nodes")
-	flag.Parse()
+type Position struct {
+	x, y float64
+}
 
-	log.Println("Building network...")
-	netw := sim.NewNetwork(numNode, width, length, reach2)
-	log.Println("Running network...")
-	go netw.Run()
+func (p *Position) Distance2(pos *Position) float64 {
+	dx := p.x - pos.x
+	dy := p.y - pos.y
+	return dx*dx + dy*dy
+}
 
-	tick := time.NewTicker(30 * time.Second)
-	for {
-		t := <-tick.C
-		log.Printf("%s: %f%%\n", t.String(), netw.Coverage())
-	}
+func (p *Position) String() string {
+	return fmt.Sprintf("(%.2f,%.2f)", p.x, p.y)
 }

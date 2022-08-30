@@ -18,21 +18,61 @@
 // SPDX-License-Identifier: AGPL3.0-or-later
 //----------------------------------------------------------------------
 
-package main
+package core
 
-type Position struct {
-	x, y float64
+import (
+	"bytes"
+	"encoding/base32"
+	"encoding/base64"
+
+	"github.com/bfix/gospel/crypto/ed25519"
+)
+
+type PeerID struct {
+	Data []byte `size:"32"`
+	pub  *ed25519.PublicKey
 }
 
-func (p *Position) Distance2(pos *Position) float64 {
-	dx := p.x - pos.x
-	dy := p.y - pos.y
-	return dx*dx + dy*dy
+func (p *PeerID) Key() string {
+	return base64.StdEncoding.EncodeToString(p.Data)
 }
 
-var lastID = 0
+func (p *PeerID) Short() string {
+	s := base32.StdEncoding.EncodeToString(p.Data)
+	return s[:8]
+}
 
-func nextID() int {
-	lastID++
-	return lastID
+func (p *PeerID) Equal(q *PeerID) bool {
+	if q == nil && p == nil {
+		return true
+	}
+	if q == nil || p == nil {
+		return false
+	}
+	return bytes.Equal(p.Data, q.Data)
+}
+
+func (p *PeerID) Bytes() []byte {
+	return Clone(p.Data)
+}
+
+type PeerPrivate struct {
+	Data []byte `size:"32"`
+	prv  *ed25519.PrivateKey
+}
+
+func NewPeerPrivate() *PeerPrivate {
+	_, prv := ed25519.NewKeypair()
+	return &PeerPrivate{
+		Data: prv.Bytes(),
+		prv:  prv,
+	}
+}
+
+func (p *PeerPrivate) Public() *PeerID {
+	pub := p.prv.Public()
+	return &PeerID{
+		Data: pub.Bytes(),
+		pub:  pub,
+	}
 }

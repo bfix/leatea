@@ -1,0 +1,3157 @@
+2022/08/30 13:58:59 Building network...
+2022/08/30 13:59:01 Running network...
+fatal error: concurrent map read and map write
+
+goroutine 1934 [running]:
+leatea/core.(*Node).Receive(0xc0004a5400, {0x506a28, 0xc000538390})
+	/vault/prj/net/routing/leatea/core/node.go:107 +0x93
+created by leatea/core.(*Node).Run
+	/vault/prj/net/routing/leatea/core/node.go:98 +0x12b
+
+goroutine 1 [chan receive]:
+main.main()
+	/vault/prj/net/routing/leatea/main.go:48 +0x392
+
+goroutine 18 [select]:
+leatea/core.(*Node).Run(0xc0000b2140)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 6 [select]:
+leatea/core.(*Node).Run(0xc0000b2000)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 7 [select]:
+leatea/core.(*Node).Run(0xc0000b2180)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 8 [select]:
+leatea/core.(*Node).Run(0xc0000b21c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 9 [select]:
+leatea/core.(*Node).Run(0xc0000b2200)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 10 [select]:
+leatea/core.(*Node).Run(0xc0000b2240)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 11 [select]:
+leatea/core.(*Node).Run(0xc0000b2280)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 12 [select]:
+leatea/core.(*Node).Run(0xc0000b22c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 21 [select]:
+leatea/core.(*Node).Run(0xc0000b2300)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 22 [runnable]:
+github.com/bfix/gospel/data.(*BloomFilter).indexList(0xc0002b2020, {0xc000532000, 0x20, 0x20})
+	/vault/prj/libs/Go/Gospel/data/bloomfilter.go:136 +0x205
+github.com/bfix/gospel/data.(*BloomFilter).Add(0xc0002b2020, {0xc000532000?, 0x20?, 0x0?})
+	/vault/prj/libs/Go/Gospel/data/bloomfilter.go:83 +0x25
+leatea/core.(*Node).Run(0xc0000b2340)
+	/vault/prj/net/routing/leatea/core/node.go:89 +0x185
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 13 [select]:
+leatea/core.(*Node).Run(0xc0000b2380)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 23 [select]:
+leatea/core.(*Node).Run(0xc0000b23c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 24 [select]:
+leatea/core.(*Node).Run(0xc0000b2400)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 14 [select]:
+leatea/core.(*Node).Run(0xc0000b2440)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 25 [select]:
+leatea/core.(*Node).Run(0xc0000b2480)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 26 [select]:
+leatea/core.(*Node).Run(0xc0000b24c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 15 [select]:
+leatea/core.(*Node).Run(0xc0004a4080)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 16 [select]:
+leatea/core.(*Node).Run(0xc0004a40c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 49 [select]:
+leatea/core.(*Node).Run(0xc0004a4100)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 50 [select]:
+leatea/core.(*Node).Run(0xc0004a4140)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 51 [select]:
+leatea/core.(*Node).Run(0xc0000b2540)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 52 [select]:
+leatea/core.(*Node).Run(0xc0000b2580)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 53 [select]:
+leatea/core.(*Node).Run(0xc0000b25c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 54 [select]:
+leatea/core.(*Node).Run(0xc0000b2600)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 55 [select]:
+leatea/core.(*Node).Run(0xc0000b2640)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 56 [select]:
+leatea/core.(*Node).Run(0xc0000b2680)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 57 [select]:
+leatea/core.(*Node).Run(0xc0000b26c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 58 [select]:
+leatea/core.(*Node).Run(0xc0000b2500)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 27 [select]:
+leatea/core.(*Node).Run(0xc0000b2700)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 28 [select]:
+leatea/core.(*Node).Run(0xc0000b2740)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 59 [select]:
+leatea/core.(*Node).Run(0xc0000b2780)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 60 [select]:
+leatea/core.(*Node).Run(0xc0000b27c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 61 [select]:
+leatea/core.(*Node).Run(0xc0000b2800)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 62 [select]:
+leatea/core.(*Node).Run(0xc0000b2840)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 63 [select]:
+leatea/core.(*Node).Run(0xc0004a4180)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 64 [select]:
+leatea/core.(*Node).Run(0xc0004a41c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 29 [select]:
+leatea/core.(*Node).Run(0xc0004a4200)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 65 [select]:
+leatea/core.(*Node).Run(0xc0004a4240)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 66 [select]:
+leatea/core.(*Node).Run(0xc0004a4280)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 30 [select]:
+leatea/core.(*Node).Run(0xc0004a42c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 31 [select]:
+leatea/core.(*Node).Run(0xc0004a4300)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 67 [select]:
+leatea/core.(*Node).Run(0xc0004a4040)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 68 [select]:
+leatea/core.(*Node).Run(0xc0004a4340)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 69 [select]:
+leatea/core.(*Node).Run(0xc0004a4380)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 70 [select]:
+leatea/core.(*Node).Run(0xc0004a4000)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 71 [select]:
+leatea/core.(*Node).Run(0xc0004a43c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 32 [select]:
+leatea/core.(*Node).Run(0xc0004a4400)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 81 [select]:
+leatea/core.(*Node).Run(0xc0004a4440)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 82 [select]:
+leatea/core.(*Node).Run(0xc0004a4480)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 83 [select]:
+leatea/core.(*Node).Run(0xc0004a44c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 84 [select]:
+leatea/core.(*Node).Run(0xc0004a4500)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 85 [select]:
+leatea/core.(*Node).Run(0xc0004a4540)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 86 [select]:
+leatea/core.(*Node).Run(0xc0004a4580)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 87 [select]:
+leatea/core.(*Node).Run(0xc0004a45c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 72 [select]:
+leatea/core.(*Node).Run(0xc0004a4600)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 73 [select]:
+leatea/core.(*Node).Run(0xc0004a4640)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 88 [select]:
+leatea/core.(*Node).Run(0xc0004a4680)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 74 [select]:
+leatea/core.(*Node).Run(0xc0004a46c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 75 [select]:
+leatea/core.(*Node).Run(0xc0004a4700)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 89 [select]:
+leatea/core.(*Node).Run(0xc0004a4740)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 90 [select]:
+leatea/core.(*Node).Run(0xc0004a4780)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 91 [select]:
+leatea/core.(*Node).Run(0xc0004a47c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 92 [select]:
+leatea/core.(*Node).Run(0xc0004a4800)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 76 [select]:
+leatea/core.(*Node).Run(0xc0004a4840)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 93 [select]:
+leatea/core.(*Node).Run(0xc0004a4880)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 94 [select]:
+leatea/core.(*Node).Run(0xc0004a48c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 77 [select]:
+leatea/core.(*Node).Run(0xc0004a4900)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 78 [select]:
+leatea/core.(*Node).Run(0xc0004a4940)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 95 [select]:
+leatea/core.(*Node).Run(0xc0004a4980)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 79 [select]:
+leatea/core.(*Node).Run(0xc0004a49c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 80 [select]:
+leatea/core.(*Node).Run(0xc0004a4a00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 96 [select]:
+leatea/core.(*Node).Run(0xc0004a4a40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 97 [select]:
+leatea/core.(*Node).Run(0xc0004a4a80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 98 [select]:
+leatea/core.(*Node).Run(0xc0004a4ac0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 99 [select]:
+leatea/core.(*Node).Run(0xc0004a4b00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 100 [select]:
+leatea/core.(*Node).Run(0xc0004a4b40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 101 [select]:
+leatea/core.(*Node).Run(0xc0004a4b80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 102 [select]:
+leatea/core.(*Node).Run(0xc0004a4bc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 103 [select]:
+leatea/core.(*Node).Run(0xc0004a4c00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 104 [select]:
+leatea/core.(*Node).Run(0xc0004a4c40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 113 [select]:
+leatea/core.(*Node).Run(0xc0004a4c80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 114 [select]:
+leatea/core.(*Node).Run(0xc0004a4cc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 115 [select]:
+leatea/core.(*Node).Run(0xc0004a4d00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 105 [select]:
+leatea/core.(*Node).Run(0xc0004a4d40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 106 [select]:
+leatea/core.(*Node).Run(0xc0004a4d80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 107 [select]:
+leatea/core.(*Node).Run(0xc0004a4dc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 108 [select]:
+leatea/core.(*Node).Run(0xc0004a4e00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 116 [select]:
+leatea/core.(*Node).Run(0xc0004a4e40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 117 [select]:
+leatea/core.(*Node).Run(0xc0004a4e80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 118 [select]:
+leatea/core.(*Node).Run(0xc0004a4ec0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 119 [select]:
+leatea/core.(*Node).Run(0xc0004a4f00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 120 [select]:
+leatea/core.(*Node).Run(0xc0004a4f40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 109 [select]:
+leatea/core.(*Node).Run(0xc0004a4f80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 110 [select]:
+leatea/core.(*Node).Run(0xc0004a4fc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 111 [select]:
+leatea/core.(*Node).Run(0xc0004a5000)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 112 [select]:
+leatea/core.(*Node).Run(0xc0004a5040)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 129 [select]:
+leatea/core.(*Node).Run(0xc0004a5080)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 130 [select]:
+leatea/core.(*Node).Run(0xc0004a50c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 131 [select]:
+leatea/core.(*Node).Run(0xc0004a5100)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 132 [select]:
+leatea/core.(*Node).Run(0xc0004a5140)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 133 [select]:
+leatea/core.(*Node).Run(0xc0004a5180)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 134 [select]:
+leatea/core.(*Node).Run(0xc0004a51c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 135 [select]:
+leatea/core.(*Node).Run(0xc0004a5200)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 136 [select]:
+leatea/core.(*Node).Run(0xc0004a5240)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 121 [select]:
+leatea/core.(*Node).Run(0xc0004a5280)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 122 [select]:
+leatea/core.(*Node).Run(0xc0004a52c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 137 [select]:
+leatea/core.(*Node).Run(0xc0004a5300)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 123 [select]:
+leatea/core.(*Node).Run(0xc0004a5340)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 124 [select]:
+leatea/core.(*Node).Run(0xc0004a5380)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 125 [select]:
+leatea/core.(*Node).Run(0xc0004a53c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 126 [select]:
+leatea/core.(*Node).Run(0xc0004a5400)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 127 [select]:
+leatea/core.(*Node).Run(0xc0004a5440)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 138 [select]:
+leatea/core.(*Node).Run(0xc0004a5480)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 139 [select]:
+leatea/core.(*Node).Run(0xc0004a54c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 128 [select]:
+leatea/core.(*Node).Run(0xc0004a5500)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 145 [select]:
+leatea/core.(*Node).Run(0xc0004a5540)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 146 [select]:
+leatea/core.(*Node).Run(0xc0004a5580)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 140 [select]:
+leatea/core.(*Node).Run(0xc0004a55c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 141 [select]:
+leatea/core.(*Node).Run(0xc0004a5600)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 147 [select]:
+leatea/core.(*Node).Run(0xc0004a5640)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 142 [select]:
+leatea/core.(*Node).Run(0xc0004a5680)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 143 [select]:
+leatea/core.(*Node).Run(0xc0004a56c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 144 [select]:
+leatea/core.(*Node).Run(0xc0004a5700)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 161 [select]:
+leatea/core.(*Node).Run(0xc0004a5740)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 162 [select]:
+leatea/core.(*Node).Run(0xc0004a5780)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 148 [select]:
+leatea/core.(*Node).Run(0xc0004a57c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 149 [select]:
+leatea/core.(*Node).Run(0xc0004a5800)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 163 [select]:
+leatea/core.(*Node).Run(0xc0004a5840)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 164 [select]:
+leatea/core.(*Node).Run(0xc0004a5880)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 165 [select]:
+leatea/core.(*Node).Run(0xc0004a58c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 166 [select]:
+leatea/core.(*Node).Run(0xc0004a5900)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 167 [select]:
+leatea/core.(*Node).Run(0xc0004a5940)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 150 [select]:
+leatea/core.(*Node).Run(0xc0004a5980)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 168 [select]:
+leatea/core.(*Node).Run(0xc0004a59c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 169 [select]:
+leatea/core.(*Node).Run(0xc0004a5a00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 151 [select]:
+leatea/core.(*Node).Run(0xc0004a5a40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 170 [select]:
+leatea/core.(*Node).Run(0xc0004a5a80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 171 [select]:
+leatea/core.(*Node).Run(0xc0004a5ac0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 152 [select]:
+leatea/core.(*Node).Run(0xc0004a5b00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 153 [select]:
+leatea/core.(*Node).Run(0xc0004a5b40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 172 [select]:
+leatea/core.(*Node).Run(0xc0004a5b80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 154 [select]:
+leatea/core.(*Node).Run(0xc0004a5bc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 155 [select]:
+leatea/core.(*Node).Run(0xc0004a5c00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 173 [select]:
+leatea/core.(*Node).Run(0xc0004a5c40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 174 [select]:
+leatea/core.(*Node).Run(0xc0004a5c80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 156 [select]:
+leatea/core.(*Node).Run(0xc0004a5cc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 175 [select]:
+leatea/core.(*Node).Run(0xc0004a5d00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 176 [select]:
+leatea/core.(*Node).Run(0xc0004a5d40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 157 [select]:
+leatea/core.(*Node).Run(0xc0004a5d80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 177 [select]:
+leatea/core.(*Node).Run(0xc0004a5dc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 178 [select]:
+leatea/core.(*Node).Run(0xc0004a5e00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 158 [select]:
+leatea/core.(*Node).Run(0xc0004a5e40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 179 [select]:
+leatea/core.(*Node).Run(0xc0004a5e80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 180 [select]:
+leatea/core.(*Node).Run(0xc0004a5ec0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 159 [select]:
+leatea/core.(*Node).Run(0xc0004a5f00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 160 [select]:
+leatea/core.(*Node).Run(0xc0004a5f40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 181 [select]:
+leatea/core.(*Node).Run(0xc0004a5f80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 193 [select]:
+leatea/core.(*Node).Run(0xc0004a5fc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 194 [select]:
+leatea/core.(*Node).Run(0xc0000b2880)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 182 [select]:
+leatea/core.(*Node).Run(0xc0000b28c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 183 [select]:
+leatea/core.(*Node).Run(0xc0000b2900)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 184 [select]:
+leatea/core.(*Node).Run(0xc0000b2940)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 195 [select]:
+leatea/core.(*Node).Run(0xc0000b2980)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 196 [select]:
+leatea/core.(*Node).Run(0xc0000b29c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 197 [select]:
+leatea/core.(*Node).Run(0xc0000b2a00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 185 [select]:
+leatea/core.(*Node).Run(0xc0000b2a40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 186 [select]:
+leatea/core.(*Node).Run(0xc0000b2a80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 198 [select]:
+leatea/core.(*Node).Run(0xc0000b2ac0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 187 [select]:
+leatea/core.(*Node).Run(0xc0000b2b00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 188 [select]:
+leatea/core.(*Node).Run(0xc0000b2b40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 199 [select]:
+leatea/core.(*Node).Run(0xc0000b2b80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 189 [select]:
+leatea/core.(*Node).Run(0xc0000b2bc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 190 [select]:
+leatea/core.(*Node).Run(0xc0000b2c00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 191 [select]:
+leatea/core.(*Node).Run(0xc0000b2c40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 192 [select]:
+leatea/core.(*Node).Run(0xc0000b2c80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 200 [select]:
+leatea/core.(*Node).Run(0xc0000b2cc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 209 [select]:
+leatea/core.(*Node).Run(0xc0000b2d00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 210 [select]:
+leatea/core.(*Node).Run(0xc0000b2d40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 201 [select]:
+leatea/core.(*Node).Run(0xc0000b2d80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 211 [select]:
+leatea/core.(*Node).Run(0xc0000b2dc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 212 [select]:
+leatea/core.(*Node).Run(0xc0000b2e00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 213 [select]:
+leatea/core.(*Node).Run(0xc0000b2e40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 214 [select]:
+leatea/core.(*Node).Run(0xc0000b2e80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 215 [select]:
+leatea/core.(*Node).Run(0xc0000b2ec0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 202 [select]:
+leatea/core.(*Node).Run(0xc0000b2f00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 203 [select]:
+leatea/core.(*Node).Run(0xc0000b2f40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 216 [select]:
+leatea/core.(*Node).Run(0xc0000b2f80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 204 [select]:
+leatea/core.(*Node).Run(0xc0000b2fc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 205 [select]:
+leatea/core.(*Node).Run(0xc0000b3000)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 217 [select]:
+leatea/core.(*Node).Run(0xc0000b3040)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 218 [select]:
+leatea/core.(*Node).Run(0xc0000b3080)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 219 [select]:
+leatea/core.(*Node).Run(0xc0000b30c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 220 [select]:
+leatea/core.(*Node).Run(0xc0000b3100)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 221 [select]:
+leatea/core.(*Node).Run(0xc0000b3140)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 206 [select]:
+leatea/core.(*Node).Run(0xc0000b3180)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 222 [select]:
+leatea/core.(*Node).Run(0xc0000b31c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 223 [select]:
+leatea/core.(*Node).Run(0xc0000b3200)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 224 [select]:
+leatea/core.(*Node).Run(0xc0000b3240)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 207 [select]:
+leatea/core.(*Node).Run(0xc0000b3280)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 208 [select]:
+leatea/core.(*Node).Run(0xc0000b32c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 225 [select]:
+leatea/core.(*Node).Run(0xc0000b3300)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 226 [select]:
+leatea/core.(*Node).Run(0xc0000b3340)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 227 [select]:
+leatea/core.(*Node).Run(0xc0000b3380)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 241 [select]:
+leatea/core.(*Node).Run(0xc0000b33c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 228 [select]:
+leatea/core.(*Node).Run(0xc0000b3400)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 229 [select]:
+leatea/core.(*Node).Run(0xc0000b3440)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 242 [select]:
+leatea/core.(*Node).Run(0xc0000b3480)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 230 [select]:
+leatea/core.(*Node).Run(0xc0000b34c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 231 [select]:
+leatea/core.(*Node).Run(0xc0000b3500)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 232 [select]:
+leatea/core.(*Node).Run(0xc0000b3540)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 233 [select]:
+leatea/core.(*Node).Run(0xc0000b3580)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 234 [select]:
+leatea/core.(*Node).Run(0xc0000b35c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 235 [select]:
+leatea/core.(*Node).Run(0xc0000b3600)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 243 [select]:
+leatea/core.(*Node).Run(0xc0000b3640)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 244 [select]:
+leatea/core.(*Node).Run(0xc0000b3680)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 236 [select]:
+leatea/core.(*Node).Run(0xc0000b36c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 237 [select]:
+leatea/core.(*Node).Run(0xc0000b3700)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 238 [select]:
+leatea/core.(*Node).Run(0xc0000b3740)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 245 [select]:
+leatea/core.(*Node).Run(0xc0000b3780)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 239 [select]:
+leatea/core.(*Node).Run(0xc0000b37c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 240 [select]:
+leatea/core.(*Node).Run(0xc0000b3800)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 257 [select]:
+leatea/core.(*Node).Run(0xc0000b3840)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 258 [select]:
+leatea/core.(*Node).Run(0xc0000b3880)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 259 [select]:
+leatea/core.(*Node).Run(0xc0000b38c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 260 [select]:
+leatea/core.(*Node).Run(0xc0000b3900)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 261 [select]:
+leatea/core.(*Node).Run(0xc0000b3940)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 262 [select]:
+leatea/core.(*Node).Run(0xc0000b3980)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 263 [select]:
+leatea/core.(*Node).Run(0xc0000b39c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 264 [select]:
+leatea/core.(*Node).Run(0xc0000b3a00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 265 [select]:
+leatea/core.(*Node).Run(0xc0000b3a40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 266 [select]:
+leatea/core.(*Node).Run(0xc0000b3a80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 246 [select]:
+leatea/core.(*Node).Run(0xc0000b3ac0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 247 [select]:
+leatea/core.(*Node).Run(0xc0000b3b00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 267 [select]:
+leatea/core.(*Node).Run(0xc0000b3b40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 268 [select]:
+leatea/core.(*Node).Run(0xc0000b3b80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 269 [select]:
+leatea/core.(*Node).Run(0xc0000b3bc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 270 [select]:
+leatea/core.(*Node).Run(0xc0000b3c00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 248 [select]:
+leatea/core.(*Node).Run(0xc0000b3c40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 271 [select]:
+leatea/core.(*Node).Run(0xc0000b3c80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 272 [select]:
+leatea/core.(*Node).Run(0xc0000b3cc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 249 [select]:
+leatea/core.(*Node).Run(0xc0000b3d00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 273 [select]:
+leatea/core.(*Node).Run(0xc0000b3d40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 274 [select]:
+leatea/core.(*Node).Run(0xc0000b3d80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 250 [select]:
+leatea/core.(*Node).Run(0xc0000b3dc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 275 [select]:
+leatea/core.(*Node).Run(0xc0000b3e00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 276 [select]:
+leatea/core.(*Node).Run(0xc0000b3e40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 277 [select]:
+leatea/core.(*Node).Run(0xc0000b3e80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 251 [select]:
+leatea/core.(*Node).Run(0xc0000b3ec0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 252 [select]:
+leatea/core.(*Node).Run(0xc0000b3f00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 278 [select]:
+leatea/core.(*Node).Run(0xc0000b3f40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 253 [select]:
+leatea/core.(*Node).Run(0xc0000b3f80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 254 [select]:
+leatea/core.(*Node).Run(0xc0000b3fc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 255 [select]:
+leatea/core.(*Node).Run(0xc0002f4000)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 279 [select]:
+leatea/core.(*Node).Run(0xc0002f4040)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 280 [select]:
+leatea/core.(*Node).Run(0xc0002f4080)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 281 [select]:
+leatea/core.(*Node).Run(0xc0002f40c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 282 [select]:
+leatea/core.(*Node).Run(0xc0002f4100)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 283 [select]:
+leatea/core.(*Node).Run(0xc0002f4140)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 284 [select]:
+leatea/core.(*Node).Run(0xc0002f4180)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 256 [select]:
+leatea/core.(*Node).Run(0xc0002f41c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 289 [select]:
+leatea/core.(*Node).Run(0xc0002f4200)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 305 [select]:
+leatea/core.(*Node).Run(0xc0005b0000)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 290 [select]:
+leatea/core.(*Node).Run(0xc0005b0040)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 285 [select]:
+leatea/core.(*Node).Run(0xc0005b0080)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 291 [select]:
+leatea/core.(*Node).Run(0xc0005b00c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 292 [select]:
+leatea/core.(*Node).Run(0xc0005b0100)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 293 [select]:
+leatea/core.(*Node).Run(0xc0005b0140)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 286 [select]:
+leatea/core.(*Node).Run(0xc0005b0180)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 287 [select]:
+leatea/core.(*Node).Run(0xc0005b01c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 294 [select]:
+leatea/core.(*Node).Run(0xc0005b0200)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 295 [select]:
+leatea/core.(*Node).Run(0xc0005b0240)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 296 [select]:
+leatea/core.(*Node).Run(0xc0005b0280)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 288 [select]:
+leatea/core.(*Node).Run(0xc0005b02c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 297 [select]:
+leatea/core.(*Node).Run(0xc0005b0300)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 298 [select]:
+leatea/core.(*Node).Run(0xc0005b0340)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 321 [select]:
+leatea/core.(*Node).Run(0xc0005b0380)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 322 [select]:
+leatea/core.(*Node).Run(0xc0005b03c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 323 [select]:
+leatea/core.(*Node).Run(0xc0005b0400)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 324 [select]:
+leatea/core.(*Node).Run(0xc0005b0440)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 325 [select]:
+leatea/core.(*Node).Run(0xc0005b0480)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 326 [select]:
+leatea/core.(*Node).Run(0xc0005b04c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 327 [select]:
+leatea/core.(*Node).Run(0xc0005b0500)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 299 [select]:
+leatea/core.(*Node).Run(0xc0005b0540)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 328 [select]:
+leatea/core.(*Node).Run(0xc0005b0580)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 329 [select]:
+leatea/core.(*Node).Run(0xc0005b05c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 330 [select]:
+leatea/core.(*Node).Run(0xc0005b0600)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 331 [select]:
+leatea/core.(*Node).Run(0xc0005b0640)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 332 [select]:
+leatea/core.(*Node).Run(0xc0005b0680)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 300 [select]:
+leatea/core.(*Node).Run(0xc0005b06c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 301 [select]:
+leatea/core.(*Node).Run(0xc0005b0700)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 333 [select]:
+leatea/core.(*Node).Run(0xc0005b0740)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 334 [select]:
+leatea/core.(*Node).Run(0xc0005b0780)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 335 [select]:
+leatea/core.(*Node).Run(0xc0005b07c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 336 [select]:
+leatea/core.(*Node).Run(0xc0005b0800)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 337 [select]:
+leatea/core.(*Node).Run(0xc0005b0840)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 338 [select]:
+leatea/core.(*Node).Run(0xc0005b0880)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 339 [select]:
+leatea/core.(*Node).Run(0xc0005b08c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 340 [select]:
+leatea/core.(*Node).Run(0xc0005b0900)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 302 [select]:
+leatea/core.(*Node).Run(0xc0005b0940)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 303 [select]:
+leatea/core.(*Node).Run(0xc0005b0980)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 304 [select]:
+leatea/core.(*Node).Run(0xc0005b09c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 341 [select]:
+leatea/core.(*Node).Run(0xc0005b0a00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 353 [select]:
+leatea/core.(*Node).Run(0xc0005b0a40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 342 [select]:
+leatea/core.(*Node).Run(0xc0005b0a80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 343 [select]:
+leatea/core.(*Node).Run(0xc0005b0ac0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 354 [select]:
+leatea/core.(*Node).Run(0xc0005b0b00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 344 [select]:
+leatea/core.(*Node).Run(0xc0005b0b40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 345 [select]:
+leatea/core.(*Node).Run(0xc0005b0b80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 346 [select]:
+leatea/core.(*Node).Run(0xc0005b0bc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 355 [select]:
+leatea/core.(*Node).Run(0xc0005b0c00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 347 [select]:
+leatea/core.(*Node).Run(0xc0005b0c40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 348 [select]:
+leatea/core.(*Node).Run(0xc0005b0c80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 349 [select]:
+leatea/core.(*Node).Run(0xc0005b0cc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 356 [select]:
+leatea/core.(*Node).Run(0xc0005b0d00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 357 [select]:
+leatea/core.(*Node).Run(0xc0005b0d40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 358 [select]:
+leatea/core.(*Node).Run(0xc0005b0d80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 359 [select]:
+leatea/core.(*Node).Run(0xc0005b0dc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 350 [select]:
+leatea/core.(*Node).Run(0xc0005b0e00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 351 [select]:
+leatea/core.(*Node).Run(0xc0005b0e40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 360 [select]:
+leatea/core.(*Node).Run(0xc0005b0e80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 361 [select]:
+leatea/core.(*Node).Run(0xc0005b0ec0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 352 [select]:
+leatea/core.(*Node).Run(0xc0005b0f00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 369 [select]:
+leatea/core.(*Node).Run(0xc0005b0f40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 306 [select]:
+leatea/core.(*Node).Run(0xc0005b0f80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 307 [select]:
+leatea/core.(*Node).Run(0xc0005b0fc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 362 [select]:
+leatea/core.(*Node).Run(0xc0005b1000)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 370 [select]:
+leatea/core.(*Node).Run(0xc0005b1040)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 363 [select]:
+leatea/core.(*Node).Run(0xc0005b1080)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 364 [select]:
+leatea/core.(*Node).Run(0xc0005b10c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 371 [select]:
+leatea/core.(*Node).Run(0xc0005b1100)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 372 [select]:
+leatea/core.(*Node).Run(0xc0005b1140)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 373 [select]:
+leatea/core.(*Node).Run(0xc0005b1180)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 374 [select]:
+leatea/core.(*Node).Run(0xc0005b11c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 375 [select]:
+leatea/core.(*Node).Run(0xc0005b1200)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 365 [select]:
+leatea/core.(*Node).Run(0xc0005b1240)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 366 [select]:
+leatea/core.(*Node).Run(0xc0005b1280)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 376 [select]:
+leatea/core.(*Node).Run(0xc0005b12c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 377 [select]:
+leatea/core.(*Node).Run(0xc0005b1300)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 367 [select]:
+leatea/core.(*Node).Run(0xc0005b1340)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 378 [select]:
+leatea/core.(*Node).Run(0xc0005b1380)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 368 [select]:
+leatea/core.(*Node).Run(0xc0005b13c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 385 [select]:
+leatea/core.(*Node).Run(0xc0005b1400)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 379 [select]:
+leatea/core.(*Node).Run(0xc0005b1440)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 380 [select]:
+leatea/core.(*Node).Run(0xc0005b1480)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 381 [select]:
+leatea/core.(*Node).Run(0xc0005b14c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 386 [select]:
+leatea/core.(*Node).Run(0xc0005b1500)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 387 [select]:
+leatea/core.(*Node).Run(0xc0005b1540)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 388 [select]:
+leatea/core.(*Node).Run(0xc0005b1580)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 389 [select]:
+leatea/core.(*Node).Run(0xc0005b15c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 382 [select]:
+leatea/core.(*Node).Run(0xc0005b1600)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 390 [select]:
+leatea/core.(*Node).Run(0xc0005b1640)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 391 [select]:
+leatea/core.(*Node).Run(0xc0005b1680)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 383 [select]:
+leatea/core.(*Node).Run(0xc0005b16c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 384 [select]:
+leatea/core.(*Node).Run(0xc0005b1700)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 401 [select]:
+leatea/core.(*Node).Run(0xc0005b1740)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 392 [select]:
+leatea/core.(*Node).Run(0xc0005b1780)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 393 [select]:
+leatea/core.(*Node).Run(0xc0005b17c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 402 [select]:
+leatea/core.(*Node).Run(0xc0005b1800)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 403 [select]:
+leatea/core.(*Node).Run(0xc0005b1840)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 404 [select]:
+leatea/core.(*Node).Run(0xc0005b1880)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 405 [select]:
+leatea/core.(*Node).Run(0xc0005b18c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 406 [select]:
+leatea/core.(*Node).Run(0xc0005b1900)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 407 [select]:
+leatea/core.(*Node).Run(0xc0005b1940)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 408 [select]:
+leatea/core.(*Node).Run(0xc0005b1980)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 394 [select]:
+leatea/core.(*Node).Run(0xc0005b19c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 409 [select]:
+leatea/core.(*Node).Run(0xc0005b1a00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 395 [select]:
+leatea/core.(*Node).Run(0xc0005b1a40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 396 [select]:
+leatea/core.(*Node).Run(0xc0005b1a80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 410 [select]:
+leatea/core.(*Node).Run(0xc0005b1ac0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 411 [select]:
+leatea/core.(*Node).Run(0xc0005b1b00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 397 [select]:
+leatea/core.(*Node).Run(0xc0005b1b40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 412 [select]:
+leatea/core.(*Node).Run(0xc0005b1b80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 413 [select]:
+leatea/core.(*Node).Run(0xc0005b1bc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 398 [select]:
+leatea/core.(*Node).Run(0xc0005b1c00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 414 [select]:
+leatea/core.(*Node).Run(0xc0005b1c40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 415 [select]:
+leatea/core.(*Node).Run(0xc0005b1c80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 399 [select]:
+leatea/core.(*Node).Run(0xc0005b1cc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 416 [select]:
+leatea/core.(*Node).Run(0xc0005b1d00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 417 [select]:
+leatea/core.(*Node).Run(0xc0005b1d40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 400 [select]:
+leatea/core.(*Node).Run(0xc0005b1d80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 418 [select]:
+leatea/core.(*Node).Run(0xc0005b1dc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 419 [select]:
+leatea/core.(*Node).Run(0xc0005b1e00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 420 [select]:
+leatea/core.(*Node).Run(0xc0005b1e40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 433 [select]:
+leatea/core.(*Node).Run(0xc0005b1e80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 434 [select]:
+leatea/core.(*Node).Run(0xc0005b1ec0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 421 [select]:
+leatea/core.(*Node).Run(0xc0005b1f00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 422 [select]:
+leatea/core.(*Node).Run(0xc0005b1f40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 423 [select]:
+leatea/core.(*Node).Run(0xc0005b1f80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 435 [select]:
+leatea/core.(*Node).Run(0xc0005b1fc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 424 [select]:
+leatea/core.(*Node).Run(0xc0002f4240)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 425 [select]:
+leatea/core.(*Node).Run(0xc0002f4280)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 436 [select]:
+leatea/core.(*Node).Run(0xc0002f42c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 426 [select]:
+leatea/core.(*Node).Run(0xc0002f4300)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 427 [select]:
+leatea/core.(*Node).Run(0xc0002f4340)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 437 [select]:
+leatea/core.(*Node).Run(0xc0002f4380)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 428 [select]:
+leatea/core.(*Node).Run(0xc0002f43c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 429 [select]:
+leatea/core.(*Node).Run(0xc0002f4400)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 430 [select]:
+leatea/core.(*Node).Run(0xc0002f4440)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 431 [select]:
+leatea/core.(*Node).Run(0xc0002f4480)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 438 [select]:
+leatea/core.(*Node).Run(0xc0002f44c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 432 [select]:
+leatea/core.(*Node).Run(0xc0002f4500)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 449 [select]:
+leatea/core.(*Node).Run(0xc0002f4540)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 450 [select]:
+leatea/core.(*Node).Run(0xc0002f4580)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 451 [select]:
+leatea/core.(*Node).Run(0xc0002f45c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 439 [select]:
+leatea/core.(*Node).Run(0xc0002f4600)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 440 [select]:
+leatea/core.(*Node).Run(0xc0002f4640)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 452 [select]:
+leatea/core.(*Node).Run(0xc0002f4680)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 453 [select]:
+leatea/core.(*Node).Run(0xc0002f46c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 454 [select]:
+leatea/core.(*Node).Run(0xc0002f4700)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 441 [select]:
+leatea/core.(*Node).Run(0xc0002f4740)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 455 [select]:
+leatea/core.(*Node).Run(0xc0002f4780)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 456 [select]:
+leatea/core.(*Node).Run(0xc0002f47c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 457 [select]:
+leatea/core.(*Node).Run(0xc0002f4800)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 458 [select]:
+leatea/core.(*Node).Run(0xc0002f4840)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 442 [select]:
+leatea/core.(*Node).Run(0xc0002f4880)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 459 [select]:
+leatea/core.(*Node).Run(0xc0002f48c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 443 [select]:
+leatea/core.(*Node).Run(0xc0002f4900)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 460 [select]:
+leatea/core.(*Node).Run(0xc0002f4940)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 461 [select]:
+leatea/core.(*Node).Run(0xc0002f4980)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 444 [select]:
+leatea/core.(*Node).Run(0xc0002f49c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 445 [select]:
+leatea/core.(*Node).Run(0xc0002f4a00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 446 [select]:
+leatea/core.(*Node).Run(0xc0002f4a40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 447 [select]:
+leatea/core.(*Node).Run(0xc0002f4a80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 462 [select]:
+leatea/core.(*Node).Run(0xc0002f4ac0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 463 [select]:
+leatea/core.(*Node).Run(0xc0002f4b00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 464 [select]:
+leatea/core.(*Node).Run(0xc0002f4b40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 448 [select]:
+leatea/core.(*Node).Run(0xc0002f4b80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 465 [select]:
+leatea/core.(*Node).Run(0xc0002f4bc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 481 [select]:
+leatea/core.(*Node).Run(0xc0002f4c00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 482 [select]:
+leatea/core.(*Node).Run(0xc0002f4c40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 466 [select]:
+leatea/core.(*Node).Run(0xc0002f4c80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 467 [select]:
+leatea/core.(*Node).Run(0xc0002f4cc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 468 [select]:
+leatea/core.(*Node).Run(0xc0002f4d00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 469 [select]:
+leatea/core.(*Node).Run(0xc0002f4d40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 483 [select]:
+leatea/core.(*Node).Run(0xc0002f4d80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 470 [select]:
+leatea/core.(*Node).Run(0xc0002f4dc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 484 [select]:
+leatea/core.(*Node).Run(0xc0002f4e00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 485 [select]:
+leatea/core.(*Node).Run(0xc0002f4e40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 471 [select]:
+leatea/core.(*Node).Run(0xc0002f4e80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 486 [select]:
+leatea/core.(*Node).Run(0xc0002f4ec0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 472 [select]:
+leatea/core.(*Node).Run(0xc0002f4f00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 487 [select]:
+leatea/core.(*Node).Run(0xc0002f4f40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 473 [select]:
+leatea/core.(*Node).Run(0xc0002f4f80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 488 [select]:
+leatea/core.(*Node).Run(0xc0002f4fc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 474 [select]:
+leatea/core.(*Node).Run(0xc0002f5000)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 475 [select]:
+leatea/core.(*Node).Run(0xc0002f5040)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 489 [select]:
+leatea/core.(*Node).Run(0xc0002f5080)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 490 [select]:
+leatea/core.(*Node).Run(0xc0002f50c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 476 [select]:
+leatea/core.(*Node).Run(0xc0002f5100)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 477 [select]:
+leatea/core.(*Node).Run(0xc0002f5140)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 478 [select]:
+leatea/core.(*Node).Run(0xc0002f5180)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 491 [select]:
+leatea/core.(*Node).Run(0xc0002f51c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 479 [select]:
+leatea/core.(*Node).Run(0xc0002f5200)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 492 [select]:
+leatea/core.(*Node).Run(0xc0002f5240)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 480 [select]:
+leatea/core.(*Node).Run(0xc0002f5280)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 493 [select]:
+leatea/core.(*Node).Run(0xc0002f52c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 497 [select]:
+leatea/core.(*Node).Run(0xc0002f5300)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 498 [select]:
+leatea/core.(*Node).Run(0xc0002f5340)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 499 [select]:
+leatea/core.(*Node).Run(0xc0002f5380)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 494 [select]:
+leatea/core.(*Node).Run(0xc0002f53c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 500 [select]:
+leatea/core.(*Node).Run(0xc0002f5400)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 501 [select]:
+leatea/core.(*Node).Run(0xc0002f5440)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 495 [select]:
+leatea/core.(*Node).Run(0xc0002f5480)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 496 [select]:
+leatea/core.(*Node).Run(0xc0002f54c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 502 [select]:
+leatea/core.(*Node).Run(0xc0002f5500)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 513 [select]:
+leatea/core.(*Node).Run(0xc0002f5540)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 514 [select]:
+leatea/core.(*Node).Run(0xc0002f5580)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 503 [select]:
+leatea/core.(*Node).Run(0xc0002f55c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 504 [select]:
+leatea/core.(*Node).Run(0xc0002f5600)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 515 [select]:
+leatea/core.(*Node).Run(0xc0002f5640)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 505 [select]:
+leatea/core.(*Node).Run(0xc0002f5680)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 516 [select]:
+leatea/core.(*Node).Run(0xc0002f56c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 506 [select]:
+leatea/core.(*Node).Run(0xc0002f5700)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 517 [select]:
+leatea/core.(*Node).Run(0xc0002f5740)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 507 [select]:
+leatea/core.(*Node).Run(0xc0002f5780)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 518 [select]:
+leatea/core.(*Node).Run(0xc0002f57c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 508 [select]:
+leatea/core.(*Node).Run(0xc0002f5800)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 519 [select]:
+leatea/core.(*Node).Run(0xc0002f5840)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 509 [select]:
+leatea/core.(*Node).Run(0xc0002f5880)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 510 [select]:
+leatea/core.(*Node).Run(0xc0002f58c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 511 [select]:
+leatea/core.(*Node).Run(0xc0002f5900)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 512 [select]:
+leatea/core.(*Node).Run(0xc0002f5940)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 520 [select]:
+leatea/core.(*Node).Run(0xc0002f5980)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 529 [select]:
+leatea/core.(*Node).Run(0xc0002f59c0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 521 [select]:
+leatea/core.(*Node).Run(0xc0002f5a00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 530 [select]:
+leatea/core.(*Node).Run(0xc0002f5a40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 531 [select]:
+leatea/core.(*Node).Run(0xc0002f5a80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 532 [select]:
+leatea/core.(*Node).Run(0xc0002f5ac0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 522 [select]:
+leatea/core.(*Node).Run(0xc0002f5b00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 523 [select]:
+leatea/core.(*Node).Run(0xc0002f5b40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 533 [select]:
+leatea/core.(*Node).Run(0xc0002f5b80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 524 [select]:
+leatea/core.(*Node).Run(0xc0002f5bc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 525 [select]:
+leatea/core.(*Node).Run(0xc0002f5c00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 526 [select]:
+leatea/core.(*Node).Run(0xc0002f5c40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 534 [select]:
+leatea/core.(*Node).Run(0xc0002f5c80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 535 [select]:
+leatea/core.(*Node).Run(0xc0002f5cc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 536 [select]:
+leatea/core.(*Node).Run(0xc0002f5d00)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 527 [select]:
+leatea/core.(*Node).Run(0xc0002f5d40)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 537 [select]:
+leatea/core.(*Node).Run(0xc0002f5d80)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 538 [select]:
+leatea/core.(*Node).Run(0xc0002f5dc0)
+	/vault/prj/net/routing/leatea/core/node.go:85 +0x9c
+created by leatea/sim.NewNetwork
+	/vault/prj/net/routing/leatea/sim/network.go:46 +0xaf
+
+goroutine 539 [chan receive]:
+leatea/sim.(*Network).Run(0xc0000a8030)
+	/vault/prj/net/routing/leatea/sim/network.go:52 +0x51
+created by main.main
+	/vault/prj/net/routing/leatea/main.go:44 +0x2a5
+
+goroutine 1886 [runnable]:
+leatea/sim.(*Network).Run.func1()
+	/vault/prj/net/routing/leatea/sim/network.go:58
+runtime.goexit()
+	/opt/go/golang/src/runtime/asm_amd64.s:1594 +0x1
+created by leatea/sim.(*Network).Run
+	/vault/prj/net/routing/leatea/sim/network.go:58 +0x245
+
+goroutine 1884 [runnable]:
+leatea/sim.(*Network).Run.func1()
+	/vault/prj/net/routing/leatea/sim/network.go:58
+runtime.goexit()
+	/opt/go/golang/src/runtime/asm_amd64.s:1594 +0x1
+created by leatea/sim.(*Network).Run
+	/vault/prj/net/routing/leatea/sim/network.go:58 +0x245
+
+goroutine 1885 [runnable]:
+leatea/sim.(*Network).Run.func1()
+	/vault/prj/net/routing/leatea/sim/network.go:58
+runtime.goexit()
+	/opt/go/golang/src/runtime/asm_amd64.s:1594 +0x1
+created by leatea/sim.(*Network).Run
+	/vault/prj/net/routing/leatea/sim/network.go:58 +0x245
+
+goroutine 1882 [runnable]:
+leatea/sim.(*Network).Run.func1()
+	/vault/prj/net/routing/leatea/sim/network.go:58
+runtime.goexit()
+	/opt/go/golang/src/runtime/asm_amd64.s:1594 +0x1
+created by leatea/sim.(*Network).Run
+	/vault/prj/net/routing/leatea/sim/network.go:58 +0x245
+
+goroutine 1883 [runnable]:
+leatea/sim.(*Network).Run.func1()
+	/vault/prj/net/routing/leatea/sim/network.go:58
+runtime.goexit()
+	/opt/go/golang/src/runtime/asm_amd64.s:1594 +0x1
+created by leatea/sim.(*Network).Run
+	/vault/prj/net/routing/leatea/sim/network.go:58 +0x245
+
+goroutine 1807 [runnable]:
+leatea/core.(*Node).broadcast.func1()
+	/vault/prj/net/routing/leatea/core/node.go:73 +0x38
+created by leatea/core.(*Node).broadcast
+	/vault/prj/net/routing/leatea/core/node.go:72 +0x95
+
+goroutine 1901 [runnable]:
+leatea/sim.(*Network).Run.func1()
+	/vault/prj/net/routing/leatea/sim/network.go:58
+runtime.goexit()
+	/opt/go/golang/src/runtime/asm_amd64.s:1594 +0x1
+created by leatea/sim.(*Network).Run
+	/vault/prj/net/routing/leatea/sim/network.go:58 +0x245
+
+goroutine 1902 [runnable]:
+leatea/sim.(*Network).Run.func1()
+	/vault/prj/net/routing/leatea/sim/network.go:58
+runtime.goexit()
+	/opt/go/golang/src/runtime/asm_amd64.s:1594 +0x1
+created by leatea/sim.(*Network).Run
+	/vault/prj/net/routing/leatea/sim/network.go:58 +0x245
+
+goroutine 1903 [runnable]:
+leatea/sim.(*Network).Run.func1()
+	/vault/prj/net/routing/leatea/sim/network.go:58
+runtime.goexit()
+	/opt/go/golang/src/runtime/asm_amd64.s:1594 +0x1
+created by leatea/sim.(*Network).Run
+	/vault/prj/net/routing/leatea/sim/network.go:58 +0x245
+
+goroutine 1904 [runnable]:
+leatea/sim.(*Network).Run.func1()
+	/vault/prj/net/routing/leatea/sim/network.go:58
+runtime.goexit()
+	/opt/go/golang/src/runtime/asm_amd64.s:1594 +0x1
+created by leatea/sim.(*Network).Run
+	/vault/prj/net/routing/leatea/sim/network.go:58 +0x245
+
+goroutine 1921 [runnable]:
+leatea/sim.(*Network).Run.func1()
+	/vault/prj/net/routing/leatea/sim/network.go:58
+runtime.goexit()
+	/opt/go/golang/src/runtime/asm_amd64.s:1594 +0x1
+created by leatea/sim.(*Network).Run
+	/vault/prj/net/routing/leatea/sim/network.go:58 +0x245
+
+goroutine 1922 [runnable]:
+leatea/sim.(*Network).Run.func1()
+	/vault/prj/net/routing/leatea/sim/network.go:58
+runtime.goexit()
+	/opt/go/golang/src/runtime/asm_amd64.s:1594 +0x1
+created by leatea/sim.(*Network).Run
+	/vault/prj/net/routing/leatea/sim/network.go:58 +0x245
+
+goroutine 1923 [runnable]:
+leatea/sim.(*Network).Run.func1()
+	/vault/prj/net/routing/leatea/sim/network.go:58
+runtime.goexit()
+	/opt/go/golang/src/runtime/asm_amd64.s:1594 +0x1
+created by leatea/sim.(*Network).Run
+	/vault/prj/net/routing/leatea/sim/network.go:58 +0x245
+
+goroutine 1924 [runnable]:
+leatea/sim.(*Network).Run.func1()
+	/vault/prj/net/routing/leatea/sim/network.go:58
+runtime.goexit()
+	/opt/go/golang/src/runtime/asm_amd64.s:1594 +0x1
+created by leatea/sim.(*Network).Run
+	/vault/prj/net/routing/leatea/sim/network.go:58 +0x245
+
+goroutine 1925 [runnable]:
+leatea/sim.(*Network).Run.func1()
+	/vault/prj/net/routing/leatea/sim/network.go:58
+runtime.goexit()
+	/opt/go/golang/src/runtime/asm_amd64.s:1594 +0x1
+created by leatea/sim.(*Network).Run
+	/vault/prj/net/routing/leatea/sim/network.go:58 +0x245
+
+goroutine 1926 [runnable]:
+leatea/sim.(*Network).Run.func1()
+	/vault/prj/net/routing/leatea/sim/network.go:58
+runtime.goexit()
+	/opt/go/golang/src/runtime/asm_amd64.s:1594 +0x1
+created by leatea/sim.(*Network).Run
+	/vault/prj/net/routing/leatea/sim/network.go:58 +0x245
+
+goroutine 1927 [runnable]:
+leatea/sim.(*Network).Run.func1()
+	/vault/prj/net/routing/leatea/sim/network.go:58
+runtime.goexit()
+	/opt/go/golang/src/runtime/asm_amd64.s:1594 +0x1
+created by leatea/sim.(*Network).Run
+	/vault/prj/net/routing/leatea/sim/network.go:58 +0x245
