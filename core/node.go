@@ -35,10 +35,11 @@ type Node struct {
 }
 
 func NewNode(prv *PeerPrivate, in, out chan Message) *Node {
+	pub := prv.Public()
 	return &Node{
 		prv:  prv,
-		pub:  prv.Public(),
-		rt:   NewForwardTable(),
+		pub:  pub,
+		rt:   NewForwardTable(pub),
 		recv: in,
 		send: out,
 	}
@@ -58,6 +59,10 @@ func (n *Node) Forwards() int {
 	return len(n.rt.list)
 }
 
+func (n *Node) Forward(target *PeerID) (*PeerID, int) {
+	return n.rt.Forward(target)
+}
+
 func (n *Node) Run() {
 
 	learn := time.NewTicker(10 * time.Second)
@@ -65,11 +70,7 @@ func (n *Node) Run() {
 		select {
 		case <-learn.C:
 			// send out our own learn message
-			pf := n.rt.Filter()
-			pf.Add(n.pub.Bytes())
-			msg := new(LearnMsg)
-			msg.Sender_ = n.pub
-			msg.Filter = pf
+			msg := NewLearnMsg(n.pub, n.rt.Filter())
 			n.broadcast(msg)
 		case msg := <-n.recv:
 			go n.Receive(msg)
@@ -110,10 +111,8 @@ func (n *Node) Receive(msg Message) {
 				candidates = candidates[:maxTeachs]
 			}
 			// assemble and send TEACH message
-			teach := new(TeachMsg)
-			teach.Sender_ = n.pub
-			teach.Announce = candidates
-			n.broadcast(teach)
+			msg := NewTeachMsg(n.pub, candidates)
+			n.broadcast(msg)
 		}
 
 	//------------------------------------------------------------------
