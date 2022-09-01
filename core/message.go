@@ -42,6 +42,7 @@ type Message interface {
 type MessageImpl struct {
 	MsgSize uint16 `order:"big"`
 	MsgType uint16 `order:"big"`
+	Sender_ *PeerID
 }
 
 func (m *MessageImpl) Size() uint16 {
@@ -52,21 +53,25 @@ func (m *MessageImpl) Type() uint16 {
 	return m.MsgType
 }
 
+func (m *MessageImpl) Sender() *PeerID {
+	return m.Sender_
+}
+
 //----------------------------------------------------------------------
 
 type LearnMsg struct {
 	MessageImpl
 
-	Sender_ *PeerID
-	Filter  *data.BloomFilter
+	Filter *data.SaltedBloomFilter
 }
 
-func (m *LearnMsg) Type() uint16 {
-	return MSG_LEARN
-}
-
-func (m *LearnMsg) Sender() *PeerID {
-	return m.Sender_
+func NewLearnMsg(sender *PeerID, filter *data.SaltedBloomFilter) *LearnMsg {
+	msg := new(LearnMsg)
+	msg.MsgType = MSG_LEARN
+	msg.MsgSize = uint16(4 + sender.Size() + filter.Size())
+	msg.Sender_ = sender
+	msg.Filter = filter
+	return msg
 }
 
 func (m *LearnMsg) String() string {
@@ -78,24 +83,27 @@ func (m *LearnMsg) String() string {
 type TeachMsg struct {
 	MessageImpl
 
-	Sender_  *PeerID
-	Announce []*Entry
+	Announce []*Entry `size:"*"`
+}
+
+func NewTeachMsg(sender *PeerID, candidates []*Entry) *TeachMsg {
+	msg := new(TeachMsg)
+	msg.Sender_ = sender
+	msg.Announce = candidates
+	msg.MsgType = MSG_TEACH
+	msg.MsgSize = uint16(4 + sender.Size())
+	for _, e := range candidates {
+		msg.MsgSize += uint16(e.Size())
+	}
+	return msg
 }
 
 func (m *TeachMsg) Add(e *Entry) {
 	m.Announce = append(m.Announce, e)
 }
 
-func (m *TeachMsg) Type() uint16 {
-	return MSG_TEACH
-}
-
-func (m *TeachMsg) Sender() *PeerID {
-	return m.Sender_
-}
-
 func (m *TeachMsg) String() string {
 	return fmt.Sprintf("Teach{%s:%d}", m.Sender_.Short(), len(m.Announce))
 }
 
-const maxTeachs = 5
+const maxTeachs = 10
