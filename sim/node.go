@@ -45,5 +45,5 @@ func (n *SimNode) Receive(msg core.Message) {
 }
 
 func (n *SimNode) String() string {
-	return fmt.Sprintf("SimNode{%s @ %s}", n.PeerID().Short(), n.pos)
+	return fmt.Sprintf("SimNode{%s @ %s}", n.Node.String(), n.pos)
 }
