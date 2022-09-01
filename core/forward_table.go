@@ -39,6 +39,15 @@ func (e *Entry) WithHop() bool {
 	return e.Hops > 0
 }
 
+// Size of the binary representation
+func (e *Entry) Size() uint {
+	size := e.Peer.Size() + 10
+	if e.Hops > 0 {
+		size += e.NextHop.Size()
+	}
+	return size
+}
+
 // Clone entry for response
 func (e *Entry) Clone() *Entry {
 	return &Entry{
@@ -52,12 +61,14 @@ func (e *Entry) Clone() *Entry {
 // ForwardTable is a map of entries with key "target"
 type ForwardTable struct {
 	sync.RWMutex
+	self *PeerID
 	list map[string]*Entry
 }
 
 // NewForwardTable creates an empty table
-func NewForwardTable() *ForwardTable {
+func NewForwardTable(self *PeerID) *ForwardTable {
 	return &ForwardTable{
+		self: self,
 		list: make(map[string]*Entry),
 	}
 }
@@ -70,13 +81,17 @@ func (t *ForwardTable) Add(e *Entry) {
 }
 
 // Filter returns a bloomfilter from all table entries (PeerID)
-func (t *ForwardTable) Filter() *data.BloomFilter {
+func (t *ForwardTable) Filter() *data.SaltedBloomFilter {
 	t.RLock()
 	defer t.RUnlock()
-	pf := data.NewBloomFilter(1000, 1e-3)
+	salt := RndUInt32()
+	n := len(t.list) + 2
+	fpr := 1. / float64(n)
+	pf := data.NewSaltedBloomFilter(salt, n, fpr)
 	for _, e := range t.list {
 		pf.Add(e.Peer.Bytes())
 	}
+	pf.Add(t.self.Bytes())
 	return pf
 }
 
@@ -98,7 +113,11 @@ func (t *ForwardTable) Learn(m *TeachMsg) {
 	t.Lock()
 	defer t.Unlock()
 	for _, e := range m.Announce {
-		fwt, ok := t.list[e.Peer.Key()]
+		if e.Peer.Equal(t.self) {
+			continue
+		}
+		key := e.Peer.Key()
+		fwt, ok := t.list[key]
 		if ok {
 			// already known: shorter path?
 			if fwt.Hops > e.Hops+1 {
@@ -109,7 +128,7 @@ func (t *ForwardTable) Learn(m *TeachMsg) {
 			}
 		} else {
 			// not yet known: add to table
-			t.list[e.Peer.Key()] = &Entry{
+			t.list[key] = &Entry{
 				Peer:     e.Peer,
 				NextHop:  m.Sender(),
 				Hops:     e.Hops + 1,
@@ -117,4 +136,14 @@ func (t *ForwardTable) Learn(m *TeachMsg) {
 			}
 		}
 	}
+}
+
+func (t *ForwardTable) Forward(target *PeerID) (*PeerID, int) {
+	t.RLock()
+	defer t.RUnlock()
+	f, ok := t.list[target.Key()]
+	if !ok {
+		return nil, 0
+	}
+	return f.NextHop, int(f.Hops) + 1
 }
