@@ -35,3 +35,16 @@ func (p *Position) Distance2(pos *Position) float64 {
 func (p *Position) String() string {
 	return fmt.Sprintf("(%.2f,%.2f)", p.x, p.y)
 }
+
+var _scales = []string{"B", "kB", "MB", "GB"}
+
+func Scale(v float64) string {
+	var pos int
+	for pos = 0; pos < len(_scales); pos++ {
+		if v < 1024. {
+			return fmt.Sprintf("%.2f%s", v, _scales[pos])
+		}
+		v /= 1024.
+	}
+	return fmt.Sprintf("%.2f%s", v, _scales[pos-1])
+}
