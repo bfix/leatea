@@ -33,11 +33,18 @@ type PeerID struct {
 	pub  *ed25519.PublicKey
 }
 
+func (p *PeerID) Size() uint {
+	return 32
+}
+
 func (p *PeerID) Key() string {
 	return base64.StdEncoding.EncodeToString(p.Data)
 }
 
 func (p *PeerID) Short() string {
+	if p == nil {
+		return "(none)"
+	}
 	s := base32.StdEncoding.EncodeToString(p.Data)
 	return s[:8]
 }
