@@ -20,7 +20,12 @@
 
 package core
 
-import "time"
+import (
+	"bytes"
+	"crypto/rand"
+	"encoding/binary"
+	"time"
+)
 
 type Time struct {
 	Val int64 `order:"big"`
@@ -28,6 +33,19 @@ type Time struct {
 
 func TimeNow() *Time {
 	return &Time{Val: time.Now().UnixMicro()}
+}
+
+func RndUInt64() uint64 {
+	b := make([]byte, 8)
+	_, _ = rand.Read(b)
+	var v uint64
+	c := bytes.NewBuffer(b)
+	_ = binary.Read(c, binary.BigEndian, &v)
+	return v
+}
+
+func RndUInt32() uint32 {
+	return uint32(RndUInt64())
 }
 
 //----------------------------------------------------------------------
