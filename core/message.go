@@ -29,8 +29,6 @@ import (
 const (
 	MSG_LEARN = 1 // LEARN message type
 	MSG_TEACH = 2 // TEACH message type
-
-	maxTeachs = 10 // max. number of entries in TEACH message
 )
 
 //----------------------------------------------------------------------
