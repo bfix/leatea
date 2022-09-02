@@ -36,6 +36,11 @@ type Time struct {
 	Val int64 `order:"big"`
 }
 
+// Expired returns true if 't+ttl' is in the past
+func (t *Time) Expired(ttl time.Duration) bool {
+	return (time.Now().UnixMicro() - t.Val) > ttl.Microseconds()
+}
+
 // TimeNow returns the current time
 func TimeNow() *Time {
 	return &Time{Val: time.Now().UnixMicro()}
