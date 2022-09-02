@@ -33,7 +33,6 @@ import (
 type Network struct {
 	nodes   map[string]*SimNode // list of nodes (keyed by peerid)
 	queue   chan core.Message   // "ether" for message transport
-	reach2  float64             // broadcast range for nodes
 	trafOut uint64              // total "send" traffic
 	trafIn  uint64              // total "receive" traffic
 	active  bool                // simulation running?
@@ -46,14 +45,11 @@ func NewNetwork(numNodes int, width, length, r2 float64) *Network {
 	n := new(Network)
 	n.queue = make(chan core.Message, 10)
 	n.nodes = make(map[string]*SimNode)
-	n.reach2 = r2
 	// create and run nodes.
 	for i := 0; i < numNodes; i++ {
 		prv := core.NewPeerPrivate()
-		node := NewSimNode(prv, n.queue, &Position{
-			x: rand.Float64() * width,
-			y: rand.Float64() * length,
-		})
+		pos := &Position{rand.Float64() * width, rand.Float64() * length}
+		node := NewSimNode(prv, r2, n.queue, pos)
 		n.nodes[node.PeerID().Key()] = node
 		go node.Run()
 	}
@@ -72,8 +68,7 @@ func (n *Network) Run() {
 		if sender, ok := n.nodes[msg.Sender().Key()]; ok {
 			// process all nodes that are in broadcast reach of the sender
 			for _, node := range n.nodes {
-				dist2 := node.pos.Distance2(sender.pos)
-				if dist2 < n.reach2 && !node.PeerID().Equal(sender.PeerID()) {
+				if sender.CanReach(node) && !node.PeerID().Equal(sender.PeerID()) {
 					// node in reach receives message
 					n.trafIn += mSize
 					go node.Receive(msg)

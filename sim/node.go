@@ -31,17 +31,25 @@ import (
 type SimNode struct {
 	core.Node
 	pos  *Position         // position in the field
+	r2   float64           // square of braodcast distance
 	recv chan core.Message // channel for incoming messages
 }
 
 // NewSimNode creates a new node in the test network
-func NewSimNode(prv *core.PeerPrivate, out chan core.Message, pos *Position) *SimNode {
+func NewSimNode(prv *core.PeerPrivate, r2 float64, out chan core.Message, pos *Position) *SimNode {
 	recv := make(chan core.Message)
 	return &SimNode{
 		Node: *core.NewNode(prv, recv, out),
+		r2:   r2,
 		pos:  pos,
 		recv: recv,
 	}
+}
+
+// CanReach returns true if the node can reach another node by broadcast
+func (n *SimNode) CanReach(peer *SimNode) bool {
+	dist2 := n.pos.Distance2(peer.pos)
+	return dist2 < n.r2
 }
 
 // Receive a message and process it
