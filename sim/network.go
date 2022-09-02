@@ -80,6 +80,11 @@ func (n *Network) Run() {
 
 // Stop the network (message exchange)
 func (n *Network) Stop() {
+	// stop all nodes
+	for _, node := range n.nodes {
+		node.Stop()
+	}
+	// stop network
 	n.active = false
 }
 

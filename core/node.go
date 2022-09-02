@@ -30,11 +30,12 @@ import (
 
 // Node represents a node in the network
 type Node struct {
-	prv   *PeerPrivate  // private signing key
-	pub   *PeerID       // peer identifier (public key)
-	rt    *ForwardTable // forward table
-	inCh  chan Message  // channel for incoming messages
-	outCh chan Message  // channel for outgoing messages
+	prv    *PeerPrivate  // private signing key
+	pub    *PeerID       // peer identifier (public key)
+	rt     *ForwardTable // forward table
+	inCh   chan Message  // channel for incoming messages
+	outCh  chan Message  // channel for outgoing messages
+	active bool          // node running?
 }
 
 // NewNode creates a new node with a given private signing key and an input /
@@ -78,7 +79,8 @@ func (n *Node) Forward(target *PeerID) (*PeerID, int) {
 func (n *Node) Run() {
 	// broadcast LEARN message periodically
 	learn := time.NewTicker(10 * time.Second)
-	for {
+	n.active = true
+	for n.active {
 		select {
 		case <-learn.C:
 			// send out our own learn message
@@ -90,6 +92,11 @@ func (n *Node) Run() {
 			go n.Receive(msg)
 		}
 	}
+}
+
+// Stop a running node
+func (n *Node) Stop() {
+	n.active = false
 }
 
 // Receive handles an incoming message
