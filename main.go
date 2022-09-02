@@ -80,7 +80,7 @@ loop:
 	success := 0
 	broken := 0
 	loop := 0
-	rt, allHops1 := netw.FullTable()
+	rt, allHops1 := netw.RoutingTable()
 	allHops2 := 0
 	log.Println("Network routing table constructed - checking routes:")
 	for from, e := range rt {

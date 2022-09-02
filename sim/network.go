@@ -25,20 +25,29 @@ import (
 	"math/rand"
 )
 
+//----------------------------------------------------------------------
+// Network simulation to test the LEATEA algorithm
+//----------------------------------------------------------------------
+
+// Network is the overall test controller
 type Network struct {
-	nodes   map[string]*SimNode
-	queue   chan core.Message
-	reach2  float64
-	trafOut uint64
-	trafIn  uint64
-	active  bool
+	nodes   map[string]*SimNode // list of nodes (keyed by peerid)
+	queue   chan core.Message   // "ether" for message transport
+	reach2  float64             // broadcast range for nodes
+	trafOut uint64              // total "send" traffic
+	trafIn  uint64              // total "receive" traffic
+	active  bool                // simulation running?
 }
 
+// NewNetwork creates a new network of 'numNodes' randomly distributed nodes
+// in an area of 'width x length'. All nodes have the same squared broadcast
+// range r2.
 func NewNetwork(numNodes int, width, length, r2 float64) *Network {
 	n := new(Network)
 	n.queue = make(chan core.Message, 10)
 	n.nodes = make(map[string]*SimNode)
 	n.reach2 = r2
+	// create and run nodes.
 	for i := 0; i < numNodes; i++ {
 		prv := core.NewPeerPrivate()
 		node := NewSimNode(prv, n.queue, &Position{
@@ -51,16 +60,21 @@ func NewNetwork(numNodes int, width, length, r2 float64) *Network {
 	return n
 }
 
+// Run the network simulation
 func (n *Network) Run() {
 	n.active = true
 	for n.active {
+		// wait for broadcasted message.
 		msg := <-n.queue
 		mSize := uint64(msg.Size())
 		n.trafOut += mSize
+		// lookup sender in node table
 		if sender, ok := n.nodes[msg.Sender().Key()]; ok {
+			// process all nodes that are in broadcast reach of the sender
 			for _, node := range n.nodes {
 				dist2 := node.pos.Distance2(sender.pos)
 				if dist2 < n.reach2 && !node.PeerID().Equal(sender.PeerID()) {
+					// node in reach receives message
 					n.trafIn += mSize
 					go node.Receive(msg)
 				}
@@ -69,51 +83,62 @@ func (n *Network) Run() {
 	}
 }
 
+// Stop the network (message exchange)
 func (n *Network) Stop() {
 	n.active = false
 }
 
+//----------------------------------------------------------------------
+// Analysis helpers
+//----------------------------------------------------------------------
+
+// Coverage returns the mean coverage of all forward tables (known targets)
 func (n *Network) Coverage() float64 {
 	total := 0
 	num := len(n.nodes)
 	for _, node := range n.nodes {
-		total += node.Forwards()
+		total += node.NumForwards()
 	}
 	return float64(100*total) / float64(num*(num-1))
 }
 
+// Traffic returns traffic volumes (in and out)
 func (n *Network) Traffic() (in, out uint64) {
 	return n.trafIn, n.trafOut
 }
 
-func (n *Network) FullTable() ([][]int, float64) {
+// RoutingTable returns the routing table for the whole
+// network and the average number of hops.
+func (n *Network) RoutingTable() ([][]int, float64) {
 	allHops := 0
 	numRoute := 0
+	// create empty routing table
 	num := len(n.nodes)
 	res := make([][]int, num)
 	for i := range res {
 		res[i] = make([]int, num)
 	}
-	look := make(map[string]int)
+	// index maps a peerid to an integer
+	index := make(map[string]int)
 	pos := 0
 	for k := range n.nodes {
-		look[k] = pos
+		index[k] = pos
 		pos++
 	}
 	for k1, node1 := range n.nodes {
-		i1 := look[k1]
+		i1 := index[k1]
 		for k2, node2 := range n.nodes {
 			if k1 == k2 {
-				res[i1][i1] = -2
+				res[i1][i1] = -2 // "self" route
 				continue
 			}
-			i2 := look[k2]
+			i2 := index[k2]
 			if next, hops := node1.Forward(node2.PeerID()); hops > 0 {
 				allHops += hops
 				numRoute++
 				ref := i2
 				if next != nil {
-					ref = look[next.Key()]
+					ref = index[next.Key()]
 				}
 				res[i1][i2] = ref
 			} else {
@@ -121,5 +146,6 @@ func (n *Network) FullTable() ([][]int, float64) {
 			}
 		}
 	}
+	// return results
 	return res, float64(allHops) / float64(numRoute)
 }

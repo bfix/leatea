@@ -22,22 +22,30 @@ package sim
 
 import "fmt"
 
+//----------------------------------------------------------------------
+
+// Position (2D)
 type Position struct {
 	x, y float64
 }
 
+// Distance2 returns the squared distance between positions.
 func (p *Position) Distance2(pos *Position) float64 {
 	dx := p.x - pos.x
 	dy := p.y - pos.y
 	return dx*dx + dy*dy
 }
 
+// String returns a human-readable representation
 func (p *Position) String() string {
 	return fmt.Sprintf("(%.2f,%.2f)", p.x, p.y)
 }
 
+//----------------------------------------------------------------------
+
 var _scales = []string{"B", "kB", "MB", "GB"}
 
+// Scale returns a byte size as a string in compact form
 func Scale(v float64) string {
 	var pos int
 	for pos = 0; pos < len(_scales); pos++ {

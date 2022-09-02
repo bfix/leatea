@@ -26,15 +26,24 @@ import (
 	"github.com/bfix/gospel/data"
 )
 
+//----------------------------------------------------------------------
+// Forwarding table: each peer has a forwarding table with entries for
+// all other peers it learned about over time. The entry specifies the
+// peer ID of the other peer, the next hop on the route to the target,
+// the number of hops to reach the target and a timestamp when the peer
+// was last seen in the network. A direct neighbor (within broadcast
+// range) has no next hop and a hop count of 0 in the table.
+//----------------------------------------------------------------------
+
 // Entry in forward table
 type Entry struct {
 	Peer     *PeerID ``                // target node
-	Hops     uint16  `size:"big"`      // number of hops
+	Hops     uint16  `size:"big"`      // number of hops to target
 	NextHop  *PeerID `opt:"(WithHop)"` // next hop (optional)
 	LastSeen *Time   ``                // last time seen
 }
 
-// WithHop returns true if next hop is set
+// WithHop returns true if next hop is set (used for serialization).
 func (e *Entry) WithHop() bool {
 	return e.Hops > 0
 }
@@ -57,6 +66,8 @@ func (e *Entry) Clone() *Entry {
 		LastSeen: e.LastSeen,
 	}
 }
+
+//----------------------------------------------------------------------
 
 // ForwardTable is a map of entries with key "target"
 type ForwardTable struct {
@@ -138,6 +149,8 @@ func (t *ForwardTable) Learn(m *TeachMsg) {
 	}
 }
 
+// Forward returns the peerid of the next hop to target and the number of
+// expected hops on the route.
 func (t *ForwardTable) Forward(target *PeerID) (*PeerID, int) {
 	t.RLock()
 	defer t.RUnlock()

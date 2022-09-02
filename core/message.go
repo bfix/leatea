@@ -29,7 +29,11 @@ import (
 const (
 	MSG_LEARN = 1 // LEARN message type
 	MSG_TEACH = 2 // TEACH message type
+
+	maxTeachs = 10 // max. number of entries in TEACH message
 )
+
+//----------------------------------------------------------------------
 
 // Message interface
 type Message interface {
@@ -39,32 +43,41 @@ type Message interface {
 	String() string
 }
 
+//----------------------------------------------------------------------
+
+// MessageImpl is a generic message used in derived message implementations.
+// It implements a basic set of interface methods (all except 'String()').
 type MessageImpl struct {
-	MsgSize uint16 `order:"big"`
-	MsgType uint16 `order:"big"`
-	Sender_ *PeerID
+	MsgSize uint16  `order:"big"` // total size of message
+	MsgType uint16  `order:"big"` // message type
+	Sender_ *PeerID ``            // sender of message
 }
 
+// Size returns the binary size of a message
 func (m *MessageImpl) Size() uint16 {
 	return m.MsgSize
 }
 
+// Type returns the message type
 func (m *MessageImpl) Type() uint16 {
 	return m.MsgType
 }
 
+// Sender returns the peer id of the message sender
 func (m *MessageImpl) Sender() *PeerID {
 	return m.Sender_
 }
 
 //----------------------------------------------------------------------
 
+// Learn message: "I want to learn, and here is what I know already..."
 type LearnMsg struct {
 	MessageImpl
 
-	Filter *data.SaltedBloomFilter
+	Filter *data.SaltedBloomFilter // bloomfilter over target peerids in forward table
 }
 
+// NewLearnMsg creates a new message for a learn broadcast
 func NewLearnMsg(sender *PeerID, filter *data.SaltedBloomFilter) *LearnMsg {
 	msg := new(LearnMsg)
 	msg.MsgType = MSG_LEARN
@@ -74,18 +87,21 @@ func NewLearnMsg(sender *PeerID, filter *data.SaltedBloomFilter) *LearnMsg {
 	return msg
 }
 
+// String returns a human-readable representation of the message
 func (m *LearnMsg) String() string {
-	return fmt.Sprintf("Learn{%s}", m.Sender_.Short())
+	return fmt.Sprintf("Learn{%s}", m.Sender_)
 }
 
 //----------------------------------------------------------------------
 
+// Teach message: "This is what I know and you don't..."
 type TeachMsg struct {
 	MessageImpl
 
-	Announce []*Entry `size:"*"`
+	Announce []*Entry `size:"*"` // unfiltered table entries
 }
 
+// NewTeachMsg creates a new message for broadcast
 func NewTeachMsg(sender *PeerID, candidates []*Entry) *TeachMsg {
 	msg := new(TeachMsg)
 	msg.Sender_ = sender
@@ -98,12 +114,7 @@ func NewTeachMsg(sender *PeerID, candidates []*Entry) *TeachMsg {
 	return msg
 }
 
-func (m *TeachMsg) Add(e *Entry) {
-	m.Announce = append(m.Announce, e)
-}
-
+// String returns a human-readable representation of the message
 func (m *TeachMsg) String() string {
-	return fmt.Sprintf("Teach{%s:%d}", m.Sender_.Short(), len(m.Announce))
+	return fmt.Sprintf("Teach{%s:%d}", m.Sender_, len(m.Announce))
 }
-
-const maxTeachs = 10

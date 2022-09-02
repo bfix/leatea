@@ -25,12 +25,16 @@ import (
 	"leatea/core"
 )
 
+//----------------------------------------------------------------------
+
+// SimNode represents a node in the test network (extended attributes)
 type SimNode struct {
 	core.Node
-	pos  *Position
-	recv chan core.Message
+	pos  *Position         // position in the field
+	recv chan core.Message // channel for incoming messages
 }
 
+// NewSimNode creates a new node in the test network
 func NewSimNode(prv *core.PeerPrivate, out chan core.Message, pos *Position) *SimNode {
 	recv := make(chan core.Message)
 	return &SimNode{
@@ -40,10 +44,12 @@ func NewSimNode(prv *core.PeerPrivate, out chan core.Message, pos *Position) *Si
 	}
 }
 
+// Receive a message and process it
 func (n *SimNode) Receive(msg core.Message) {
 	n.recv <- msg
 }
 
+// String returns a human-readable representation.
 func (n *SimNode) String() string {
 	return fmt.Sprintf("SimNode{%s @ %s}", n.Node.String(), n.pos)
 }

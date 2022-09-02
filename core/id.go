@@ -28,20 +28,29 @@ import (
 	"github.com/bfix/gospel/crypto/ed25519"
 )
 
+//----------------------------------------------------------------------
+
+// PeerID is the identifier for a node in the network. It is the binary
+// representation of the public Ed25519 key of a node.
 type PeerID struct {
-	Data []byte `size:"32"`
-	pub  *ed25519.PublicKey
+	Data []byte `size:"(Size)"` // binary representation
+
+	// transient
+	pub *ed25519.PublicKey // corresponding Ed25519 pubkey
 }
 
+// Size of a peerid (used for serialization).
 func (p *PeerID) Size() uint {
 	return 32
 }
 
+// Key returns a string used for map operations
 func (p *PeerID) Key() string {
 	return base64.StdEncoding.EncodeToString(p.Data)
 }
 
-func (p *PeerID) Short() string {
+// String returns a human-readable short peer identifier
+func (p *PeerID) String() string {
 	if p == nil {
 		return "(none)"
 	}
@@ -49,25 +58,36 @@ func (p *PeerID) Short() string {
 	return s[:8]
 }
 
+// Equal returns true if two peerids are equal
 func (p *PeerID) Equal(q *PeerID) bool {
+	// handle edge cases involving nil pointers
 	if q == nil && p == nil {
 		return true
 	}
 	if q == nil || p == nil {
 		return false
 	}
+	// compare binary representations
 	return bytes.Equal(p.Data, q.Data)
 }
 
+// Bytes returns the binary representation (as a clone)
 func (p *PeerID) Bytes() []byte {
 	return Clone(p.Data)
 }
 
+//----------------------------------------------------------------------
+
+// PeerPrivate is the binary representation of the long-term signing key
+// of the node (a Ed25519 private key)
 type PeerPrivate struct {
-	Data []byte `size:"32"`
-	prv  *ed25519.PrivateKey
+	Data []byte `size:"(Size)"` // binary representation
+
+	// transient
+	prv *ed25519.PrivateKey // node private signng key
 }
 
+// NewPeerPrivate creates a new node private signing key
 func NewPeerPrivate() *PeerPrivate {
 	_, prv := ed25519.NewKeypair()
 	return &PeerPrivate{
@@ -76,6 +96,13 @@ func NewPeerPrivate() *PeerPrivate {
 	}
 }
 
+// Size of a peer private key (used for local serialization).
+func (p *PeerPrivate) Size() uint {
+	return 32
+}
+
+// Public returns the peerid (binary representation of the public Ed25519 key
+// of the node)
 func (p *PeerPrivate) Public() *PeerID {
 	pub := p.prv.Public()
 	return &PeerID{

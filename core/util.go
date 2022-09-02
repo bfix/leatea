@@ -27,14 +27,25 @@ import (
 	"time"
 )
 
+//----------------------------------------------------------------------
+// Time
+//----------------------------------------------------------------------
+
+// Time is the number of microseconds since Jan 1st, 1970 (Unix epoch)
 type Time struct {
 	Val int64 `order:"big"`
 }
 
+// TimeNow returns the current time
 func TimeNow() *Time {
 	return &Time{Val: time.Now().UnixMicro()}
 }
 
+//----------------------------------------------------------------------
+// Random numbers
+//----------------------------------------------------------------------
+
+// RndUInt64 returns a random uint64 integer
 func RndUInt64() uint64 {
 	b := make([]byte, 8)
 	_, _ = rand.Read(b)
@@ -44,6 +55,7 @@ func RndUInt64() uint64 {
 	return v
 }
 
+// RndUInt64 returns a random uint32 integer
 func RndUInt32() uint32 {
 	return uint32(RndUInt64())
 }
