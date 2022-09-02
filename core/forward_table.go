@@ -91,10 +91,18 @@ func (t *ForwardTable) Add(e *Entry) {
 	t.list[e.Peer.Key()] = e
 }
 
-// Filter returns a bloomfilter from all table entries (PeerID)
+// Filter returns a bloomfilter from all table entries (PeerID).
+// Remove expired entries first.
 func (t *ForwardTable) Filter() *data.SaltedBloomFilter {
-	t.RLock()
-	defer t.RUnlock()
+	t.Lock()
+	defer t.Unlock()
+	// remove expired entries
+	for k, e := range t.list {
+		if e.LastSeen.Expired(ttlEntry) {
+			delete(t.list, k)
+		}
+	}
+	// generate bloomfilter
 	salt := RndUInt32()
 	n := len(t.list) + 2
 	fpr := 1. / float64(n)
