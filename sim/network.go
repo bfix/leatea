@@ -126,7 +126,7 @@ func (n *Network) Traffic() (in, out uint64) {
 
 // RoutingTable returns the routing table for the whole
 // network and the average number of hops.
-func (n *Network) RoutingTable() ([][]int, float64) {
+func (n *Network) RoutingTable() ([][]int, *Graph, float64) {
 	allHops := 0
 	numRoute := 0
 	// create empty routing table
@@ -163,6 +163,20 @@ func (n *Network) RoutingTable() ([][]int, float64) {
 			}
 		}
 	}
+	// construct graph
+	g := NewGraph()
+	for k1, node1 := range n.nodes {
+		i1 := index[k1]
+		neighbors := g.NewRoute()
+		for k2, node2 := range n.nodes {
+			if k1 == k2 || !node1.CanReach(node2) {
+				continue
+			}
+			i2 := index[k2]
+			neighbors.Add(i2)
+		}
+		g.mdl[i1] = neighbors
+	}
 	// return results
-	return res, float64(allHops) / float64(numRoute)
+	return res, g, float64(allHops) / float64(numRoute)
 }
