@@ -21,6 +21,7 @@
 package core
 
 import (
+	"sort"
 	"sync"
 
 	"github.com/bfix/gospel/data"
@@ -41,6 +42,7 @@ type Entry struct {
 	Hops     uint16  `size:"big"`      // number of hops to target
 	NextHop  *PeerID `opt:"(WithHop)"` // next hop (optional)
 	LastSeen *Time   ``                // last time seen
+	Pending  bool    ``                // entry changed but not forwarded
 }
 
 // WithHop returns true if next hop is set (used for serialization).
@@ -57,6 +59,11 @@ func (e *Entry) Size() uint {
 	return size
 }
 
+// Equal returns true if the base attributes of the entries are the same
+func (e *Entry) Equal(e2 *Entry) bool {
+	return e.Peer.Equal(e2.Peer) && e.Hops == e2.Hops && e.NextHop.Equal(e2.NextHop)
+}
+
 // Clone entry for response
 func (e *Entry) Clone() *Entry {
 	return &Entry{
@@ -64,6 +71,7 @@ func (e *Entry) Clone() *Entry {
 		NextHop:  e.NextHop,
 		Hops:     e.Hops,
 		LastSeen: e.LastSeen,
+		Pending:  false,
 	}
 }
 
@@ -88,7 +96,27 @@ func NewForwardTable(self *PeerID) *ForwardTable {
 func (t *ForwardTable) Add(e *Entry) {
 	t.Lock()
 	defer t.Unlock()
-	t.list[e.Peer.Key()] = e
+	key := e.Peer.Key()
+	// check for changes if entry exists
+	if e2, ok := t.list[key]; ok && e.Equal(e2) {
+		// no change
+		return
+	}
+	// insert/update into table
+	e.Pending = true
+	e.LastSeen = TimeNow()
+	t.list[key] = e
+}
+
+func (t *ForwardTable) Cleanup() {
+	t.Lock()
+	defer t.Unlock()
+	// remove expired neighbors
+	for k, e := range t.list {
+		if e.LastSeen.Expired(ttlEntry) {
+			delete(t.list, k)
+		}
+	}
 }
 
 // Filter returns a bloomfilter from all table entries (PeerID).
@@ -96,12 +124,6 @@ func (t *ForwardTable) Add(e *Entry) {
 func (t *ForwardTable) Filter() *data.SaltedBloomFilter {
 	t.Lock()
 	defer t.Unlock()
-	// remove expired entries
-	for k, e := range t.list {
-		if e.LastSeen.Expired(ttlEntry) {
-			delete(t.list, k)
-		}
-	}
 	// generate bloomfilter
 	salt := RndUInt32()
 	n := len(t.list) + 2
@@ -115,12 +137,50 @@ func (t *ForwardTable) Filter() *data.SaltedBloomFilter {
 }
 
 // Candiates from the table not filtered out. Candiates also can't have
-// sender as next hop.
+// sender as next hop. Pending entries (updated but not forwarded yet)
+// are collected if there is space for them in the result list
 func (t *ForwardTable) Candidates(m *LearnMsg) (list []*Entry) {
 	t.Lock()
 	defer t.Unlock()
+
+	// collect unfiltered entries
 	for _, e := range t.list {
 		if !m.Filter.Contains(e.Peer.Bytes()) && !m.Sender().Equal(e.NextHop) {
+			e.Pending = false
+			list = append(list, e.Clone())
+		}
+	}
+	// sort them by ascending hops
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].Hops < list[j].Hops
+	})
+	// if list limit is reached, return results.
+	if len(list) >= maxTeachs {
+		list = list[:maxTeachs]
+		return
+	}
+
+	// collect pending entries
+	var pList []*Entry
+	for _, e := range t.list {
+		if e.Pending {
+			pList = append(pList, e)
+		}
+	}
+	// append pennding entries
+	if len(pList) > 0 {
+		// sort them by ascending hops
+		sort.Slice(pList, func(i, j int) bool {
+			return pList[i].Hops < pList[j].Hops
+		})
+		// append to result list
+		n := maxTeachs - len(list)
+		if n > len(pList) {
+			n = len(pList)
+		}
+		for i := 0; i < n; i++ {
+			e := pList[i]
+			e.Pending = false
 			list = append(list, e.Clone())
 		}
 	}
@@ -144,6 +204,7 @@ func (t *ForwardTable) Learn(m *TeachMsg) {
 				fwt.Hops = e.Hops + 1
 				fwt.NextHop = m.Sender()
 				fwt.LastSeen = TimeNow()
+				fwt.Pending = true
 			}
 		} else {
 			// not yet known: add to table
@@ -152,6 +213,7 @@ func (t *ForwardTable) Learn(m *TeachMsg) {
 				NextHop:  m.Sender(),
 				Hops:     e.Hops + 1,
 				LastSeen: TimeNow(),
+				Pending:  false,
 			}
 		}
 	}

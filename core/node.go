@@ -22,7 +22,6 @@ package core
 
 import (
 	"fmt"
-	"sort"
 	"time"
 )
 
@@ -124,14 +123,6 @@ func (n *Node) Receive(msg Message) {
 		// candidates are not included in the learn filter
 		// and don't have the learner as next hop.
 		if candidates := n.rt.Candidates(m); len(candidates) > 0 {
-			// sort them by ascending hops
-			sort.Slice(candidates, func(i, j int) bool {
-				return candidates[i].Hops < candidates[j].Hops
-			})
-			// trim list if we have too many candidates
-			if len(candidates) > maxTeachs {
-				candidates = candidates[:maxTeachs]
-			}
 			// assemble and send TEACH message
 			msg := NewTeachMsg(n.pub, candidates)
 			n.send(msg)
