@@ -20,7 +20,10 @@
 
 package sim
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 //----------------------------------------------------------------------
 
@@ -55,4 +58,10 @@ func Scale(v float64) string {
 		v /= 1024.
 	}
 	return fmt.Sprintf("%.2f%s", v, _scales[pos-1])
+}
+
+// Vary a time span 't'
+func Vary(t float64) time.Duration {
+	v := Random.ExpFloat64() * t
+	return time.Duration(v*1000) * time.Millisecond
 }

@@ -23,6 +23,8 @@ package sim
 import (
 	"fmt"
 	"leatea/core"
+	"log"
+	"time"
 )
 
 //----------------------------------------------------------------------
@@ -36,14 +38,21 @@ type SimNode struct {
 }
 
 // NewSimNode creates a new node in the test network
-func NewSimNode(prv *core.PeerPrivate, r2 float64, out chan core.Message, pos *Position) *SimNode {
+func NewSimNode(prv *core.PeerPrivate, out chan core.Message, pos *Position) *SimNode {
 	recv := make(chan core.Message)
 	return &SimNode{
 		Node: *core.NewNode(prv, recv, out),
-		r2:   r2,
+		r2:   Reach2,
 		pos:  pos,
 		recv: recv,
 	}
+}
+
+// Run the node after bootupTime.
+func (n *SimNode) Run() {
+	time.Sleep(Vary(BootupTime))
+	log.Printf("Node %s started\n", n.Node.PeerID())
+	n.Node.Run()
 }
 
 // CanReach returns true if the node can reach another node by broadcast

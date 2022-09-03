@@ -41,15 +41,15 @@ type Network struct {
 // NewNetwork creates a new network of 'numNodes' randomly distributed nodes
 // in an area of 'width x length'. All nodes have the same squared broadcast
 // range r2.
-func NewNetwork(numNodes int, width, length, r2 float64) *Network {
+func NewNetwork() *Network {
 	n := new(Network)
 	n.queue = make(chan core.Message, 10)
 	n.nodes = make(map[string]*SimNode)
 	// create and run nodes.
-	for i := 0; i < numNodes; i++ {
+	for i := 0; i < NumNodes; i++ {
 		prv := core.NewPeerPrivate()
-		pos := &Position{rand.Float64() * width, rand.Float64() * length}
-		node := NewSimNode(prv, r2, n.queue, pos)
+		pos := &Position{rand.Float64() * Width, rand.Float64() * Length}
+		node := NewSimNode(prv, n.queue, pos)
 		n.nodes[node.PeerID().Key()] = node
 		go node.Run()
 	}
