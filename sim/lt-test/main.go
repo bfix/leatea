@@ -52,9 +52,9 @@ func main() {
 loop:
 	for {
 		select {
-		case t := <-tick.C:
+		case <-tick.C:
 			cover := netw.Coverage()
-			log.Printf("%s: %.2f%%\n", t.Format(time.RFC1123), cover)
+			log.Printf("--> Coverage: %.2f%%\n", cover)
 			if cover > 99. {
 				break loop
 			}
