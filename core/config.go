@@ -27,6 +27,6 @@ const (
 )
 
 var (
-	ttlEntry  = time.Minute      // time to live for a table entry
+	ttlEntry  = 2 * time.Minute  // time to live for a table entry (neighbor)
 	learnIntv = 10 * time.Second // LEARN intervall
 )
