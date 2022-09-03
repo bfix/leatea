@@ -21,6 +21,7 @@
 package core
 
 import (
+	"log"
 	"sort"
 	"sync"
 
@@ -52,7 +53,7 @@ func (e *Entry) WithHop() bool {
 
 // Size of the binary representation
 func (e *Entry) Size() uint {
-	size := e.Peer.Size() + 10
+	size := e.Peer.Size() + 11
 	if e.Hops > 0 {
 		size += e.NextHop.Size()
 	}
@@ -100,6 +101,7 @@ func (t *ForwardTable) Add(e *Entry) {
 	// check for changes if entry exists
 	if e2, ok := t.list[key]; ok && e.Equal(e2) {
 		// no change
+		e2.LastSeen = TimeNow()
 		return
 	}
 	// insert/update into table
@@ -118,6 +120,7 @@ func (t *ForwardTable) Cleanup() {
 		if e.NextHop == nil && e.LastSeen.Expired(ttlEntry) {
 			nList[e.Peer.Key()] = struct{}{}
 			delete(t.list, k)
+			log.Printf("Neighbor %s of %s expired (%s)\n", e.Peer, t.self, e.LastSeen)
 		}
 	}
 	// remove forwards depending on removed neighbors
@@ -125,6 +128,7 @@ func (t *ForwardTable) Cleanup() {
 		if e.NextHop != nil {
 			if _, ok := nList[e.NextHop.Key()]; ok {
 				delete(t.list, k)
+				log.Printf("Target %s on %s removed\n", e.Peer, t.self)
 			}
 		}
 	}
