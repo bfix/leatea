@@ -66,8 +66,8 @@ loop:
 			}
 		}
 	}
-	netw.Stop()
-	log.Println("Routing complete.")
+	discarded := netw.Stop()
+	log.Printf("Routing complete, %d messages discarded", discarded)
 	trafIn, trafOut := netw.Traffic()
 	in := float64(trafIn) / float64(sim.NumNodes)
 	out := float64(trafOut) / float64(sim.NumNodes)
