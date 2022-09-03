@@ -23,6 +23,7 @@ package sim
 import (
 	"leatea/core"
 	"math/rand"
+	"time"
 )
 
 //----------------------------------------------------------------------
@@ -79,7 +80,7 @@ func (n *Network) Run() {
 }
 
 // Stop the network (message exchange)
-func (n *Network) Stop() {
+func (n *Network) Stop() int {
 	// stop all nodes
 	for _, node := range n.nodes {
 		if node.IsRunning() {
@@ -88,6 +89,20 @@ func (n *Network) Stop() {
 	}
 	// stop network
 	n.active = false
+
+	// discard messages in queue
+	discard := 0
+	wdog := time.NewTicker(5 * time.Second)
+loop:
+	for {
+		select {
+		case <-n.queue:
+			discard++
+		case <-wdog.C:
+			break loop
+		}
+	}
+	return discard
 }
 
 //----------------------------------------------------------------------
