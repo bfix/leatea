@@ -98,6 +98,11 @@ func (n *Node) Stop() {
 	n.active = false
 }
 
+// IsRunning returns true if the node is active
+func (n *Node) IsRunning() bool {
+	return n.active
+}
+
 // Receive handles an incoming message
 func (n *Node) Receive(msg Message) {
 	// add the sender as direct neighbor to the
