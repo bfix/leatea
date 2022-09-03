@@ -22,7 +22,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"leatea/sim"
 	"log"
 	"os"
@@ -32,33 +31,46 @@ import (
 )
 
 func main() {
-	var withTable bool
+	//------------------------------------------------------------------
+	// parse arguments
 	flag.Float64Var(&sim.Width, "w", 100., "width")
 	flag.Float64Var(&sim.Length, "l", 100., "length")
 	flag.Float64Var(&sim.Reach2, "r", 49., "reach^2")
-	flag.BoolVar(&withTable, "t", false, "table output")
 	flag.IntVar(&sim.NumNodes, "n", 500, "number of nodes")
 	flag.Parse()
 
+	//------------------------------------------------------------------
+	// Build and start test network
 	log.Println("Building network...")
 	netw := sim.NewNetwork()
 	log.Println("Running network...")
 	go netw.Run()
 
+	// prepare monitoring
 	sigCh := make(chan os.Signal, 5)
 	signal.Notify(sigCh)
-
 	tick := time.NewTicker(10 * time.Second)
+	lastCover := -1.0
+	repeat := 0
 loop:
 	for {
 		select {
 		case <-tick.C:
+			// show status (coverage)
 			cover := netw.Coverage()
 			log.Printf("--> Coverage: %.2f%%\n", cover)
-			if cover > 99. {
-				break loop
+			// break loop if coverage has not changed the last 10 epochs
+			if lastCover == cover {
+				repeat++
+				if repeat == 10 {
+					break loop
+				}
+			} else {
+				repeat = 0
+				lastCover = cover
 			}
 		case sig := <-sigCh:
+			// signal received
 			switch sig {
 			case syscall.SIGKILL, syscall.SIGINT, syscall.SIGTERM:
 				break loop
@@ -66,45 +78,45 @@ loop:
 			}
 		}
 	}
+	// stop network
 	discarded := netw.Stop()
 	log.Printf("Routing complete, %d messages discarded", discarded)
+
+	// show statistics
 	trafIn, trafOut := netw.Traffic()
 	in := float64(trafIn) / float64(sim.NumNodes)
 	out := float64(trafOut) / float64(sim.NumNodes)
 	log.Printf("Avg. traffic per node: %s in / %s out", sim.Scale(in), sim.Scale(out))
 
+	// test routing
+	// (1) Follow all routes; detect cycles and broken routes
 	success := 0
 	broken := 0
 	loop := 0
-	rt, allHops1 := netw.RoutingTable()
+	rt, graph, allHops1 := netw.RoutingTable()
 	allHops2 := 0
+	allHops3 := 0
+	nodes3 := 0
 	log.Println("Network routing table constructed - checking routes:")
 	for from, e := range rt {
 		for to := range e {
 			if from == to {
 				continue
 			}
-			ttl := sim.NumNodes
-			hops := 0
-			for {
-				hops++
-				next := rt[from][to]
-				if next == to {
-					success++
-					allHops2 += hops
-					break
-				}
-				if next < 0 {
-					broken++
-					break
-				}
-				from = next
-				if ttl--; ttl < 0 {
-					loop++
-					break
-				}
+			hops := route(rt, from, to)
+			switch hops {
+			case -1:
+				loop++
+			case 0:
+				broken++
+			default:
+				allHops2 += hops
+				success++
 			}
-
+			if r := graph.ShortestPath(from, to); r != nil {
+				nodes3++
+				allHops3 += r.Hops()
+			}
 		}
 	}
 	perc := func(n int) float64 {
@@ -114,20 +126,33 @@ loop:
 	log.Printf("  * Broken: %d (%.2f%%)\n", broken, perc(broken))
 	log.Printf("  * Success: %d (%.2f%%)\n", success, perc(success))
 	h2 := float64(allHops2) / float64(success)
-	log.Printf("  * Hops: %.2f (%.2f)\n", h2, allHops1)
+	h3 := float64(allHops3) / float64(nodes3)
+	log.Printf("  * Hops: %.2f (%.2f / %.2f)\n", h2, allHops1, h3)
 
-	if withTable {
-		log.Println("    1  2  3  4  5  6  7  8  9 10")
-		log.Println("  +--+--+--+--+--+--+--+--+--+--+")
-		for i, e := range rt {
-			s := fmt.Sprintf("%2d|", i+1)
-			for _, v := range e {
-				s += fmt.Sprintf("%2d|", v)
-			}
-			log.Println(s)
-			log.Println("  +--+--+--+--+--+--+--+--+--+--+")
-		}
-	}
+	// (2) build a graph from the node list and use "shortest path" methods
+	//     to compare routes (by number of hops)
 
 	log.Println("Done")
+}
+
+// ----------------------------------------------------------------------
+// Follow the route to target. Returns number of hops on success, 0 for
+// broken routes and -1 for cycles.
+func route(rt [][]int, from, to int) int {
+	ttl := sim.NumNodes
+	hops := 0
+	for {
+		hops++
+		next := rt[from][to]
+		if next == to {
+			return hops
+		}
+		if next < 0 {
+			return 0
+		}
+		from = next
+		if ttl--; ttl < 0 {
+			return -1
+		}
+	}
 }
