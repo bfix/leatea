@@ -41,6 +41,11 @@ func (t *Time) Expired(ttl time.Duration) bool {
 	return (time.Now().UnixMicro() - t.Val) > ttl.Microseconds()
 }
 
+// String returns a human-readabe timestamps
+func (t *Time) String() string {
+	return time.UnixMicro(t.Val).Format(time.RFC1123)
+}
+
 // TimeNow returns the current time
 func TimeNow() *Time {
 	return &Time{Val: time.Now().UnixMicro()}
