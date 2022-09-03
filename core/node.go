@@ -109,9 +109,11 @@ func (n *Node) Receive(msg Message) {
 	// forward table.
 	sender := msg.Sender()
 	e := &Entry{
-		Peer:     sender,
+		Forward: Forward{
+			Peer: sender,
+			Hops: 0,
+		},
 		NextHop:  nil,
-		Hops:     0,
 		LastSeen: TimeNow(),
 	}
 	n.rt.Add(e)

@@ -96,11 +96,11 @@ func (m *LearnMsg) String() string {
 type TeachMsg struct {
 	MessageImpl
 
-	Announce []*Entry `size:"*"` // unfiltered table entries
+	Announce []*Forward `size:"*"` // unfiltered table entries
 }
 
 // NewTeachMsg creates a new message for broadcast
-func NewTeachMsg(sender *PeerID, candidates []*Entry) *TeachMsg {
+func NewTeachMsg(sender *PeerID, candidates []*Forward) *TeachMsg {
 	msg := new(TeachMsg)
 	msg.Sender_ = sender
 	msg.Announce = candidates

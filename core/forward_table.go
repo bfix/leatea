@@ -37,13 +37,25 @@ import (
 // range) has no next hop and a hop count of 0 in the table.
 //----------------------------------------------------------------------
 
+// Forward (target peerid and distance/hops)
+type Forward struct {
+	Peer *PeerID ``           // target node
+	Hops uint16  `size:"big"` // number of hops to target
+}
+
+// Size returns the size of the binary representation
+func (f *Forward) Size() uint {
+	return 34
+}
+
+//......................................................................
+
 // Entry in forward table
 type Entry struct {
-	Peer     *PeerID ``                // target node
-	Hops     uint16  `size:"big"`      // number of hops to target
-	NextHop  *PeerID `opt:"(WithHop)"` // next hop (optional)
-	LastSeen *Time   ``                // last time seen
-	Pending  bool    ``                // entry changed but not forwarded
+	Forward
+	NextHop  *PeerID // next hop (nil for neighbors)
+	LastSeen *Time   // last time seen
+	Pending  bool    // entry changed but not forwarded
 }
 
 // WithHop returns true if next hop is set (used for serialization).
@@ -51,28 +63,16 @@ func (e *Entry) WithHop() bool {
 	return e.Hops > 0
 }
 
-// Size of the binary representation
-func (e *Entry) Size() uint {
-	size := e.Peer.Size() + 11
-	if e.Hops > 0 {
-		size += e.NextHop.Size()
-	}
-	return size
-}
-
 // Equal returns true if the base attributes of the entries are the same
 func (e *Entry) Equal(e2 *Entry) bool {
 	return e.Peer.Equal(e2.Peer) && e.Hops == e2.Hops && e.NextHop.Equal(e2.NextHop)
 }
 
-// Clone entry for response
-func (e *Entry) Clone() *Entry {
-	return &Entry{
-		Peer:     e.Peer,
-		NextHop:  e.NextHop,
-		Hops:     e.Hops,
-		LastSeen: e.LastSeen,
-		Pending:  false,
+// Forward entry for response (TEACH message)
+func (e *Entry) Target() *Forward {
+	return &Forward{
+		Peer: e.Peer,
+		Hops: e.Hops,
 	}
 }
 
@@ -157,7 +157,7 @@ func (t *ForwardTable) Filter() *data.SaltedBloomFilter {
 // Candiates from the table not filtered out. Candiates also can't have
 // sender as next hop. Pending entries (updated but not forwarded yet)
 // are collected if there is space for them in the result list
-func (t *ForwardTable) Candidates(m *LearnMsg) (list []*Entry) {
+func (t *ForwardTable) Candidates(m *LearnMsg) (list []*Forward) {
 	t.Lock()
 	defer t.Unlock()
 
@@ -165,7 +165,7 @@ func (t *ForwardTable) Candidates(m *LearnMsg) (list []*Entry) {
 	var fList []*Entry
 	for _, e := range t.list {
 		if !m.Filter.Contains(e.Peer.Bytes()) && !m.Sender().Equal(e.NextHop) {
-			fList = append(fList, e.Clone())
+			fList = append(fList, e)
 		}
 	}
 	// sort them by ascending hops
@@ -176,7 +176,7 @@ func (t *ForwardTable) Candidates(m *LearnMsg) (list []*Entry) {
 	if len(fList) >= maxTeachs {
 		for _, e := range fList[:maxTeachs] {
 			e.Pending = false
-			list = append(list, e.Clone())
+			list = append(list, e.Target())
 		}
 		return
 	}
@@ -202,7 +202,7 @@ func (t *ForwardTable) Candidates(m *LearnMsg) (list []*Entry) {
 		for i := 0; i < n; i++ {
 			e := pList[i]
 			e.Pending = false
-			list = append(list, e.Clone())
+			list = append(list, e.Target())
 		}
 	}
 	return
@@ -230,11 +230,13 @@ func (t *ForwardTable) Learn(m *TeachMsg) {
 		} else {
 			// not yet known: add to table
 			t.list[key] = &Entry{
-				Peer:     e.Peer,
+				Forward: Forward{
+					Peer: e.Peer,
+					Hops: e.Hops + 1,
+				},
 				NextHop:  m.Sender(),
-				Hops:     e.Hops + 1,
 				LastSeen: TimeNow(),
-				Pending:  false,
+				Pending:  true,
 			}
 		}
 	}
