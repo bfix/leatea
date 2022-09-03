@@ -82,7 +82,9 @@ func (n *Network) Run() {
 func (n *Network) Stop() {
 	// stop all nodes
 	for _, node := range n.nodes {
-		node.Stop()
+		if node.IsRunning() {
+			node.Stop()
+		}
 	}
 	// stop network
 	n.active = false
@@ -95,7 +97,7 @@ func (n *Network) Stop() {
 // Coverage returns the mean coverage of all forward tables (known targets)
 func (n *Network) Coverage() float64 {
 	total := 0
-	num := len(n.nodes)
+	num := activeNodes
 	for _, node := range n.nodes {
 		total += node.NumForwards()
 	}
