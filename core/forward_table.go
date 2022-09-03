@@ -108,13 +108,24 @@ func (t *ForwardTable) Add(e *Entry) {
 	t.list[key] = e
 }
 
+// Cleanup forward table and remove expired neighbors and their dependencies.
 func (t *ForwardTable) Cleanup() {
 	t.Lock()
 	defer t.Unlock()
 	// remove expired neighbors
+	nList := make(map[string]struct{})
 	for k, e := range t.list {
-		if e.LastSeen.Expired(ttlEntry) {
+		if e.NextHop == nil && e.LastSeen.Expired(ttlEntry) {
+			nList[e.Peer.Key()] = struct{}{}
 			delete(t.list, k)
+		}
+	}
+	// remove forwards depending on removed neighbors
+	for k, e := range t.list {
+		if e.NextHop != nil {
+			if _, ok := nList[e.NextHop.Key()]; ok {
+				delete(t.list, k)
+			}
 		}
 	}
 }
@@ -122,9 +133,12 @@ func (t *ForwardTable) Cleanup() {
 // Filter returns a bloomfilter from all table entries (PeerID).
 // Remove expired entries first.
 func (t *ForwardTable) Filter() *data.SaltedBloomFilter {
+	// cleanup first
+	t.Cleanup()
+
+	// generate bloomfilter
 	t.Lock()
 	defer t.Unlock()
-	// generate bloomfilter
 	salt := RndUInt32()
 	n := len(t.list) + 2
 	fpr := 1. / float64(n)
@@ -144,19 +158,22 @@ func (t *ForwardTable) Candidates(m *LearnMsg) (list []*Entry) {
 	defer t.Unlock()
 
 	// collect unfiltered entries
+	var fList []*Entry
 	for _, e := range t.list {
 		if !m.Filter.Contains(e.Peer.Bytes()) && !m.Sender().Equal(e.NextHop) {
-			e.Pending = false
-			list = append(list, e.Clone())
+			fList = append(fList, e.Clone())
 		}
 	}
 	// sort them by ascending hops
-	sort.Slice(list, func(i, j int) bool {
-		return list[i].Hops < list[j].Hops
+	sort.Slice(fList, func(i, j int) bool {
+		return fList[i].Hops < fList[j].Hops
 	})
 	// if list limit is reached, return results.
-	if len(list) >= maxTeachs {
-		list = list[:maxTeachs]
+	if len(fList) >= maxTeachs {
+		for _, e := range fList[:maxTeachs] {
+			e.Pending = false
+			list = append(list, e.Clone())
+		}
 		return
 	}
 
