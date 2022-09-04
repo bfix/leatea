@@ -167,13 +167,13 @@ func (n *Network) RoutingTable() ([][]int, *Graph, float64) {
 	g := NewGraph()
 	for k1, node1 := range n.nodes {
 		i1 := index[k1]
-		neighbors := g.NewRoute()
+		neighbors := make([]int, 0)
 		for k2, node2 := range n.nodes {
 			if k1 == k2 || !node1.CanReach(node2) {
 				continue
 			}
 			i2 := index[k2]
-			neighbors.Add(i2)
+			neighbors = append(neighbors, i2)
 		}
 		g.mdl[i1] = neighbors
 	}
