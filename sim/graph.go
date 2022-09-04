@@ -20,75 +20,52 @@
 
 package sim
 
-import "leatea/core"
+import (
+	"math"
+)
 
-type Route struct {
-	hops []int
-}
-
-func (r *Route) Clone() *Route {
-	return &Route{
-		hops: core.Clone(r.hops),
-	}
-}
-
-func (r *Route) Contains(n int) bool {
-	for _, h := range r.hops {
-		if h == n {
-			return true
-		}
-	}
-	return false
-}
-
-func (r *Route) Add(n int) {
-	r.hops = append(r.hops, n)
-}
-
-func (r *Route) Hops() int {
-	return len(r.hops) - 1
-}
-
+// Graph is a list of nodes that have a list of neighbors. The graph is
+// independently constructed from nodes and their positions and is not
+// based on results of the routing algorithm it is going to check.
 type Graph struct {
-	mdl map[int]*Route
+	mdl map[int][]int
 }
 
+// NewGraph creates a new graph instance
 func NewGraph() *Graph {
 	return &Graph{
-		mdl: make(map[int]*Route),
+		mdl: make(map[int][]int),
 	}
 }
 
-func (g *Graph) NewRoute() *Route {
-	return &Route{
-		hops: make([]int, 0),
+// Compute a distance vector from start node to all other nodes it can reach
+// (Dijkstra shortest path algorithm)
+func (g *Graph) Distance(start int) (dist []int) {
+	num := len(g.mdl)
+	spt := make([]bool, num)
+	dist = make([]int, num)
+	for i := range dist {
+		dist[i] = math.MaxInt
 	}
-}
-
-func (g *Graph) ShortestPath(start int, end int) *Route {
-	return g.shortestPath(start, end, g.NewRoute())
-}
-
-func (g *Graph) shortestPath(start int, end int, p *Route) (r *Route) {
-	if _, ok := g.mdl[start]; !ok {
-		return nil
-	}
-	r = p.Clone()
-	r.Add(start)
-	if start == end {
-		return r
-	}
-	var shortest *Route
-	for _, node := range g.mdl[start].hops {
-		if !p.Contains(node) {
-			newPath := g.shortestPath(node, end, r)
-			if newPath == nil {
-				continue
+	dist[start] = 0
+	for {
+		min := math.MaxInt
+		best := -1
+		for i, d := range dist {
+			if d < min && !spt[i] {
+				min = d
+				best = i
 			}
-			if shortest == nil || (len(newPath.hops) < len(shortest.hops)) {
-				shortest = newPath
+		}
+		if best == -1 {
+			return
+		}
+		spt[best] = true
+		d := dist[best] + 1
+		for _, v := range g.mdl[best] {
+			if d < dist[v] {
+				dist[v] = d
 			}
 		}
 	}
-	return shortest
 }
