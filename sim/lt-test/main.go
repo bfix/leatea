@@ -24,6 +24,7 @@ import (
 	"flag"
 	"leatea/sim"
 	"log"
+	"math"
 	"os"
 	"os/signal"
 	"syscall"
@@ -97,12 +98,16 @@ loop:
 	allHops2 := 0
 	allHops3 := 0
 	nodes3 := 0
+	total := float64(sim.NumNodes * (sim.NumNodes - 1))
+	count := 0
 	log.Println("Network routing table constructed - checking routes:")
 	for from, e := range rt {
+		distvec := graph.Distance((from))
 		for to := range e {
 			if from == to {
 				continue
 			}
+			count++
 			hops := route(rt, from, to)
 			switch hops {
 			case -1:
@@ -113,21 +118,23 @@ loop:
 				allHops2 += hops
 				success++
 			}
-			if r := graph.ShortestPath(from, to); r != nil {
+			if d := distvec[to]; d != math.MaxInt {
 				nodes3++
-				allHops3 += r.Hops()
+				allHops3 += d
 			}
 		}
 	}
 	perc := func(n int) float64 {
-		return float64(100*n) / float64(sim.NumNodes*(sim.NumNodes-1))
+		return float64(100*n) / total
 	}
 	log.Printf("  * Loops: %d (%.2f%%)\n", loop, perc(loop))
 	log.Printf("  * Broken: %d (%.2f%%)\n", broken, perc(broken))
 	log.Printf("  * Success: %d (%.2f%%)\n", success, perc(success))
 	h2 := float64(allHops2) / float64(success)
 	h3 := float64(allHops3) / float64(nodes3)
-	log.Printf("  * Hops: %.2f (%.2f / %.2f)\n", h2, allHops1, h3)
+	log.Printf("  * Hops (routg): %.2f (%d)\n", h2, success)
+	log.Printf("  * Hops (table): %.2f\n", allHops1)
+	log.Printf("  * Hops (check): %.2f (%d)\n", h3, nodes3)
 
 	// (2) build a graph from the node list and use "shortest path" methods
 	//     to compare routes (by number of hops)
