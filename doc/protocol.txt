@@ -1,11 +1,11 @@
 
-
 Forwarding table  []Entry
 -------------------------
-  PeerID
-  NextHop
-  HopCount
-  LastSeen
+  PeerID    // target peer
+  NextHop   // next hop in routing
+  HopCount  // hops until target
+  LastSeen  // relevant for neighbors that can expire
+  Pending   // entry not teach'd yet
 
 PeerFilter
 ----------
@@ -17,22 +17,19 @@ LEARN message
   Sender
   PeerFilter
 
-This is what I know (PeerFilter), want to learn more...
+  "This is what I know (PeerFilter), want to learn more..."
 
 On LEARN receive:
 -----------------
-∀ PeerID not in PeerFilter:
-  add FWT entry to TEACH response
-
-* number can be size limited (MTU); if limited sorted by LastSeen (desc) 
+* announce = {∀ PeerID not in PeerFilter}
+* sort announce by hops
+* len(announce) < limit: announce += {∀ PeerID: pending = true && PeerID != sender}
 
 TEACH message
 -------------
   Sender
-  []Entry
+  Announce []{ PeerID, hops }
 
 On TEACH receive:
 -----------------
 * add/update entries in FWT
-
-
