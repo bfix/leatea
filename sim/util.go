@@ -29,19 +29,19 @@ import (
 
 // Position (2D)
 type Position struct {
-	x, y float64
+	X, Y float64
 }
 
 // Distance2 returns the squared distance between positions.
 func (p *Position) Distance2(pos *Position) float64 {
-	dx := p.x - pos.x
-	dy := p.y - pos.y
+	dx := p.X - pos.X
+	dy := p.Y - pos.Y
 	return dx*dx + dy*dy
 }
 
 // String returns a human-readable representation
 func (p *Position) String() string {
-	return fmt.Sprintf("(%.2f,%.2f)", p.x, p.y)
+	return fmt.Sprintf("(%.2f,%.2f)", p.X, p.Y)
 }
 
 //----------------------------------------------------------------------

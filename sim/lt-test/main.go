@@ -34,16 +34,28 @@ import (
 func main() {
 	//------------------------------------------------------------------
 	// parse arguments
+	var mode, env string
 	flag.Float64Var(&sim.Width, "w", 100., "width")
 	flag.Float64Var(&sim.Length, "l", 100., "length")
 	flag.Float64Var(&sim.Reach2, "r", 49., "reach^2")
+	flag.Float64Var(&sim.BootupTime, "b", 0, "bootup time")
 	flag.IntVar(&sim.NumNodes, "n", 500, "number of nodes")
+	flag.StringVar(&mode, "m", "rand", "placement mode")
+	flag.StringVar(&env, "e", "open", "environment mode")
 	flag.Parse()
 
 	//------------------------------------------------------------------
 	// Build and start test network
 	log.Println("Building network...")
-	netw := sim.NewNetwork()
+	p, ok := nodePlacer[mode]
+	if !ok {
+		log.Fatalf("No topology '%s' defined.", mode)
+	}
+	e, ok := environment[env]
+	if !ok {
+		log.Fatalf("No environment '%s' defined.", env)
+	}
+	netw := sim.NewNetwork(p, e)
 	log.Println("Running network...")
 	go netw.Run()
 

@@ -34,25 +34,27 @@ var activeNodes = 0 // counter for currently active nodes.
 // SimNode represents a node in the test network (extended attributes)
 type SimNode struct {
 	core.Node
-	pos  *Position         // position in the field
-	r2   float64           // square of braodcast distance
-	recv chan core.Message // channel for incoming messages
+	pos   *Position         // position in the field
+	r2    float64           // square of braodcast distance
+	recv  chan core.Message // channel for incoming messages
+	delay time.Duration     // dela at startup
 }
 
 // NewSimNode creates a new node in the test network
-func NewSimNode(prv *core.PeerPrivate, out chan core.Message, pos *Position) *SimNode {
+func NewSimNode(prv *core.PeerPrivate, out chan core.Message, pos *Position, r2 float64, t time.Duration) *SimNode {
 	recv := make(chan core.Message)
 	return &SimNode{
-		Node: *core.NewNode(prv, recv, out),
-		r2:   Reach2,
-		pos:  pos,
-		recv: recv,
+		Node:  *core.NewNode(prv, recv, out),
+		r2:    r2,
+		pos:   pos,
+		recv:  recv,
+		delay: t,
 	}
 }
 
 // Run the node after bootupTime.
 func (n *SimNode) Run() {
-	time.Sleep(Vary(BootupTime))
+	time.Sleep(n.delay)
 	activeNodes++
 	log.Printf("Node %s (#%d) started\n", n.Node.PeerID(), activeNodes)
 	n.Node.Run()
