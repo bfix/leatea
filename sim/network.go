@@ -33,6 +33,7 @@ import (
 type Network struct {
 	env     Environment         // model of the environment
 	nodes   map[string]*SimNode // list of nodes (keyed by peerid)
+	index   map[string]int      // node index map
 	queue   chan core.Message   // "ether" for message transport
 	trafOut uint64              // total "send" traffic
 	trafIn  uint64              // total "receive" traffic
@@ -47,13 +48,17 @@ func NewNetwork(env Environment) *Network {
 	n.env = env
 	n.queue = make(chan core.Message, 10)
 	n.nodes = make(map[string]*SimNode)
+	n.index = make(map[string]int)
 	// create and run nodes.
 	for i := 0; i < NumNodes; i++ {
 		r2, pos := env.Placement(i)
 		prv := core.NewPeerPrivate()
 		delay := Vary(BootupTime)
 		node := NewSimNode(prv, n.queue, pos, r2, delay)
-		n.nodes[node.PeerID().Key()] = node
+		key := node.PeerID().Key()
+		n.nodes[key] = node
+		n.index[key] = i
+		go node.Run(i + 1)
 	}
 	return n
 }
@@ -139,26 +144,20 @@ func (n *Network) RoutingTable() ([][]int, *Graph, float64) {
 		res[i] = make([]int, num)
 	}
 	// index maps a peerid to an integer
-	index := make(map[string]int)
-	pos := 0
-	for k := range n.nodes {
-		index[k] = pos
-		pos++
-	}
 	for k1, node1 := range n.nodes {
-		i1 := index[k1]
+		i1 := n.index[k1]
 		for k2, node2 := range n.nodes {
 			if k1 == k2 {
 				res[i1][i1] = -2 // "self" route
 				continue
 			}
-			i2 := index[k2]
+			i2 := n.index[k2]
 			if next, hops := node1.Forward(node2.PeerID()); hops > 0 {
 				allHops += hops
 				numRoute++
 				ref := i2
 				if next != nil {
-					ref = index[next.Key()]
+					ref = n.index[next.Key()]
 				}
 				res[i1][i2] = ref
 			} else {
@@ -169,13 +168,13 @@ func (n *Network) RoutingTable() ([][]int, *Graph, float64) {
 	// construct graph
 	g := NewGraph(n)
 	for k1, node1 := range n.nodes {
-		i1 := index[k1]
+		i1 := n.index[k1]
 		neighbors := make([]int, 0)
 		for k2, node2 := range n.nodes {
 			if k1 == k2 || !n.env.Connectivity(node1, node2) {
 				continue
 			}
-			i2 := index[k2]
+			i2 := n.index[k2]
 			neighbors = append(neighbors, i2)
 		}
 		g.mdl[i1] = neighbors

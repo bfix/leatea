@@ -23,10 +23,12 @@ package main
 import (
 	"leatea/sim"
 	"math"
+
+	svg "github.com/ajstarks/svgo"
 )
 
 //----------------------------------------------------------------------
-// Modul with circular node layout (evenly spaced) with reach just
+// Model with circular node layout (evenly spaced) with reach just
 // spanning the two neighbors
 //----------------------------------------------------------------------
 
@@ -50,6 +52,11 @@ func (m *CircModel) Placement(i int) (r2 float64, pos *sim.Position) {
 	r2 = reach * reach
 	return
 }
+
+// Draw the environment
+func (m *CircModel) Draw(svg *svg.SVG, xlate func(x float64) int) {}
+
+//----------------------------------------------------------------------
 
 // Get the "physical" environment that controls connectivity
 func getEnvironment(env string) sim.Environment {

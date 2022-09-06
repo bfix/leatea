@@ -34,7 +34,7 @@ import (
 func main() {
 	//------------------------------------------------------------------
 	// parse arguments
-	var env string
+	var env, svg string
 	var limit int
 	flag.Float64Var(&sim.Width, "w", 100., "width")
 	flag.Float64Var(&sim.Length, "l", 100., "length")
@@ -42,6 +42,7 @@ func main() {
 	flag.Float64Var(&sim.BootupTime, "b", 0, "bootup time")
 	flag.IntVar(&sim.NumNodes, "n", 500, "number of nodes")
 	flag.StringVar(&env, "e", "open", "environment model")
+	flag.StringVar(&svg, "s", "", "SVG file name")
 	flag.IntVar(&limit, "z", 10, "number of unchanged coverages until end")
 	flag.Parse()
 
@@ -70,9 +71,6 @@ loop:
 			cover := netw.Coverage()
 			log.Printf("--> Coverage: %.2f%%", cover)
 			// break loop if coverage has not changed for some epochs
-			if cover == 100 {
-				break loop
-			}
 			if lastCover == cover {
 				repeat++
 				if repeat == limit {
@@ -101,8 +99,8 @@ loop:
 	out := float64(trafOut) / float64(sim.NumNodes)
 	log.Printf("Avg. traffic per node: %s in / %s out", sim.Scale(in), sim.Scale(out))
 
-	// test routing
-	// (1) Follow all routes; detect cycles and broken routes
+	// test routing:
+	// Follow all routes; detect cycles and broken routes
 	success := 0
 	broken := 0
 	loop := 0
@@ -148,9 +146,15 @@ loop:
 	log.Printf("  * Hops (table): %.2f", allHops1)
 	log.Printf("  * Hops (graph): %.2f (%d)", h3, nodes3)
 
-	// (2) build a graph from the node list and use "shortest path" methods
-	//     to compare routes (by number of hops)
-
+	// build SVG on demand
+	if len(svg) > 0 {
+		f, err := os.Create(svg)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+		graph.SVG(f)
+	}
 	log.Println("Done")
 }
 

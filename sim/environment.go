@@ -22,7 +22,8 @@ package sim
 
 import (
 	"math"
-	"math/rand"
+
+	svg "github.com/ajstarks/svgo"
 )
 
 type Environment interface {
@@ -32,6 +33,9 @@ type Environment interface {
 
 	// Placement decides where to place i.th node with calculated reach.
 	Placement(i int) (r2 float64, pos *Position)
+
+	// Draw the environment
+	Draw(svg *svg.SVG, xlate func(x float64) int)
 }
 
 //----------------------------------------------------------------------
@@ -69,11 +73,22 @@ func (m *WallModel) Connectivity(n1, n2 *SimNode) bool {
 // Placement decides where to place i.th node with calculated reach (interface impl)
 func (m *WallModel) Placement(i int) (r2 float64, pos *Position) {
 	pos = &Position{
-		X: rand.Float64() * Width,  //nolint:gosec // deterministic testing
-		Y: rand.Float64() * Length, //nolint:gosec // deterministic testing
+		X: Random.Float64() * Width,
+		Y: Random.Float64() * Length,
 	}
 	r2 = Reach2
 	return
+}
+
+// Draw the environment
+func (m *WallModel) Draw(svg *svg.SVG, xlate func(x float64) int) {
+	for _, wall := range m.walls {
+		x1 := xlate(wall.From.X)
+		y1 := xlate(wall.From.Y)
+		x2 := xlate(wall.To.X)
+		y2 := xlate(wall.To.Y)
+		svg.Line(x1, y1, x2, y2, "stroke:red;stroke-width:50")
+	}
 }
 
 // Add a new wall
@@ -130,9 +145,12 @@ func (m *RndModel) Connectivity(n1, n2 *SimNode) bool {
 // Placement decides where to place i.th node with calculated reach (interface impl)
 func (m *RndModel) Placement(i int) (r2 float64, pos *Position) {
 	pos = &Position{
-		X: rand.Float64() * Width,  //nolint:gosec // deterministic testing
-		Y: rand.Float64() * Length, //nolint:gosec // deterministic testing
+		X: Random.Float64() * Width,
+		Y: Random.Float64() * Length,
 	}
 	r2 = Reach2
 	return
 }
+
+// Draw the environment
+func (m *RndModel) Draw(svg *svg.SVG, xlate func(x float64) int) {}

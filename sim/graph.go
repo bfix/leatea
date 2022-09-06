@@ -21,20 +21,25 @@
 package sim
 
 import (
+	"io"
 	"math"
+
+	svg "github.com/ajstarks/svgo"
 )
 
 // Graph is a list of nodes that have a list of neighbors. The graph is
 // independently constructed from nodes and their positions and is not
 // based on results of the routing algorithm it is going to check.
 type Graph struct {
-	mdl map[int][]int
+	mdl  map[int][]int
+	netw *Network
 }
 
 // NewGraph creates a new graph instance
-func NewGraph() *Graph {
+func NewGraph(n *Network) *Graph {
 	return &Graph{
-		mdl: make(map[int][]int),
+		mdl:  make(map[int][]int),
+		netw: n,
 	}
 }
 
@@ -68,4 +73,51 @@ func (g *Graph) Distance(start int) (dist []int) {
 			}
 		}
 	}
+}
+
+// SVG creates an image of the graph
+func (g *Graph) SVG(wrt io.Writer) {
+	// find longest reach for offset
+	reach := 0.
+	for _, node := range g.netw.nodes {
+		if node.r2 > reach {
+			reach = node.r2
+		}
+	}
+	off := math.Sqrt(reach)
+	xlate := func(xy float64) int {
+		return int((xy + off) * 100)
+	}
+	// start generating SVG
+	canvas := svg.New(wrt)
+	canvas.Start(xlate(Width+2*off), xlate(Length+2*off))
+
+	// draw environment
+	g.netw.env.Draw(canvas, xlate)
+
+	// draw nodes
+	list := make([]*SimNode, len(g.netw.nodes))
+	for key, node := range g.netw.nodes {
+		cx := xlate(node.pos.X)
+		cy := xlate(node.pos.Y)
+		r := int(math.Sqrt(node.r2) * 100)
+		id := g.netw.index[key]
+		list[id] = node
+		canvas.Circle(cx, cy, 50, "fill:red")
+		canvas.Circle(cx, cy, r, "stroke:black;stroke-width:3;fill:none")
+		canvas.Text(cx, cy+120, node.PeerID().String(), "text-anchor:middle;font-size:100px")
+	}
+	// draw connections
+	for key, node := range g.netw.nodes {
+		cx := xlate(node.pos.X)
+		cy := xlate(node.pos.Y)
+		id := g.netw.index[key]
+		for _, n := range g.mdl[id] {
+			node2 := list[n]
+			c2x := xlate(node2.pos.X)
+			c2y := xlate(node2.pos.Y)
+			canvas.Line(cx, cy, c2x, c2y, "stroke:black;stroke-width:15")
+		}
+	}
+	canvas.End()
 }
