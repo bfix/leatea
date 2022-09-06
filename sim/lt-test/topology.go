@@ -44,7 +44,7 @@ func (m *CircModel) Connectivity(n1, n2 *sim.SimNode) bool {
 func (m *CircModel) Placement(i int) (r2 float64, pos *sim.Position) {
 	rad := math.Max(sim.Length, sim.Width) / 2
 	alpha := 2 * math.Pi / float64(sim.NumNodes)
-	reach := rad * math.Tan(alpha)
+	reach := 1.2 * rad * math.Tan(alpha)
 	pos = &sim.Position{
 		X: sim.Width/2 + rad*math.Cos(float64(i)*alpha),
 		Y: sim.Length/2 + rad*math.Sin(float64(i)*alpha),
@@ -74,6 +74,13 @@ func getEnvironment(env string) sim.Environment {
 		mdlCross.Add(
 			&sim.Position{X: sim.Width / 2, Y: sim.Length / 3},
 			&sim.Position{X: sim.Width / 2, Y: 2 * sim.Length / 3},
+			0.)
+		return mdlCross
+	case "divide":
+		mdlCross := sim.NewWallModel()
+		mdlCross.Add(
+			&sim.Position{X: sim.Width / 3, Y: sim.Length / 2},
+			&sim.Position{X: sim.Width, Y: sim.Length / 2},
 			0.)
 		return mdlCross
 	}
