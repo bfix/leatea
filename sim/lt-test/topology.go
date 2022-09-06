@@ -23,57 +23,52 @@ package main
 import (
 	"leatea/sim"
 	"math"
-	"math/rand"
 )
 
-// Node placement configurations
-var nodePlacer = map[string]sim.Placement{
-	"rand": func(i int) (r2 float64, pos *sim.Position) {
-		pos = &sim.Position{
-			X: rand.Float64() * sim.Width,  //nolint:gosec // deterministic testing
-			Y: rand.Float64() * sim.Length, //nolint:gosec // deterministic testing
-		}
-		r2 = sim.Reach2
-		return
-	},
-	"circ": func(i int) (r2 float64, pos *sim.Position) {
-		rad := math.Max(sim.Length, sim.Width) / 2
-		alpha := 2 * math.Pi / float64(sim.NumNodes)
-		reach := rad * math.Tan(alpha)
-		pos = &sim.Position{
-			X: sim.Width/2 + rad*math.Cos(float64(i)*alpha),
-			Y: sim.Length/2 + rad*math.Sin(float64(i)*alpha),
-		}
-		r2 = reach * reach
-		return
-	},
-}
-
+//----------------------------------------------------------------------
+// Modul with circular node layout (evenly spaced) with reach just
+// spanning the two neighbors
 //----------------------------------------------------------------------
 
-func getEnvironment(env string) sim.Connectivity {
+// CircModel for special circular layout
+type CircModel struct{}
+
+// Connectivity between two nodes only based on reach (interface impl)
+func (m *CircModel) Connectivity(n1, n2 *sim.SimNode) bool {
+	return n1.CanReach(n2) || n2.CanReach(n1)
+}
+
+// Placement decides where to place i.th node with calculated reach (interface impl)
+func (m *CircModel) Placement(i int) (r2 float64, pos *sim.Position) {
+	rad := math.Max(sim.Length, sim.Width) / 2
+	alpha := 2 * math.Pi / float64(sim.NumNodes)
+	reach := rad * math.Tan(alpha)
+	pos = &sim.Position{
+		X: sim.Width/2 + rad*math.Cos(float64(i)*alpha),
+		Y: sim.Length/2 + rad*math.Sin(float64(i)*alpha),
+	}
+	r2 = reach * reach
+	return
+}
+
+// Get the "physical" environment that controls connectivity
+func getEnvironment(env string) sim.Environment {
 	switch env {
-	case "open":
-		return func(n1, n2 *sim.SimNode) bool {
-			return n1.CanReach(n2) || n2.CanReach(n1)
-		}
+	case "rand":
+		return new(sim.RndModel)
+	case "circ":
+		return new(CircModel)
 	case "cross":
 		mdlCross := sim.NewWallModel()
 		mdlCross.Add(
-			&sim.Position{X: 30, Y: 50},
-			&sim.Position{X: 70, Y: 50},
+			&sim.Position{X: sim.Width / 3, Y: sim.Length / 2},
+			&sim.Position{X: 2 * sim.Width / 3, Y: sim.Length / 2},
 			0.)
-		/*
-			mdlCross.Add(
-				&sim.Position{X: sim.Width / 3, Y: sim.Length / 2},
-				&sim.Position{X: 2 * sim.Width / 3, Y: sim.Length / 2},
-				0.)
-			mdlCross.Add(
-				&sim.Position{X: sim.Width / 2, Y: sim.Length / 3},
-				&sim.Position{X: sim.Width / 2, Y: 2 * sim.Length / 3},
-				0.)
-		*/
-		return mdlCross.CanReach
+		mdlCross.Add(
+			&sim.Position{X: sim.Width / 2, Y: sim.Length / 3},
+			&sim.Position{X: sim.Width / 2, Y: 2 * sim.Length / 3},
+			0.)
+		return mdlCross
 	}
 	return nil
 }

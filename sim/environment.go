@@ -20,18 +20,27 @@
 
 package sim
 
-import "math"
+import (
+	"math"
+	"math/rand"
+)
 
-// Connectivity between two nodes based on the "phsical" model
-// of the environment.
-type Connectivity func(n1, n2 *SimNode) bool
+type Environment interface {
+	// Connectivity between two nodes based on the "phsical" model
+	// of the environment.
+	Connectivity(n1, n2 *SimNode) bool
 
-// Placement describes how to place i.th node.
-type Placement func(i int) (r2 float64, pos *Position)
+	// Placement decides where to place i.th node with calculated reach.
+	Placement(i int) (r2 float64, pos *Position)
+}
+
+//----------------------------------------------------------------------
+// Model with "walls" that block connectivity
+//----------------------------------------------------------------------
 
 // WallModel for walls with opacity
 type WallModel struct {
-	walls []*Wall // list of walls in the world
+	walls []*Wall // list of all walls in the world
 }
 
 // NewWallModel returns an empty model for walls
@@ -41,8 +50,8 @@ func NewWallModel() *WallModel {
 	}
 }
 
-// CanReach implements the connectivity type
-func (m *WallModel) CanReach(n1, n2 *SimNode) bool {
+// Connectivity between two nodes based on a wall model (interface impl)
+func (m *WallModel) Connectivity(n1, n2 *SimNode) bool {
 	los := &Line{n1.pos, n2.pos}
 	red := 1.0
 	for _, w := range m.walls {
@@ -55,6 +64,16 @@ func (m *WallModel) CanReach(n1, n2 *SimNode) bool {
 	}
 	d2 := n1.pos.Distance2(n2.pos) / red
 	return n1.r2 > d2 || n2.r2 > d2
+}
+
+// Placement decides where to place i.th node with calculated reach (interface impl)
+func (m *WallModel) Placement(i int) (r2 float64, pos *Position) {
+	pos = &Position{
+		X: rand.Float64() * Width,  //nolint:gosec // deterministic testing
+		Y: rand.Float64() * Length, //nolint:gosec // deterministic testing
+	}
+	r2 = Reach2
+	return
 }
 
 // Add a new wall
@@ -93,4 +112,27 @@ func (l *Line) Side(p *Position) int {
 		return -1
 	}
 	return 1
+}
+
+//----------------------------------------------------------------------
+// Simple model with random distribution
+//----------------------------------------------------------------------
+
+// WallModel for walls with opacity
+type RndModel struct{}
+
+// Connectivity between two nodes only based on reach (interface impl)
+func (m *RndModel) Connectivity(n1, n2 *SimNode) bool {
+	d2 := n1.pos.Distance2(n2.pos)
+	return n1.r2 > d2 || n2.r2 > d2
+}
+
+// Placement decides where to place i.th node with calculated reach (interface impl)
+func (m *RndModel) Placement(i int) (r2 float64, pos *Position) {
+	pos = &Position{
+		X: rand.Float64() * Width,  //nolint:gosec // deterministic testing
+		Y: rand.Float64() * Length, //nolint:gosec // deterministic testing
+	}
+	r2 = Reach2
+	return
 }

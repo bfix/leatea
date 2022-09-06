@@ -34,28 +34,25 @@ import (
 func main() {
 	//------------------------------------------------------------------
 	// parse arguments
-	var mode, env string
+	var env string
+	var limit int
 	flag.Float64Var(&sim.Width, "w", 100., "width")
 	flag.Float64Var(&sim.Length, "l", 100., "length")
 	flag.Float64Var(&sim.Reach2, "r", 49., "reach^2")
 	flag.Float64Var(&sim.BootupTime, "b", 0, "bootup time")
 	flag.IntVar(&sim.NumNodes, "n", 500, "number of nodes")
-	flag.StringVar(&mode, "m", "rand", "placement mode")
-	flag.StringVar(&env, "e", "open", "environment mode")
+	flag.StringVar(&env, "e", "open", "environment model")
+	flag.IntVar(&limit, "z", 10, "number of unchanged coverages until end")
 	flag.Parse()
 
 	//------------------------------------------------------------------
 	// Build and start test network
 	log.Println("Building network...")
-	p, ok := nodePlacer[mode]
-	if !ok {
-		log.Fatalf("No topology '%s' defined.", mode)
-	}
 	e := getEnvironment(env)
 	if e == nil {
 		log.Fatalf("No environment '%s' defined.", env)
 	}
-	netw := sim.NewNetwork(p, e)
+	netw := sim.NewNetwork(e)
 	log.Println("Running network...")
 	go netw.Run()
 
@@ -78,7 +75,7 @@ loop:
 			}
 			if lastCover == cover {
 				repeat++
-				if repeat == 2 {
+				if repeat == limit {
 					break loop
 				}
 			} else {
