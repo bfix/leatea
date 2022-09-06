@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"leatea/core"
 	"log"
-	"time"
 )
 
 //----------------------------------------------------------------------
@@ -32,29 +31,20 @@ import (
 // SimNode represents a node in the test network (extended attributes)
 type SimNode struct {
 	core.Node
-	pos   *Position         // position in the field
-	r2    float64           // square of broadcast distance
-	recv  chan core.Message // channel for incoming messages
-	delay time.Duration     // dela at startup
+	pos  *Position         // position in the field
+	r2   float64           // square of broadcast distance
+	recv chan core.Message // channel for incoming messages
 }
 
 // NewSimNode creates a new node in the test network
-func NewSimNode(prv *core.PeerPrivate, out chan core.Message, pos *Position, r2 float64, t time.Duration) *SimNode {
+func NewSimNode(prv *core.PeerPrivate, out chan core.Message, pos *Position, r2 float64) *SimNode {
 	recv := make(chan core.Message)
 	return &SimNode{
-		Node:  *core.NewNode(prv, recv, out),
-		r2:    r2,
-		pos:   pos,
-		recv:  recv,
-		delay: t,
+		Node: *core.NewNode(prv, recv, out),
+		r2:   r2,
+		pos:  pos,
+		recv: recv,
 	}
-}
-
-// Run the node after bootupTime.
-func (n *SimNode) Run(i int) {
-	time.Sleep(n.delay)
-	log.Printf("Node %s started (#%d)", n.Node.PeerID(), i)
-	n.Node.Run()
 }
 
 // Stop the node

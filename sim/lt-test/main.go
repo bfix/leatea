@@ -71,7 +71,11 @@ loop:
 			// show status (coverage)
 			cover := netw.Coverage()
 			log.Printf("--> Coverage: %.2f%%", cover)
-			// break loop if coverage has not changed for some epochs
+			// if all nodes are running break loop if coverage has not
+			// changed for some epochs
+			if !netw.Booted() {
+				continue
+			}
 			if lastCover == cover {
 				repeat++
 				if repeat == limit {

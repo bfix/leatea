@@ -23,6 +23,7 @@ package sim
 import (
 	"io"
 	"leatea/core"
+	"log"
 	"math"
 	"time"
 
@@ -37,6 +38,7 @@ import (
 type Network struct {
 	env     Environment         // model of the environment
 	nodes   map[string]*SimNode // list of nodes (keyed by peerid)
+	running int                 // number of running nodes
 	index   map[string]int      // node index map
 	queue   chan core.Message   // "ether" for message transport
 	trafOut uint64              // total "send" traffic
@@ -53,16 +55,22 @@ func NewNetwork(env Environment) *Network {
 	n.queue = make(chan core.Message, 10)
 	n.nodes = make(map[string]*SimNode)
 	n.index = make(map[string]int)
+	n.running = 0
 	// create and run nodes.
 	for i := 0; i < NumNodes; i++ {
 		r2, pos := env.Placement(i)
 		prv := core.NewPeerPrivate()
 		delay := Vary(BootupTime)
-		node := NewSimNode(prv, n.queue, pos, r2, delay)
+		node := NewSimNode(prv, n.queue, pos, r2)
 		key := node.PeerID().Key()
 		n.nodes[key] = node
 		n.index[key] = i
-		go node.Run(i + 1)
+		go func() {
+			time.Sleep(delay)
+			n.running++
+			log.Printf("Node %s started (#%d)", node.Node.PeerID(), n.running)
+			node.Node.Run()
+		}()
 	}
 	return n
 }
@@ -89,6 +97,11 @@ func (n *Network) Run() {
 	}
 }
 
+// Botted returns true if all nodes have started
+func (n *Network) Booted() bool {
+	return n.running == len(n.nodes)
+}
+
 // Stop the network (message exchange)
 func (n *Network) Stop() int {
 	// stop all nodes
@@ -96,6 +109,7 @@ func (n *Network) Stop() int {
 	for _, node := range n.nodes {
 		remain--
 		if node.IsRunning() {
+			n.running--
 			node.Stop(remain)
 		}
 	}
