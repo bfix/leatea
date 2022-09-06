@@ -21,8 +21,12 @@
 package sim
 
 import (
+	"io"
 	"leatea/core"
+	"math"
 	"time"
+
+	svg "github.com/ajstarks/svgo"
 )
 
 //----------------------------------------------------------------------
@@ -134,21 +138,16 @@ func (n *Network) Traffic() (in, out uint64) {
 
 // RoutingTable returns the routing table for the whole
 // network and the average number of hops.
-func (n *Network) RoutingTable() ([][]int, *Graph, float64) {
+func (n *Network) RoutingTable() (*RoutingTable, *Graph, float64) {
 	allHops := 0
 	numRoute := 0
-	// create empty routing table
-	num := len(n.nodes)
-	res := make([][]int, num)
-	for i := range res {
-		res[i] = make([]int, num)
-	}
+	rt := NewRoutingTable(n)
 	// index maps a peerid to an integer
 	for k1, node1 := range n.nodes {
 		i1 := n.index[k1]
 		for k2, node2 := range n.nodes {
 			if k1 == k2 {
-				res[i1][i1] = -2 // "self" route
+				rt.List[i1][i1] = -2 // "self" route
 				continue
 			}
 			i2 := n.index[k2]
@@ -159,9 +158,9 @@ func (n *Network) RoutingTable() ([][]int, *Graph, float64) {
 				if next != nil {
 					ref = n.index[next.Key()]
 				}
-				res[i1][i2] = ref
+				rt.List[i1][i2] = ref
 			} else {
-				res[i1][i2] = -1
+				rt.List[i1][i2] = -1
 			}
 		}
 	}
@@ -180,5 +179,73 @@ func (n *Network) RoutingTable() ([][]int, *Graph, float64) {
 		g.mdl[i1] = neighbors
 	}
 	// return results
-	return res, g, float64(allHops) / float64(numRoute)
+	return rt, g, float64(allHops) / float64(numRoute)
+}
+
+type RoutingTable struct {
+	netw *Network
+	List [][]int
+}
+
+func NewRoutingTable(n *Network) *RoutingTable {
+	// create empty routing table
+	num := len(n.nodes)
+	res := make([][]int, num)
+	for i := range res {
+		res[i] = make([]int, num)
+	}
+	return &RoutingTable{
+		netw: n,
+		List: res,
+	}
+}
+
+// SVG creates an image of the graph
+func (rt *RoutingTable) SVG(wrt io.Writer) {
+	// find longest reach for offset
+	reach := 0.
+	for _, node := range rt.netw.nodes {
+		if node.r2 > reach {
+			reach = node.r2
+		}
+	}
+	off := math.Sqrt(reach)
+	xlate := func(xy float64) int {
+		return int((xy + off) * 100)
+	}
+	// start generating SVG
+	canvas := svg.New(wrt)
+	canvas.Start(xlate(Width+2*off), xlate(Length+2*off))
+
+	// draw environment
+	rt.netw.env.Draw(canvas, xlate)
+
+	// draw nodes
+	list := make([]*SimNode, len(rt.netw.nodes))
+	for key, node := range rt.netw.nodes {
+		cx := xlate(node.pos.X)
+		cy := xlate(node.pos.Y)
+		r := int(math.Sqrt(node.r2) * 100)
+		id := rt.netw.index[key]
+		list[id] = node
+		canvas.Circle(cx, cy, 50, "fill:red")
+		canvas.Circle(cx, cy, r, "stroke:black;stroke-width:3;fill:none")
+		canvas.Text(cx, cy+120, node.PeerID().String(), "text-anchor:middle;font-size:100px")
+	}
+	// draw connections
+	for from, neighbors := range rt.List {
+		node1 := list[from]
+		x1 := xlate(node1.pos.X)
+		y1 := xlate(node1.pos.Y)
+		for _, to := range neighbors {
+			if to < 0 {
+				continue
+			}
+			node2 := list[to]
+			x2 := xlate(node2.pos.X)
+			y2 := xlate(node2.pos.Y)
+			canvas.Line(x1, y1, x2, y2, "stroke:blue;stroke-width:15")
+		}
+	}
+	canvas.End()
 }

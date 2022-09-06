@@ -34,7 +34,7 @@ import (
 func main() {
 	//------------------------------------------------------------------
 	// parse arguments
-	var env, svg string
+	var env, svg, mode string
 	var limit int
 	flag.Float64Var(&sim.Width, "w", 100., "width")
 	flag.Float64Var(&sim.Length, "l", 100., "length")
@@ -43,6 +43,7 @@ func main() {
 	flag.IntVar(&sim.NumNodes, "n", 500, "number of nodes")
 	flag.StringVar(&env, "e", "open", "environment model")
 	flag.StringVar(&svg, "s", "", "SVG file name")
+	flag.StringVar(&mode, "m", "rt", "SVG mode (rt,graph)")
 	flag.IntVar(&limit, "z", 10, "number of unchanged coverages until end")
 	flag.Parse()
 
@@ -111,14 +112,14 @@ loop:
 	total := float64(sim.NumNodes * (sim.NumNodes - 1))
 	count := 0
 	log.Println("Network routing table constructed - checking routes:")
-	for from, e := range rt {
+	for from, e := range rt.List {
 		distvec := graph.Distance((from))
 		for to := range e {
 			if from == to {
 				continue
 			}
 			count++
-			hops := route(rt, from, to)
+			hops := route(rt.List, from, to)
 			switch hops {
 			case -1:
 				loop++
@@ -153,7 +154,14 @@ loop:
 			log.Fatal(err)
 		}
 		defer f.Close()
-		graph.SVG(f)
+		switch mode {
+		case "graph":
+			graph.SVG(f)
+		case "rt":
+			rt.SVG(f)
+		default:
+			log.Fatal("unknown SVG mode")
+		}
 	}
 	log.Println("Done")
 }
