@@ -22,6 +22,7 @@ package sim
 
 import (
 	"leatea/core"
+	"log"
 	"time"
 )
 
@@ -29,16 +30,9 @@ import (
 // Network simulation to test the LEATEA algorithm
 //----------------------------------------------------------------------
 
-// Environent defines the connectivity between two nodes based on the
-// "phsical" model of the environment.
-type Environment func(n1, n2 *SimNode) bool
-
-// Placement describes how to place i.th node.
-type Placement func(i int) (r2 float64, pos *Position)
-
 // Network is the overall test controller
 type Network struct {
-	env     Environment         // model of the environment
+	env     Connectivity        // model of the environment
 	nodes   map[string]*SimNode // list of nodes (keyed by peerid)
 	queue   chan core.Message   // "ether" for message transport
 	trafOut uint64              // total "send" traffic
@@ -49,20 +43,27 @@ type Network struct {
 // NewNetwork creates a new network of 'numNodes' randomly distributed nodes
 // in an area of 'width x length'. All nodes have the same squared broadcast
 // range r2.
-func NewNetwork(put Placement, env Environment) *Network {
+func NewNetwork(put Placement, env Connectivity) *Network {
 	n := new(Network)
 	n.env = env
 	n.queue = make(chan core.Message, 10)
 	n.nodes = make(map[string]*SimNode)
 	// create and run nodes.
+	var n1, n2 *SimNode
 	for i := 0; i < NumNodes; i++ {
 		r2, pos := put(i)
 		prv := core.NewPeerPrivate()
 		delay := Vary(BootupTime)
 		node := NewSimNode(prv, n.queue, pos, r2, delay)
+		if i == 0 {
+			n1 = node
+		} else if i == 1 {
+			n2 = node
+		}
 		n.nodes[node.PeerID().Key()] = node
-		go node.Run()
+		go node.Run(i + 1)
 	}
+	log.Printf("dist^2(n1,n2): %.3f, reach^2(n1): %.3f", n1.pos.Distance2(n2.pos), n1.r2)
 	return n
 }
 
@@ -91,9 +92,11 @@ func (n *Network) Run() {
 // Stop the network (message exchange)
 func (n *Network) Stop() int {
 	// stop all nodes
+	remain := len(n.nodes)
 	for _, node := range n.nodes {
+		remain--
 		if node.IsRunning() {
-			node.Stop()
+			node.Stop(remain)
 		}
 	}
 	// stop network
@@ -101,7 +104,7 @@ func (n *Network) Stop() int {
 
 	// discard messages in queue
 	discard := 0
-	wdog := time.NewTicker(5 * time.Second)
+	wdog := time.NewTicker(CoolDown)
 loop:
 	for {
 		select {
@@ -121,7 +124,7 @@ loop:
 // Coverage returns the mean coverage of all forward tables (known targets)
 func (n *Network) Coverage() float64 {
 	total := 0
-	num := activeNodes
+	num := len(n.nodes)
 	for _, node := range n.nodes {
 		total += node.NumForwards()
 	}
@@ -178,7 +181,7 @@ func (n *Network) RoutingTable() ([][]int, *Graph, float64) {
 		i1 := index[k1]
 		neighbors := make([]int, 0)
 		for k2, node2 := range n.nodes {
-			if k1 == k2 || !node1.CanReach(node2) {
+			if k1 == k2 || !n.env(node1, node2) {
 				continue
 			}
 			i2 := index[k2]

@@ -51,8 +51,8 @@ func main() {
 	if !ok {
 		log.Fatalf("No topology '%s' defined.", mode)
 	}
-	e, ok := environment[env]
-	if !ok {
+	e := getEnvironment(env)
+	if e == nil {
 		log.Fatalf("No environment '%s' defined.", env)
 	}
 	netw := sim.NewNetwork(p, e)
@@ -71,11 +71,14 @@ loop:
 		case <-tick.C:
 			// show status (coverage)
 			cover := netw.Coverage()
-			log.Printf("--> Coverage: %.2f%%\n", cover)
-			// break loop if coverage has not changed the last 10 epochs
+			log.Printf("--> Coverage: %.2f%%", cover)
+			// break loop if coverage has not changed for some epochs
+			if cover == 100 {
+				break loop
+			}
 			if lastCover == cover {
 				repeat++
-				if repeat == 10 {
+				if repeat == 2 {
 					break loop
 				}
 			} else {
@@ -139,14 +142,14 @@ loop:
 	perc := func(n int) float64 {
 		return float64(100*n) / total
 	}
-	log.Printf("  * Loops: %d (%.2f%%)\n", loop, perc(loop))
-	log.Printf("  * Broken: %d (%.2f%%)\n", broken, perc(broken))
-	log.Printf("  * Success: %d (%.2f%%)\n", success, perc(success))
+	log.Printf("  * Loops: %d (%.2f%%)", loop, perc(loop))
+	log.Printf("  * Broken: %d (%.2f%%)", broken, perc(broken))
+	log.Printf("  * Success: %d (%.2f%%)", success, perc(success))
 	h2 := float64(allHops2) / float64(success)
 	h3 := float64(allHops3) / float64(nodes3)
-	log.Printf("  * Hops (routg): %.2f (%d)\n", h2, success)
-	log.Printf("  * Hops (table): %.2f\n", allHops1)
-	log.Printf("  * Hops (check): %.2f (%d)\n", h3, nodes3)
+	log.Printf("  * Hops (routg): %.2f (%d)", h2, success)
+	log.Printf("  * Hops (table): %.2f", allHops1)
+	log.Printf("  * Hops (graph): %.2f (%d)", h3, nodes3)
 
 	// (2) build a graph from the node list and use "shortest path" methods
 	//     to compare routes (by number of hops)

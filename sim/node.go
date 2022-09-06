@@ -29,13 +29,11 @@ import (
 
 //----------------------------------------------------------------------
 
-var activeNodes = 0 // counter for currently active nodes.
-
 // SimNode represents a node in the test network (extended attributes)
 type SimNode struct {
 	core.Node
 	pos   *Position         // position in the field
-	r2    float64           // square of braodcast distance
+	r2    float64           // square of broadcast distance
 	recv  chan core.Message // channel for incoming messages
 	delay time.Duration     // dela at startup
 }
@@ -53,18 +51,16 @@ func NewSimNode(prv *core.PeerPrivate, out chan core.Message, pos *Position, r2 
 }
 
 // Run the node after bootupTime.
-func (n *SimNode) Run() {
+func (n *SimNode) Run(i int) {
 	time.Sleep(n.delay)
-	activeNodes++
-	log.Printf("Node %s (#%d) started\n", n.Node.PeerID(), activeNodes)
+	log.Printf("Node %s started (#%d)", n.Node.PeerID(), i)
 	n.Node.Run()
 }
 
 // Stop the node
-func (n *SimNode) Stop() {
+func (n *SimNode) Stop(running int) {
 	n.Node.Stop()
-	activeNodes--
-	log.Printf("Node %s stopped (%d running)\n", n.Node.PeerID(), activeNodes)
+	log.Printf("Node %s stopped (%d running)", n.Node.PeerID(), running)
 }
 
 // CanReach returns true if the node can reach another node by broadcast

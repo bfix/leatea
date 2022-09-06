@@ -27,8 +27,8 @@ import (
 )
 
 const (
-	MSG_LEARN = 1 // LEARN message type
-	MSG_TEACH = 2 // TEACH message type
+	MsgLEARN = 1 // LEARN message type
+	MsgTEACH = 2 // TEACH message type
 )
 
 //----------------------------------------------------------------------
@@ -78,7 +78,7 @@ type LearnMsg struct {
 // NewLearnMsg creates a new message for a learn broadcast
 func NewLearnMsg(sender *PeerID, filter *data.SaltedBloomFilter) *LearnMsg {
 	msg := new(LearnMsg)
-	msg.MsgType = MSG_LEARN
+	msg.MsgType = MsgLEARN
 	msg.MsgSize = uint16(4 + sender.Size() + filter.Size())
 	msg.Sender_ = sender
 	msg.Filter = filter
@@ -104,7 +104,7 @@ func NewTeachMsg(sender *PeerID, candidates []*Forward) *TeachMsg {
 	msg := new(TeachMsg)
 	msg.Sender_ = sender
 	msg.Announce = candidates
-	msg.MsgType = MSG_TEACH
+	msg.MsgType = MsgTEACH
 	msg.MsgSize = uint16(4 + sender.Size())
 	for _, e := range candidates {
 		msg.MsgSize += uint16(e.Size())

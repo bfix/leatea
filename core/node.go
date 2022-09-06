@@ -124,7 +124,7 @@ func (n *Node) Receive(msg Message) {
 	//------------------------------------------------------------------
 	// LEARN message received
 	//------------------------------------------------------------------
-	case MSG_LEARN:
+	case MsgLEARN:
 		m, _ := msg.(*LearnMsg)
 		// build a list of candidate entries for teaching:
 		// candidates are not included in the learn filter
@@ -138,7 +138,7 @@ func (n *Node) Receive(msg Message) {
 	//------------------------------------------------------------------
 	// TEACH message received
 	//------------------------------------------------------------------
-	case MSG_TEACH:
+	case MsgTEACH:
 		m, _ := msg.(*TeachMsg)
 		// learn new peers
 		n.rt.Learn(m)

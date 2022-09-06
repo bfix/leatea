@@ -120,7 +120,7 @@ func (t *ForwardTable) Cleanup() {
 		if e.NextHop == nil && e.LastSeen.Expired(ttlEntry) {
 			nList[e.Peer.Key()] = struct{}{}
 			delete(t.list, k)
-			log.Printf("Neighbor %s of %s expired (%s)\n", e.Peer, t.self, e.LastSeen)
+			log.Printf("Neighbor %s of %s expired (%s)", e.Peer, t.self, e.LastSeen)
 		}
 	}
 	// remove forwards depending on removed neighbors
@@ -128,7 +128,7 @@ func (t *ForwardTable) Cleanup() {
 		if e.NextHop != nil {
 			if _, ok := nList[e.NextHop.Key()]; ok {
 				delete(t.list, k)
-				log.Printf("Target %s on %s removed\n", e.Peer, t.self)
+				log.Printf("Target %s on %s removed", e.Peer, t.self)
 			}
 		}
 	}
