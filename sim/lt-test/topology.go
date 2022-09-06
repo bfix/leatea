@@ -26,11 +26,12 @@ import (
 	"math/rand"
 )
 
+// Node placement configurations
 var nodePlacer = map[string]sim.Placement{
 	"rand": func(i int) (r2 float64, pos *sim.Position) {
 		pos = &sim.Position{
-			X: rand.Float64() * sim.Width,
-			Y: rand.Float64() * sim.Length,
+			X: rand.Float64() * sim.Width,  //nolint:gosec // deterministic testing
+			Y: rand.Float64() * sim.Length, //nolint:gosec // deterministic testing
 		}
 		r2 = sim.Reach2
 		return
@@ -48,8 +49,31 @@ var nodePlacer = map[string]sim.Placement{
 	},
 }
 
-var environment = map[string]sim.Environment{
-	"open": func(n1, n2 *sim.SimNode) bool {
-		return n1.CanReach(n2) || n2.CanReach(n1)
-	},
+//----------------------------------------------------------------------
+
+func getEnvironment(env string) sim.Connectivity {
+	switch env {
+	case "open":
+		return func(n1, n2 *sim.SimNode) bool {
+			return n1.CanReach(n2) || n2.CanReach(n1)
+		}
+	case "cross":
+		mdlCross := sim.NewWallModel()
+		mdlCross.Add(
+			&sim.Position{X: 30, Y: 50},
+			&sim.Position{X: 70, Y: 50},
+			0.)
+		/*
+			mdlCross.Add(
+				&sim.Position{X: sim.Width / 3, Y: sim.Length / 2},
+				&sim.Position{X: 2 * sim.Width / 3, Y: sim.Length / 2},
+				0.)
+			mdlCross.Add(
+				&sim.Position{X: sim.Width / 2, Y: sim.Length / 3},
+				&sim.Position{X: sim.Width / 2, Y: 2 * sim.Length / 3},
+				0.)
+		*/
+		return mdlCross.CanReach
+	}
+	return nil
 }

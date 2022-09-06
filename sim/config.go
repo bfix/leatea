@@ -20,13 +20,19 @@
 
 package sim
 
-import "math/rand"
+import (
+	"math/rand"
+	"time"
+)
 
 var (
-	Random             = rand.New(rand.NewSource(19031962))
-	Width      float64 = 100.
-	Length     float64 = 100.
-	Reach2     float64 = 49.
+	Random = rand.New(rand.NewSource(19031962)) //nolint:gosec // deterministic testing
+
+	Width  float64 = 100.
+	Length float64 = 100.
+	Reach2 float64 = 49.
+
 	NumNodes   int     = 500
 	BootupTime float64 = 60.
+	CoolDown           = 5 * time.Second
 )
