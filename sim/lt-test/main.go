@@ -80,7 +80,7 @@ loop:
 					log.Fatal(err)
 				}
 				defer f.Close()
-				rt.SVG(f)
+				rt.SVG(f, false)
 
 			}
 			// if all nodes are running break loop if coverage has not
@@ -128,9 +128,9 @@ loop:
 		defer f.Close()
 		switch sim.Cfg.Options.SVGMode {
 		case "graph":
-			graph.SVG(f)
+			graph.SVG(f, true)
 		case "rt":
-			rt.SVG(f)
+			rt.SVG(f, true)
 		default:
 			log.Fatal("unknown SVG mode")
 		}

@@ -76,7 +76,7 @@ func (g *Graph) Distance(start int) (dist []int) {
 }
 
 // SVG creates an image of the graph
-func (g *Graph) SVG(wrt io.Writer) {
+func (g *Graph) SVG(wrt io.Writer, final bool) {
 	// find longest reach for offset
 	reach := 0.
 	for _, node := range g.netw.nodes {
@@ -98,29 +98,24 @@ func (g *Graph) SVG(wrt io.Writer) {
 	// draw nodes
 	list := make([]*SimNode, len(g.netw.nodes))
 	for key, node := range g.netw.nodes {
-		if !node.IsRunning() {
+		if !final && !node.IsRunning() {
+			continue
+		}
+		id := g.netw.index[key]
+		list[id] = node
+		node.Draw(canvas, xlate)
+	}
+	// draw connections
+	for key, node := range g.netw.nodes {
+		if node == nil || (!final && !node.IsRunning()) {
 			continue
 		}
 		x1 := xlate(node.pos.X)
 		y1 := xlate(node.pos.Y)
-		r := int(math.Sqrt(node.r2) * 100)
-		id := g.netw.index[key]
-		list[id] = node
-		canvas.Circle(x1, y1, 50, "fill:red")
-		canvas.Circle(x1, y1, r, "stroke:black;stroke-width:3;fill:none")
-		canvas.Text(x1, y1+130, node.PeerID().String(), "text-anchor:middle;font-size:100px")
-	}
-	// draw connections
-	for key, node1 := range g.netw.nodes {
-		if node1 == nil || !node1.IsRunning() {
-			continue
-		}
-		x1 := xlate(node1.pos.X)
-		y1 := xlate(node1.pos.Y)
 		id := g.netw.index[key]
 		for _, n := range g.mdl[id] {
 			node2 := list[n]
-			if node2 == nil || !node2.IsRunning() {
+			if node2 == nil || (!final && !node2.IsRunning()) {
 				continue
 			}
 			x2 := xlate(node2.pos.X)

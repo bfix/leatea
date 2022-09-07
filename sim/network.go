@@ -226,7 +226,7 @@ func NewRoutingTable(n *Network) *RoutingTable {
 }
 
 // SVG creates an image of the graph
-func (rt *RoutingTable) SVG(wrt io.Writer) {
+func (rt *RoutingTable) SVG(wrt io.Writer, final bool) {
 	// find longest reach for offset
 	reach := 0.
 	for _, node := range rt.netw.nodes {
@@ -248,22 +248,17 @@ func (rt *RoutingTable) SVG(wrt io.Writer) {
 	// draw nodes
 	list := make([]*SimNode, len(rt.netw.nodes))
 	for key, node := range rt.netw.nodes {
-		if !node.IsRunning() {
+		if !final && !node.IsRunning() {
 			continue
 		}
-		cx := xlate(node.pos.X)
-		cy := xlate(node.pos.Y)
-		r := int(math.Sqrt(node.r2) * 100)
 		id := rt.netw.index[key]
 		list[id] = node
-		canvas.Circle(cx, cy, 50, "fill:red")
-		canvas.Circle(cx, cy, r, "stroke:black;stroke-width:3;fill:none")
-		canvas.Text(cx, cy+120, node.PeerID().String(), "text-anchor:middle;font-size:100px")
+		node.Draw(canvas, xlate)
 	}
 	// draw connections
 	for from, neighbors := range rt.List {
 		node1 := list[from]
-		if node1 == nil || !node1.IsRunning() {
+		if node1 == nil || (!final && !node1.IsRunning()) {
 			continue
 		}
 		x1 := xlate(node1.pos.X)
