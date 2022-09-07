@@ -117,7 +117,7 @@ func (t *ForwardTable) Cleanup() {
 	// remove expired neighbors
 	nList := make(map[string]struct{})
 	for k, e := range t.list {
-		if e.NextHop == nil && e.LastSeen.Expired(ttlEntry) {
+		if e.NextHop == nil && e.LastSeen.Expired(cfg.TTLEntry) {
 			nList[e.Peer.Key()] = struct{}{}
 			delete(t.list, k)
 			log.Printf("Neighbor %s of %s expired (%s)", e.Peer, t.self, e.LastSeen)
@@ -173,8 +173,8 @@ func (t *ForwardTable) Candidates(m *LearnMsg) (list []*Forward) {
 		return fList[i].Hops < fList[j].Hops
 	})
 	// if list limit is reached, return results.
-	if len(fList) >= maxTeachs {
-		for _, e := range fList[:maxTeachs] {
+	if len(fList) >= cfg.MaxTeachs {
+		for _, e := range fList[:cfg.MaxTeachs] {
 			e.Pending = false
 			list = append(list, e.Target())
 		}
@@ -195,7 +195,7 @@ func (t *ForwardTable) Candidates(m *LearnMsg) (list []*Forward) {
 			return pList[i].Hops < pList[j].Hops
 		})
 		// append to result list
-		n := maxTeachs - len(list)
+		n := cfg.MaxTeachs - len(list)
 		if n > len(pList) {
 			n = len(pList)
 		}

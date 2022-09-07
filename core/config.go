@@ -22,11 +22,29 @@ package core
 
 import "time"
 
-const (
-	maxTeachs = 10 // max. number of entries in TEACH message
-)
+// Config for LEArn/TEAch core processes
+type Config struct {
+	MaxTeachs int           `json:"maxTeach"`  // max. number of entries in TEACH message
+	TTLEntry  time.Duration `json:"ttlEntry"`  // time to live for a table entry (neighbor)
+	LearnIntv time.Duration `json:"learnIntv"` // LEARN intervall
+}
 
-var (
-	ttlEntry  = 2 * time.Minute  // time to live for a table entry (neighbor)
-	learnIntv = 10 * time.Second // LEARN intervall
-)
+// package-local configuration data (with default values)
+var cfg = &Config{
+	MaxTeachs: 10,
+	TTLEntry:  time.Minute,
+	LearnIntv: 10 * time.Second,
+}
+
+// SetConfiguration before use
+func SetConfiguration(c *Config) {
+	if c.MaxTeachs > 0 {
+		cfg.MaxTeachs = c.MaxTeachs
+	}
+	if c.TTLEntry > 0 {
+		cfg.TTLEntry = c.TTLEntry
+	}
+	if c.LearnIntv > 0 {
+		cfg.LearnIntv = c.LearnIntv
+	}
+}
