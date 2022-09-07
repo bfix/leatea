@@ -74,8 +74,8 @@ func (n *SimNode) String() string {
 
 // Draw a node on the canvas
 func (n *SimNode) Draw(c Canvas) {
-	r := math.Sqrt(n.r2) * 100
-	c.Circle(n.pos.X, n.pos.Y, 0.2, 0, nil, ClrBlack)
-	c.Circle(n.pos.X, n.pos.Y, r, 3, ClrBlack, nil)
+	r := math.Sqrt(n.r2)
+	c.Circle(n.pos.X, n.pos.Y, 0.3, 0, nil, ClrRed)
+	c.Circle(n.pos.X, n.pos.Y, r, 0.03, ClrBlack, nil)
 	c.Text(n.pos.X, n.pos.Y+1.3, 1, n.PeerID().String(), "middle")
 }
