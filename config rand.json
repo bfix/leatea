@@ -1,0 +1,24 @@
+{
+    "core": {
+        "maxTeachs": 10,
+        "ttlEntry":  60,
+        "learnIntv": 10
+    },
+    "environment": {
+        "class": "rand",
+        "width": 100,
+        "length": 100,
+        "numNodes": 60,
+        "cooldown": 5
+    },
+    "node":{
+		"reach2": 500,
+		"bootup": 60,
+		"peerTTL": 600
+    },
+    "options": {
+        "video": false,
+        "svgFile": "rt/out",
+        "svgMode": "rt"
+    }
+}
