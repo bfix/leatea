@@ -24,6 +24,9 @@ import (
 	"fmt"
 	"leatea/core"
 	"log"
+	"math"
+
+	svg "github.com/ajstarks/svgo"
 )
 
 //----------------------------------------------------------------------
@@ -67,4 +70,14 @@ func (n *SimNode) Receive(msg core.Message) {
 // String returns a human-readable representation.
 func (n *SimNode) String() string {
 	return fmt.Sprintf("SimNode{%s @ %s}", n.Node.String(), n.pos)
+}
+
+// Draw a node on the canvas
+func (n *SimNode) Draw(canvas *svg.SVG, xlate func(float64) int) {
+	x1 := xlate(n.pos.X)
+	y1 := xlate(n.pos.Y)
+	r := int(math.Sqrt(n.r2) * 100)
+	canvas.Circle(x1, y1, 50, "fill:red")
+	canvas.Circle(x1, y1, r, "stroke:black;stroke-width:3;fill:none")
+	canvas.Text(x1, y1+130, n.PeerID().String(), "text-anchor:middle;font-size:100px")
 }
