@@ -237,6 +237,9 @@ func (rt *RoutingTable) SVG(wrt io.Writer) {
 	// draw nodes
 	list := make([]*SimNode, len(rt.netw.nodes))
 	for key, node := range rt.netw.nodes {
+		if !node.IsRunning() {
+			continue
+		}
 		cx := xlate(node.pos.X)
 		cy := xlate(node.pos.Y)
 		r := int(math.Sqrt(node.r2) * 100)
@@ -249,6 +252,9 @@ func (rt *RoutingTable) SVG(wrt io.Writer) {
 	// draw connections
 	for from, neighbors := range rt.List {
 		node1 := list[from]
+		if node1 == nil || !node1.IsRunning() {
+			continue
+		}
 		x1 := xlate(node1.pos.X)
 		y1 := xlate(node1.pos.Y)
 		for _, to := range neighbors {

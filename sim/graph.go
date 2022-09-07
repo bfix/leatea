@@ -98,25 +98,34 @@ func (g *Graph) SVG(wrt io.Writer) {
 	// draw nodes
 	list := make([]*SimNode, len(g.netw.nodes))
 	for key, node := range g.netw.nodes {
-		cx := xlate(node.pos.X)
-		cy := xlate(node.pos.Y)
+		if !node.IsRunning() {
+			continue
+		}
+		x1 := xlate(node.pos.X)
+		y1 := xlate(node.pos.Y)
 		r := int(math.Sqrt(node.r2) * 100)
 		id := g.netw.index[key]
 		list[id] = node
-		canvas.Circle(cx, cy, 50, "fill:red")
-		canvas.Circle(cx, cy, r, "stroke:black;stroke-width:3;fill:none")
-		canvas.Text(cx, cy+120, node.PeerID().String(), "text-anchor:middle;font-size:100px")
+		canvas.Circle(x1, y1, 50, "fill:red")
+		canvas.Circle(x1, y1, r, "stroke:black;stroke-width:3;fill:none")
+		canvas.Text(x1, y1+130, node.PeerID().String(), "text-anchor:middle;font-size:100px")
 	}
 	// draw connections
-	for key, node := range g.netw.nodes {
-		cx := xlate(node.pos.X)
-		cy := xlate(node.pos.Y)
+	for key, node1 := range g.netw.nodes {
+		if node1 == nil || !node1.IsRunning() {
+			continue
+		}
+		x1 := xlate(node1.pos.X)
+		y1 := xlate(node1.pos.Y)
 		id := g.netw.index[key]
 		for _, n := range g.mdl[id] {
 			node2 := list[n]
-			c2x := xlate(node2.pos.X)
-			c2y := xlate(node2.pos.Y)
-			canvas.Line(cx, cy, c2x, c2y, "stroke:black;stroke-width:15")
+			if node2 == nil || !node2.IsRunning() {
+				continue
+			}
+			x2 := xlate(node2.pos.X)
+			y2 := xlate(node2.pos.Y)
+			canvas.Line(x1, y1, x2, y2, "stroke:black;stroke-width:15")
 		}
 	}
 	canvas.End()
