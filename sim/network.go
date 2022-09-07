@@ -66,9 +66,11 @@ func NewNetwork(env Environment) *Network {
 		// run node (delayed)
 		go func() {
 			time.Sleep(delay)
-			n.running++
-			log.Printf("Node %s started (#%d)", node.Node.PeerID(), n.running)
-			node.Node.Run()
+			if n.active {
+				n.running++
+				log.Printf("Node %s started (#%d)", node.Node.PeerID(), n.running)
+				node.Node.Run()
+			}
 		}()
 		// shutdown node (delayed)
 		go func() {
