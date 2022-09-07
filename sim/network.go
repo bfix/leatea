@@ -57,19 +57,30 @@ func NewNetwork(env Environment) *Network {
 	n.index = make(map[string]int)
 	n.running = 0
 	// create and run nodes.
-	for i := 0; i < NumNodes; i++ {
+	for i := 0; i < Cfg.Env.NumNodes; i++ {
 		r2, pos := env.Placement(i)
 		prv := core.NewPeerPrivate()
-		delay := Vary(BootupTime)
+		delay := Vary(Cfg.Node.BootupTime)
+		ttl := Vary(Cfg.Node.PeerTTL) + delay
 		node := NewSimNode(prv, n.queue, pos, r2)
 		key := node.PeerID().Key()
 		n.nodes[key] = node
 		n.index[key] = i
+		// run node (delayed)
 		go func() {
 			time.Sleep(delay)
 			n.running++
 			log.Printf("Node %s started (#%d)", node.Node.PeerID(), n.running)
 			node.Node.Run()
+		}()
+		// shutdown node (delayed)
+		go func() {
+			// only some peers stop working
+			if Random.Float64() < Cfg.Node.DeathRate {
+				time.Sleep(ttl)
+				n.running--
+				node.Stop(n.running)
+			}
 		}()
 	}
 	return n
@@ -118,7 +129,7 @@ func (n *Network) Stop() int {
 
 	// discard messages in queue
 	discard := 0
-	wdog := time.NewTicker(CoolDown)
+	wdog := time.NewTicker(time.Duration(Cfg.Env.CoolDown) * time.Second)
 loop:
 	for {
 		select {
@@ -229,7 +240,7 @@ func (rt *RoutingTable) SVG(wrt io.Writer) {
 	}
 	// start generating SVG
 	canvas := svg.New(wrt)
-	canvas.Start(xlate(Width+2*off), xlate(Length+2*off))
+	canvas.Start(xlate(Cfg.Env.Width+2*off), xlate(Cfg.Env.Length+2*off))
 
 	// draw environment
 	rt.netw.env.Draw(canvas, xlate)

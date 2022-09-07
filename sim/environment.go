@@ -73,10 +73,10 @@ func (m *WallModel) Connectivity(n1, n2 *SimNode) bool {
 // Placement decides where to place i.th node with calculated reach (interface impl)
 func (m *WallModel) Placement(i int) (r2 float64, pos *Position) {
 	pos = &Position{
-		X: Random.Float64() * Width,
-		Y: Random.Float64() * Length,
+		X: Random.Float64() * Cfg.Env.Width,
+		Y: Random.Float64() * Cfg.Env.Length,
 	}
-	r2 = Reach2
+	r2 = Cfg.Node.Reach2
 	return
 }
 
@@ -145,10 +145,10 @@ func (m *RndModel) Connectivity(n1, n2 *SimNode) bool {
 // Placement decides where to place i.th node with calculated reach (interface impl)
 func (m *RndModel) Placement(i int) (r2 float64, pos *Position) {
 	pos = &Position{
-		X: Random.Float64() * Width,
-		Y: Random.Float64() * Length,
+		X: Random.Float64() * Cfg.Env.Width,
+		Y: Random.Float64() * Cfg.Env.Length,
 	}
-	r2 = Reach2
+	r2 = Cfg.Node.Reach2
 	return
 }
 

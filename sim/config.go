@@ -21,18 +21,92 @@
 package sim
 
 import (
+	"encoding/json"
+	"leatea/core"
 	"math/rand"
-	"time"
+	"os"
 )
 
-var (
-	Random = rand.New(rand.NewSource(19031962)) //nolint:gosec // deterministic testing
+// Random generator (deterministic) for reproducible tests
+var Random = rand.New(rand.NewSource(19031962)) //nolint:gosec // deterministic testing
 
-	Width  float64 = 100.
-	Length float64 = 100.
-	Reach2 float64 = 49.
+// Wall definition in environment
+type WallDef struct {
+	X1 float64 `json:"x1"`
+	Y1 float64 `json:"y1"`
+	X2 float64 `json:"x2"`
+	Y2 float64 `json:"y2"`
+	F  float64 `json:"f"`
+}
 
-	NumNodes   int     = 500
-	BootupTime float64 = 60.
-	CoolDown           = 5 * time.Second
-)
+// EnvironCfg holds configuration data for the environment
+type EnvironCfg struct {
+	Class    string     `json:"class"`
+	Width    float64    `json:"width"`
+	Length   float64    `json:"length"`
+	NumNodes int        `json:"numNodes"`
+	CoolDown int        `json:"cooldown"`
+	Walls    []*WallDef `json:"wall"`
+}
+
+// NodeCfg holds configuration data for simulated nodes
+type NodeCfg struct {
+	Reach2     float64 `json:"reach2"`
+	BootupTime float64 `json:"bootup"`
+	PeerTTL    float64 `json:"ttl"`
+	DeathRate  float64 `json:"deathRate"`
+}
+
+// Option for test options
+type Option struct {
+	Video     bool   `json:"video"`
+	SVGFile   string `json:"svgFile"`
+	SVGMode   string `json:"svgMode"`
+	MaxRepeat int    `json:"maxRepeat"`
+}
+
+// Config for test configuration data
+type Config struct {
+	Core    *core.Config `json:"core"`
+	Env     *EnvironCfg  `json:"environment"`
+	Node    *NodeCfg     `json:"node"`
+	Options *Option      `json:"options"`
+}
+
+// Cfg is the global configuration
+var Cfg = &Config{
+	Core: &core.Config{
+		MaxTeachs: 10,
+		TTLEntry:  60,
+		LearnIntv: 10,
+	},
+	Env: &EnvironCfg{
+		Width:    100.,
+		Length:   100.,
+		NumNodes: 60,
+		CoolDown: 5,
+	},
+	Node: &NodeCfg{
+		Reach2:     500.,
+		BootupTime: 60.,
+		PeerTTL:    600.,
+		DeathRate:  0.,
+	},
+	Options: &Option{
+		Video:     false,
+		SVGFile:   "",
+		SVGMode:   "rt",
+		MaxRepeat: 0,
+	},
+}
+
+//----------------------------------------------------------------------
+
+// ReadConfig to deserialize a configuration from a JSON file
+func ReadConfig(fn string) error {
+	data, err := os.ReadFile(fn)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, &Cfg)
+}

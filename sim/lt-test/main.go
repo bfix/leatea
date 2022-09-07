@@ -35,27 +35,21 @@ import (
 func main() {
 	//------------------------------------------------------------------
 	// parse arguments
-	var env, svg, mode string
-	var limit int
-	var video bool
-	flag.Float64Var(&sim.Width, "w", 100., "width")
-	flag.Float64Var(&sim.Length, "l", 100., "length")
-	flag.Float64Var(&sim.Reach2, "r", 49., "reach^2")
-	flag.Float64Var(&sim.BootupTime, "b", 0, "bootup time")
-	flag.IntVar(&sim.NumNodes, "n", 500, "number of nodes")
-	flag.StringVar(&env, "e", "open", "environment model")
-	flag.StringVar(&svg, "s", "", "SVG base name")
-	flag.StringVar(&mode, "m", "rt", "SVG mode (rt,graph)")
-	flag.IntVar(&limit, "z", 3, "exit on number of unchanged coverages (0 = off)")
-	flag.BoolVar(&video, "v", false, "generate SVG sequence")
+	var cfgFile string
+	flag.StringVar(&cfgFile, "c", "config.json", "JSON-encoded configuration file")
 	flag.Parse()
+
+	// read configuration
+	if err := sim.ReadConfig(cfgFile); err != nil {
+		log.Fatal(err)
+	}
 
 	//------------------------------------------------------------------
 	// Build and start test network
 	log.Println("Building network...")
-	e := getEnvironment(env)
+	e := getEnvironment(sim.Cfg.Env)
 	if e == nil {
-		log.Fatalf("No environment '%s' defined.", env)
+		log.Fatalf("No environment class '%s' defined.", sim.Cfg.Env.Class)
 	}
 	netw := sim.NewNetwork(e)
 	log.Println("Running network...")
@@ -76,10 +70,12 @@ loop:
 			// show status (coverage)
 			cover := netw.Coverage()
 			log.Printf("--> Coverage: %.2f%%", cover)
+			rt, _, hops := netw.RoutingTable()
+			status(rt, nil, hops)
+
 			// generate SVG if "video" mode is set.
-			if video {
-				rt, _, _ := netw.RoutingTable()
-				f, err := os.Create(fmt.Sprintf("%s.%03d.svg", svg, epoch))
+			if sim.Cfg.Options.Video {
+				f, err := os.Create(fmt.Sprintf("%s.%03d.svg", sim.Cfg.Options.SVGFile, epoch))
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -89,12 +85,12 @@ loop:
 			}
 			// if all nodes are running break loop if coverage has not
 			// changed for some epochs (if defined)
-			if !netw.Booted() || limit == 0 {
+			if !netw.Booted() || sim.Cfg.Options.MaxRepeat == 0 {
 				continue
 			}
 			if lastCover == cover {
 				repeat++
-				if repeat == limit {
+				if repeat == sim.Cfg.Options.MaxRepeat {
 					break loop
 				}
 			} else {
@@ -114,67 +110,23 @@ loop:
 	discarded := netw.Stop()
 	log.Printf("Routing complete, %d messages discarded", discarded)
 
-	// show statistics
+	// print final statistics
 	trafIn, trafOut := netw.Traffic()
-	in := float64(trafIn) / float64(sim.NumNodes)
-	out := float64(trafOut) / float64(sim.NumNodes)
+	in := float64(trafIn) / float64(sim.Cfg.Env.NumNodes)
+	out := float64(trafOut) / float64(sim.Cfg.Env.NumNodes)
 	log.Printf("Avg. traffic per node: %s in / %s out", sim.Scale(in), sim.Scale(out))
-
-	// test routing:
-	// Follow all routes; detect cycles and broken routes
-	success := 0
-	broken := 0
-	loop := 0
-	rt, graph, allHops1 := netw.RoutingTable()
-	allHops2 := 0
-	allHops3 := 0
-	nodes3 := 0
-	total := float64(sim.NumNodes * (sim.NumNodes - 1))
-	count := 0
 	log.Println("Network routing table constructed - checking routes:")
-	for from, e := range rt.List {
-		distvec := graph.Distance((from))
-		for to := range e {
-			if from == to {
-				continue
-			}
-			count++
-			hops := route(rt.List, from, to)
-			switch hops {
-			case -1:
-				loop++
-			case 0:
-				broken++
-			default:
-				allHops2 += hops
-				success++
-			}
-			if d := distvec[to]; d != math.MaxInt {
-				nodes3++
-				allHops3 += d
-			}
-		}
-	}
-	perc := func(n int) float64 {
-		return float64(100*n) / total
-	}
-	log.Printf("  * Loops: %d (%.2f%%)", loop, perc(loop))
-	log.Printf("  * Broken: %d (%.2f%%)", broken, perc(broken))
-	log.Printf("  * Success: %d (%.2f%%)", success, perc(success))
-	h2 := float64(allHops2) / float64(success)
-	h3 := float64(allHops3) / float64(nodes3)
-	log.Printf("  * Hops (routg): %.2f (%d)", h2, success)
-	log.Printf("  * Hops (table): %.2f", allHops1)
-	log.Printf("  * Hops (graph): %.2f (%d)", h3, nodes3)
+	rt, graph, hops := netw.RoutingTable()
+	status(rt, graph, hops)
 
 	// build SVG on demand
-	if len(svg) > 0 {
-		f, err := os.Create(svg + ".svg")
+	if len(sim.Cfg.Options.SVGFile) > 0 {
+		f, err := os.Create(sim.Cfg.Options.SVGFile + ".svg")
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer f.Close()
-		switch mode {
+		switch sim.Cfg.Options.SVGMode {
 		case "graph":
 			graph.SVG(f)
 		case "rt":
@@ -190,7 +142,7 @@ loop:
 // Follow the route to target. Returns number of hops on success, 0 for
 // broken routes and -1 for cycles.
 func route(rt [][]int, from, to int) int {
-	ttl := sim.NumNodes
+	ttl := sim.Cfg.Env.NumNodes
 	hops := 0
 	for {
 		hops++
@@ -205,5 +157,61 @@ func route(rt [][]int, from, to int) int {
 		if ttl--; ttl < 0 {
 			return -1
 		}
+	}
+}
+
+// Print status information on routing table (and optional on graph)
+// Follow all routes; detect cycles and broken routes
+func status(rt *sim.RoutingTable, g *sim.Graph, allHops1 float64) {
+	success := 0
+	broken := 0
+	loop := 0
+	allHops2 := 0
+	allHops3 := 0
+	nodes3 := 0
+	total := float64(sim.Cfg.Env.NumNodes * (sim.Cfg.Env.NumNodes - 1))
+	count := 0
+	var distvec []int
+	for from, e := range rt.List {
+		if g != nil {
+			distvec = g.Distance((from))
+		}
+		for to := range e {
+			if from == to {
+				continue
+			}
+			count++
+			hops := route(rt.List, from, to)
+			switch hops {
+			case -1:
+				loop++
+			case 0:
+				broken++
+			default:
+				allHops2 += hops
+				success++
+			}
+			if g != nil {
+				if d := distvec[to]; d != math.MaxInt {
+					nodes3++
+					allHops3 += d
+				}
+			}
+		}
+	}
+	perc := func(n int) float64 {
+		return float64(100*n) / total
+	}
+	log.Printf("  * Loops: %d (%.2f%%)", loop, perc(loop))
+	log.Printf("  * Broken: %d (%.2f%%)", broken, perc(broken))
+	log.Printf("  * Success: %d (%.2f%%)", success, perc(success))
+	h2 := float64(allHops2) / float64(success)
+	h3 := float64(allHops3) / float64(nodes3)
+	if success > 0 {
+		log.Printf("  * Hops (routg): %.2f (%d)", h2, success)
+		log.Printf("  * Hops (table): %.2f", allHops1)
+	}
+	if g != nil {
+		log.Printf("  * Hops (graph): %.2f (%d)", h3, nodes3)
 	}
 }

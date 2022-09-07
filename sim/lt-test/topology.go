@@ -42,12 +42,12 @@ func (m *CircModel) Connectivity(n1, n2 *sim.SimNode) bool {
 
 // Placement decides where to place i.th node with calculated reach (interface impl)
 func (m *CircModel) Placement(i int) (r2 float64, pos *sim.Position) {
-	rad := math.Max(sim.Length, sim.Width) / 2
-	alpha := 2 * math.Pi / float64(sim.NumNodes)
+	rad := math.Max(sim.Cfg.Env.Length, sim.Cfg.Env.Width) / 2
+	alpha := 2 * math.Pi / float64(sim.Cfg.Env.NumNodes)
 	reach := 1.2 * rad * math.Tan(alpha)
 	pos = &sim.Position{
-		X: sim.Width/2 + rad*math.Cos(float64(i)*alpha),
-		Y: sim.Length/2 + rad*math.Sin(float64(i)*alpha),
+		X: sim.Cfg.Env.Width/2 + rad*math.Cos(float64(i)*alpha),
+		Y: sim.Cfg.Env.Length/2 + rad*math.Sin(float64(i)*alpha),
 	}
 	r2 = reach * reach
 	return
@@ -59,30 +59,21 @@ func (m *CircModel) Draw(svg *svg.SVG, xlate func(x float64) int) {}
 //----------------------------------------------------------------------
 
 // Get the "physical" environment that controls connectivity
-func getEnvironment(env string) sim.Environment {
-	switch env {
+func getEnvironment(env *sim.EnvironCfg) sim.Environment {
+	switch env.Class {
 	case "rand":
 		return new(sim.RndModel)
 	case "circ":
 		return new(CircModel)
-	case "cross":
-		mdlCross := sim.NewWallModel()
-		mdlCross.Add(
-			&sim.Position{X: sim.Width / 3, Y: sim.Length / 2},
-			&sim.Position{X: 2 * sim.Width / 3, Y: sim.Length / 2},
-			0.)
-		mdlCross.Add(
-			&sim.Position{X: sim.Width / 2, Y: sim.Length / 3},
-			&sim.Position{X: sim.Width / 2, Y: 2 * sim.Length / 3},
-			0.)
-		return mdlCross
-	case "divide":
-		mdlCross := sim.NewWallModel()
-		mdlCross.Add(
-			&sim.Position{X: sim.Width / 3, Y: sim.Length / 2},
-			&sim.Position{X: sim.Width, Y: sim.Length / 2},
-			0.)
-		return mdlCross
+	case "wall":
+		mdl := sim.NewWallModel()
+		for _, wall := range env.Walls {
+			mdl.Add(
+				&sim.Position{X: wall.X1, Y: wall.Y1},
+				&sim.Position{X: wall.X2, Y: wall.Y2},
+				wall.F)
+		}
+		return mdl
 	}
 	return nil
 }

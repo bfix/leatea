@@ -90,7 +90,7 @@ func (g *Graph) SVG(wrt io.Writer) {
 	}
 	// start generating SVG
 	canvas := svg.New(wrt)
-	canvas.Start(xlate(Width+2*off), xlate(Length+2*off))
+	canvas.Start(xlate(Cfg.Env.Width+2*off), xlate(Cfg.Env.Length+2*off))
 
 	// draw environment
 	g.netw.env.Draw(canvas, xlate)
