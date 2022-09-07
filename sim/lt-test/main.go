@@ -22,6 +22,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"leatea/sim"
 	"log"
 	"math"
@@ -36,15 +37,17 @@ func main() {
 	// parse arguments
 	var env, svg, mode string
 	var limit int
+	var video bool
 	flag.Float64Var(&sim.Width, "w", 100., "width")
 	flag.Float64Var(&sim.Length, "l", 100., "length")
 	flag.Float64Var(&sim.Reach2, "r", 49., "reach^2")
 	flag.Float64Var(&sim.BootupTime, "b", 0, "bootup time")
 	flag.IntVar(&sim.NumNodes, "n", 500, "number of nodes")
 	flag.StringVar(&env, "e", "open", "environment model")
-	flag.StringVar(&svg, "s", "", "SVG file name")
+	flag.StringVar(&svg, "s", "", "SVG base name")
 	flag.StringVar(&mode, "m", "rt", "SVG mode (rt,graph)")
-	flag.IntVar(&limit, "z", 10, "number of unchanged coverages until end")
+	flag.IntVar(&limit, "z", 3, "exit on number of unchanged coverages (0 = off)")
+	flag.BoolVar(&video, "v", false, "generate SVG sequence")
 	flag.Parse()
 
 	//------------------------------------------------------------------
@@ -62,18 +65,31 @@ func main() {
 	sigCh := make(chan os.Signal, 5)
 	signal.Notify(sigCh)
 	tick := time.NewTicker(10 * time.Second)
+	epoch := 0
 	lastCover := -1.0
-	repeat := 0
+	repeat := 1
 loop:
 	for {
 		select {
 		case <-tick.C:
+			epoch++
 			// show status (coverage)
 			cover := netw.Coverage()
 			log.Printf("--> Coverage: %.2f%%", cover)
+			// generate SVG if "video" mode is set.
+			if video {
+				rt, _, _ := netw.RoutingTable()
+				f, err := os.Create(fmt.Sprintf("%s.%03d.svg", svg, epoch))
+				if err != nil {
+					log.Fatal(err)
+				}
+				defer f.Close()
+				rt.SVG(f)
+
+			}
 			// if all nodes are running break loop if coverage has not
-			// changed for some epochs
-			if !netw.Booted() {
+			// changed for some epochs (if defined)
+			if !netw.Booted() || limit == 0 {
 				continue
 			}
 			if lastCover == cover {
@@ -82,7 +98,7 @@ loop:
 					break loop
 				}
 			} else {
-				repeat = 0
+				repeat = 1
 				lastCover = cover
 			}
 		case sig := <-sigCh:
@@ -153,7 +169,7 @@ loop:
 
 	// build SVG on demand
 	if len(svg) > 0 {
-		f, err := os.Create(svg)
+		f, err := os.Create(svg + ".svg")
 		if err != nil {
 			log.Fatal(err)
 		}
