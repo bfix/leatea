@@ -1,18 +1,18 @@
 {
     "core": {
         "maxTeachs": 10,
-        "ttlEntry":  60,
+        "ttlEntry":  40,
         "learnIntv": 10
     },
     "environment": {
         "class": "wall",
         "width": 100,
-        "length": 100,
-        "numNodes": 60,
+        "height": 100,
+        "numNodes": 100,
         "cooldown": 5,
         "walls": [
             {
-                "x1": 30,
+                "x1": 33.3333,
                 "y1": 50,
                 "x2": 100,
                 "y2": 50,
@@ -23,11 +23,13 @@
     "node":{
 		"reach2": 500,
 		"bootup": 60,
-		"peerTTL": 600
+		"peerTTL": 0,
+        "deathRate": 0
     },
     "options": {
         "video": false,
         "svgFile": "rt/out",
-        "svgMode": "rt"
+        "svgMode": "rt",
+        "maxRepeat": 10
     }
 }

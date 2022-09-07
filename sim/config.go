@@ -43,7 +43,7 @@ type WallDef struct {
 type EnvironCfg struct {
 	Class    string     `json:"class"`
 	Width    float64    `json:"width"`
-	Length   float64    `json:"length"`
+	Height   float64    `json:"height"`
 	NumNodes int        `json:"numNodes"`
 	CoolDown int        `json:"cooldown"`
 	Walls    []*WallDef `json:"walls"`
@@ -82,7 +82,7 @@ var Cfg = &Config{
 	},
 	Env: &EnvironCfg{
 		Width:    100.,
-		Length:   100.,
+		Height:   100.,
 		NumNodes: 60,
 		CoolDown: 5,
 	},
