@@ -20,20 +20,18 @@
 
 package core
 
-import "time"
-
 // Config for LEArn/TEAch core processes
 type Config struct {
-	MaxTeachs int           `json:"maxTeach"`  // max. number of entries in TEACH message
-	TTLEntry  time.Duration `json:"ttlEntry"`  // time to live for a table entry (neighbor)
-	LearnIntv time.Duration `json:"learnIntv"` // LEARN intervall
+	MaxTeachs int `json:"maxTeach"`  // max. number of entries in TEACH message
+	TTLEntry  int `json:"ttlEntry"`  // time to live for a table entry (neighbor)
+	LearnIntv int `json:"learnIntv"` // LEARN intervall
 }
 
 // package-local configuration data (with default values)
 var cfg = &Config{
 	MaxTeachs: 10,
-	TTLEntry:  time.Minute,
-	LearnIntv: 10 * time.Second,
+	TTLEntry:  60,
+	LearnIntv: 10,
 }
 
 // SetConfiguration before use

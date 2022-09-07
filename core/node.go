@@ -77,7 +77,7 @@ func (n *Node) Forward(target *PeerID) (*PeerID, int) {
 // Run the node (with periodic tasks and message handling)
 func (n *Node) Run() {
 	// broadcast LEARN message periodically
-	learn := time.NewTicker(cfg.LearnIntv)
+	learn := time.NewTicker(time.Duration(cfg.LearnIntv) * time.Second)
 	n.active = true
 	for n.active {
 		select {

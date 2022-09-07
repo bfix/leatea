@@ -24,6 +24,7 @@ import (
 	"log"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/bfix/gospel/data"
 )
@@ -117,7 +118,7 @@ func (t *ForwardTable) Cleanup() {
 	// remove expired neighbors
 	nList := make(map[string]struct{})
 	for k, e := range t.list {
-		if e.NextHop == nil && e.LastSeen.Expired(cfg.TTLEntry) {
+		if e.NextHop == nil && e.LastSeen.Expired(time.Duration(cfg.TTLEntry)*time.Second) {
 			nList[e.Peer.Key()] = struct{}{}
 			delete(t.list, k)
 			log.Printf("Neighbor %s of %s expired (%s)", e.Peer, t.self, e.LastSeen)
