@@ -46,7 +46,7 @@ type EnvironCfg struct {
 	Length   float64    `json:"length"`
 	NumNodes int        `json:"numNodes"`
 	CoolDown int        `json:"cooldown"`
-	Walls    []*WallDef `json:"wall"`
+	Walls    []*WallDef `json:"walls"`
 }
 
 // NodeCfg holds configuration data for simulated nodes
