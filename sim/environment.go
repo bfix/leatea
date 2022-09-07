@@ -154,3 +154,55 @@ func (m *RndModel) Placement(i int) (r2 float64, pos *Position) {
 
 // Draw the environment
 func (m *RndModel) Draw(svg *svg.SVG, xlate func(x float64) int) {}
+
+//----------------------------------------------------------------------
+// Model with circular node layout (evenly spaced) with reach just
+// spanning the two neighbors
+//----------------------------------------------------------------------
+
+// CircModel for special circular layout
+type CircModel struct{}
+
+// Connectivity between two nodes only based on reach (interface impl)
+func (m *CircModel) Connectivity(n1, n2 *SimNode) bool {
+	return n1.CanReach(n2) || n2.CanReach(n1)
+}
+
+// Placement decides where to place i.th node with calculated reach (interface impl)
+func (m *CircModel) Placement(i int) (r2 float64, pos *Position) {
+	rad := math.Max(Cfg.Env.Length, Cfg.Env.Width) / 2
+	alpha := 2 * math.Pi / float64(Cfg.Env.NumNodes)
+	reach := 1.2 * rad * math.Tan(alpha)
+	pos = &Position{
+		X: Cfg.Env.Width/2 + rad*math.Cos(float64(i)*alpha),
+		Y: Cfg.Env.Length/2 + rad*math.Sin(float64(i)*alpha),
+	}
+	r2 = reach * reach
+	return
+}
+
+// Draw the environment
+func (m *CircModel) Draw(svg *svg.SVG, xlate func(x float64) int) {}
+
+//----------------------------------------------------------------------
+
+// BuildEnvironment: create the "physical" environment that
+// controls connectivity and movement of nodes
+func BuildEnvironment(env *EnvironCfg) Environment {
+	switch env.Class {
+	case "rand":
+		return new(RndModel)
+	case "circ":
+		return new(CircModel)
+	case "wall":
+		mdl := NewWallModel()
+		for _, wall := range env.Walls {
+			mdl.Add(
+				&Position{X: wall.X1, Y: wall.Y1},
+				&Position{X: wall.X2, Y: wall.Y2},
+				wall.F)
+		}
+		return mdl
+	}
+	return nil
+}

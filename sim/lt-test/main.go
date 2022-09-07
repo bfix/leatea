@@ -47,7 +47,7 @@ func main() {
 	//------------------------------------------------------------------
 	// Build and start test network
 	log.Println("Building network...")
-	e := getEnvironment(sim.Cfg.Env)
+	e := sim.BuildEnvironment(sim.Cfg.Env)
 	if e == nil {
 		log.Fatalf("No environment class '%s' defined.", sim.Cfg.Env.Class)
 	}
