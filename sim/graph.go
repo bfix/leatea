@@ -23,8 +23,6 @@ package sim
 import (
 	"io"
 	"math"
-
-	svg "github.com/ajstarks/svgo"
 )
 
 // Graph is a list of nodes that have a list of neighbors. The graph is
@@ -84,16 +82,11 @@ func (g *Graph) SVG(wrt io.Writer, final bool) {
 			reach = node.r2
 		}
 	}
-	off := math.Sqrt(reach)
-	xlate := func(xy float64) int {
-		return int((xy + off) * 100)
-	}
 	// start generating SVG
-	canvas := svg.New(wrt)
-	canvas.Start(xlate(Cfg.Env.Width+2*off), xlate(Cfg.Env.Length+2*off))
+	canvas := NewSVGCanvas(wrt, Cfg.Env.Width, Cfg.Env.Height, math.Sqrt(reach))
 
 	// draw environment
-	g.netw.env.Draw(canvas, xlate)
+	g.netw.env.Draw(canvas)
 
 	// draw nodes
 	list := make([]*SimNode, len(g.netw.nodes))
@@ -103,24 +96,20 @@ func (g *Graph) SVG(wrt io.Writer, final bool) {
 		}
 		id := g.netw.index[key]
 		list[id] = node
-		node.Draw(canvas, xlate)
+		node.Draw(canvas)
 	}
 	// draw connections
 	for key, node := range g.netw.nodes {
 		if node == nil || (!final && !node.IsRunning()) {
 			continue
 		}
-		x1 := xlate(node.pos.X)
-		y1 := xlate(node.pos.Y)
 		id := g.netw.index[key]
 		for _, n := range g.mdl[id] {
 			node2 := list[n]
 			if node2 == nil || (!final && !node2.IsRunning()) {
 				continue
 			}
-			x2 := xlate(node2.pos.X)
-			y2 := xlate(node2.pos.Y)
-			canvas.Line(x1, y1, x2, y2, "stroke:black;stroke-width:15")
+			canvas.Line(node.pos.X, node.pos.Y, node2.pos.X, node2.pos.Y, 0.15, ClrBlack)
 		}
 	}
 	canvas.End()

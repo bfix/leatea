@@ -26,8 +26,6 @@ import (
 	"log"
 	"math"
 	"time"
-
-	svg "github.com/ajstarks/svgo"
 )
 
 //----------------------------------------------------------------------
@@ -47,7 +45,7 @@ type Network struct {
 }
 
 // NewNetwork creates a new network of 'numNodes' randomly distributed nodes
-// in an area of 'width x length'. All nodes have the same squared broadcast
+// in an area of 'width x height'. All nodes have the same squared broadcast
 // range r2.
 func NewNetwork(env Environment) *Network {
 	n := new(Network)
@@ -61,7 +59,6 @@ func NewNetwork(env Environment) *Network {
 		r2, pos := env.Placement(i)
 		prv := core.NewPeerPrivate()
 		delay := Vary(Cfg.Node.BootupTime)
-		ttl := Vary(Cfg.Node.PeerTTL) + delay
 		node := NewSimNode(prv, n.queue, pos, r2)
 		key := node.PeerID().Key()
 		n.nodes[key] = node
@@ -77,6 +74,7 @@ func NewNetwork(env Environment) *Network {
 		go func() {
 			// only some peers stop working
 			if Random.Float64() < Cfg.Node.DeathRate {
+				ttl := Vary(Cfg.Node.PeerTTL) + delay
 				time.Sleep(ttl)
 				n.running--
 				node.Stop(n.running)
@@ -234,16 +232,11 @@ func (rt *RoutingTable) SVG(wrt io.Writer, final bool) {
 			reach = node.r2
 		}
 	}
-	off := math.Sqrt(reach)
-	xlate := func(xy float64) int {
-		return int((xy + off) * 100)
-	}
 	// start generating SVG
-	canvas := svg.New(wrt)
-	canvas.Start(xlate(Cfg.Env.Width+2*off), xlate(Cfg.Env.Length+2*off))
+	canvas := NewSVGCanvas(wrt, Cfg.Env.Width, Cfg.Env.Height, math.Sqrt(reach))
 
 	// draw environment
-	rt.netw.env.Draw(canvas, xlate)
+	rt.netw.env.Draw(canvas)
 
 	// draw nodes
 	list := make([]*SimNode, len(rt.netw.nodes))
@@ -253,7 +246,7 @@ func (rt *RoutingTable) SVG(wrt io.Writer, final bool) {
 		}
 		id := rt.netw.index[key]
 		list[id] = node
-		node.Draw(canvas, xlate)
+		node.Draw(canvas)
 	}
 	// draw connections
 	for from, neighbors := range rt.List {
@@ -261,16 +254,12 @@ func (rt *RoutingTable) SVG(wrt io.Writer, final bool) {
 		if node1 == nil || (!final && !node1.IsRunning()) {
 			continue
 		}
-		x1 := xlate(node1.pos.X)
-		y1 := xlate(node1.pos.Y)
 		for _, to := range neighbors {
 			if to < 0 {
 				continue
 			}
 			node2 := list[to]
-			x2 := xlate(node2.pos.X)
-			y2 := xlate(node2.pos.Y)
-			canvas.Line(x1, y1, x2, y2, "stroke:blue;stroke-width:15")
+			canvas.Line(node1.pos.X, node1.pos.Y, node2.pos.X, node2.pos.Y, 0.15, ClrBlue)
 		}
 	}
 	canvas.End()

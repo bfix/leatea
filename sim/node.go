@@ -25,8 +25,6 @@ import (
 	"leatea/core"
 	"log"
 	"math"
-
-	svg "github.com/ajstarks/svgo"
 )
 
 //----------------------------------------------------------------------
@@ -35,6 +33,8 @@ import (
 type SimNode struct {
 	core.Node
 	pos  *Position         // position in the field
+	v    float64           // velocity (in units per epoch)
+	dir  float64           // direction [0,2π(
 	r2   float64           // square of broadcast distance
 	recv chan core.Message // channel for incoming messages
 }
@@ -73,11 +73,9 @@ func (n *SimNode) String() string {
 }
 
 // Draw a node on the canvas
-func (n *SimNode) Draw(canvas *svg.SVG, xlate func(float64) int) {
-	x1 := xlate(n.pos.X)
-	y1 := xlate(n.pos.Y)
-	r := int(math.Sqrt(n.r2) * 100)
-	canvas.Circle(x1, y1, 50, "fill:red")
-	canvas.Circle(x1, y1, r, "stroke:black;stroke-width:3;fill:none")
-	canvas.Text(x1, y1+130, n.PeerID().String(), "text-anchor:middle;font-size:100px")
+func (n *SimNode) Draw(c Canvas) {
+	r := math.Sqrt(n.r2) * 100
+	c.Circle(n.pos.X, n.pos.Y, 0.2, 0, nil, ClrBlack)
+	c.Circle(n.pos.X, n.pos.Y, r, 3, ClrBlack, nil)
+	c.Text(n.pos.X, n.pos.Y+1.3, 1, n.PeerID().String(), "middle")
 }

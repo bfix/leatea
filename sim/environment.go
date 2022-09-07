@@ -22,8 +22,6 @@ package sim
 
 import (
 	"math"
-
-	svg "github.com/ajstarks/svgo"
 )
 
 type Environment interface {
@@ -35,7 +33,7 @@ type Environment interface {
 	Placement(i int) (r2 float64, pos *Position)
 
 	// Draw the environment
-	Draw(svg *svg.SVG, xlate func(x float64) int)
+	Draw(Canvas)
 }
 
 //----------------------------------------------------------------------
@@ -74,20 +72,16 @@ func (m *WallModel) Connectivity(n1, n2 *SimNode) bool {
 func (m *WallModel) Placement(i int) (r2 float64, pos *Position) {
 	pos = &Position{
 		X: Random.Float64() * Cfg.Env.Width,
-		Y: Random.Float64() * Cfg.Env.Length,
+		Y: Random.Float64() * Cfg.Env.Height,
 	}
 	r2 = Cfg.Node.Reach2
 	return
 }
 
 // Draw the environment
-func (m *WallModel) Draw(svg *svg.SVG, xlate func(x float64) int) {
+func (m *WallModel) Draw(c Canvas) {
 	for _, wall := range m.walls {
-		x1 := xlate(wall.From.X)
-		y1 := xlate(wall.From.Y)
-		x2 := xlate(wall.To.X)
-		y2 := xlate(wall.To.Y)
-		svg.Line(x1, y1, x2, y2, "stroke:red;stroke-width:50")
+		c.Line(wall.From.X, wall.From.Y, wall.To.X, wall.To.Y, 0.7, ClrRed)
 	}
 }
 
@@ -146,14 +140,14 @@ func (m *RndModel) Connectivity(n1, n2 *SimNode) bool {
 func (m *RndModel) Placement(i int) (r2 float64, pos *Position) {
 	pos = &Position{
 		X: Random.Float64() * Cfg.Env.Width,
-		Y: Random.Float64() * Cfg.Env.Length,
+		Y: Random.Float64() * Cfg.Env.Height,
 	}
 	r2 = Cfg.Node.Reach2
 	return
 }
 
 // Draw the environment
-func (m *RndModel) Draw(svg *svg.SVG, xlate func(x float64) int) {}
+func (m *RndModel) Draw(Canvas) {}
 
 //----------------------------------------------------------------------
 // Model with circular node layout (evenly spaced) with reach just
@@ -170,19 +164,19 @@ func (m *CircModel) Connectivity(n1, n2 *SimNode) bool {
 
 // Placement decides where to place i.th node with calculated reach (interface impl)
 func (m *CircModel) Placement(i int) (r2 float64, pos *Position) {
-	rad := math.Max(Cfg.Env.Length, Cfg.Env.Width) / 2
+	rad := math.Max(Cfg.Env.Height, Cfg.Env.Width) / 2
 	alpha := 2 * math.Pi / float64(Cfg.Env.NumNodes)
 	reach := 1.2 * rad * math.Tan(alpha)
 	pos = &Position{
 		X: Cfg.Env.Width/2 + rad*math.Cos(float64(i)*alpha),
-		Y: Cfg.Env.Length/2 + rad*math.Sin(float64(i)*alpha),
+		Y: Cfg.Env.Height/2 + rad*math.Sin(float64(i)*alpha),
 	}
 	r2 = reach * reach
 	return
 }
 
 // Draw the environment
-func (m *CircModel) Draw(svg *svg.SVG, xlate func(x float64) int) {}
+func (m *CircModel) Draw(Canvas) {}
 
 //----------------------------------------------------------------------
 
