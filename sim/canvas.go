@@ -55,7 +55,7 @@ type Canvas interface {
 	Circle(x, y, r, w float64, clrBorder, clrFill *color.RGBA)
 
 	// Text primitive
-	Text(x, y, fs float64, s, anchor string)
+	Text(x, y, fs float64, s string)
 
 	// Line primitive
 	Line(x1, y1, x2, y2, w float64, clr *color.RGBA)
@@ -139,8 +139,8 @@ func (c *SVGCanvas) Circle(x, y, r, w float64, clrBorder, clrFill *color.RGBA) {
 }
 
 // Text primitive
-func (c *SVGCanvas) Text(x, y, fs float64, s, anchor string) {
-	style := fmt.Sprintf("text-anchor:%s;font-size:%dpx", anchor, int(fs/c.prec))
+func (c *SVGCanvas) Text(x, y, fs float64, s string) {
+	style := fmt.Sprintf("text-anchor:middle;font-size:%dpx", int(fs/c.prec))
 	c.svg.Text(c.xlate(x), c.xlate(y), s, style)
 }
 
@@ -259,7 +259,7 @@ func (c *SDLCanvas) Circle(x, y, r, w float64, clrBorder, clrFill *color.RGBA) {
 }
 
 // Text primitive
-func (c *SDLCanvas) Text(x, y, fs float64, s, anchor string) {
+func (c *SDLCanvas) Text(x, y, fs float64, s string) {
 	cx, cy := c.xlate(x, y)
 	cfs := c.scale * fs
 	c.cv.SetFillStyle(0, 0, 0)
