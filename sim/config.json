@@ -27,9 +27,10 @@
         "deathRate": 0
     },
     "render": {
-        "mode": "svg",
-        "file": "rt/out.svg",
-        "source": "rtab"
+        "mode": "sdl",
+        "source": "rtab",
+        "width": 800,
+        "height": 800
     },
     "options": {
         "maxRepeat": 3

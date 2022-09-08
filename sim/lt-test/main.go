@@ -134,20 +134,22 @@ loop:
 	// draw final network graph if canvas is not dynamic
 	if !c.IsDynamic() {
 		// start rendering
-		c.Open()
-		c.Start()
-		// draw environment
-		e.Draw(c)
-		// render graph
-		switch sim.Cfg.Render.Source {
-		case "graph":
-			graph.Render(c, true)
-		case "rtab":
-			rt.Render(c, true)
-		default:
-			log.Fatal("render: unknown source mode")
+		if err := c.Open(); err != nil {
+			log.Fatal(err)
 		}
-		c.End()
+		c.Render(func(c sim.Canvas) {
+			// draw environment
+			e.Draw(c)
+			// render graph
+			switch sim.Cfg.Render.Source {
+			case "graph":
+				graph.Render(c, true)
+			case "rtab":
+				rt.Render(c, true)
+			default:
+				log.Fatal("render: unknown source mode")
+			}
+		})
 		c.Close()
 	}
 	log.Println("Done")

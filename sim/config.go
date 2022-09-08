@@ -62,6 +62,8 @@ type RenderCfg struct {
 	Mode   string `json:"mode"`
 	Source string `json:"source"`
 	File   string `json:"file"`
+	Width  int    `json:"width"`
+	Height int    `json:"height"`
 }
 
 // Option for comtrol flags/values
