@@ -68,6 +68,16 @@ func (n *Node) NumForwards() int {
 	return len(n.rt.list)
 }
 
+// Return a list of direct neighbors
+func (n *Node) Neighbors() (list []*PeerID) {
+	for _, e := range n.rt.list {
+		if e.NextHop == nil {
+			list = append(list, e.Peer)
+		}
+	}
+	return
+}
+
 // Forward returns the next hop on the route to target and the number of
 // expected hops. If hop count is less than 0, a next hop doesn't exist
 // (broken route)
