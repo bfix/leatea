@@ -22,6 +22,7 @@ package main
 
 import (
 	"flag"
+	"leatea/core"
 	"leatea/sim"
 	"log"
 	"math"
@@ -61,7 +62,19 @@ func run(e sim.Environment, c sim.Canvas) {
 	log.Println("Building network...")
 	netw := sim.NewNetwork(e)
 	log.Println("Running network...")
-	go netw.Run()
+	go netw.Run(func(ev *core.Event) {
+		// listen to network events
+		switch ev.Type {
+		case sim.EvNodeAdded:
+			log.Printf("[%s] started (#%d)", ev.Peer, ev.Val)
+		case sim.EvNodeRemoved:
+			log.Printf("[%s] stopped (%d running)", ev.Peer, ev.Val)
+		case core.EvNeighborExpired:
+			log.Printf("[%s] neighbor %s expired", ev.Peer, ev.Ref)
+		case core.EvForwardRemoved:
+			log.Printf("[%s] forward %s removed", ev.Peer, ev.Ref)
+		}
+	})
 
 	// prepare monitoring
 	sigCh := make(chan os.Signal, 5)
@@ -120,6 +133,7 @@ loop:
 
 	// draw final network graph if canvas is not dynamic
 	if !c.IsDynamic() {
+		// start rendering
 		c.Open()
 		c.Start()
 		// draw environment

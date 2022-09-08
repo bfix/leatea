@@ -22,8 +22,13 @@ package sim
 
 import (
 	"leatea/core"
-	"log"
 	"time"
+)
+
+// Event types for network events
+const (
+	EvNodeAdded   = 10 // node added to network
+	EvNodeRemoved = 11 // node removed from network
 )
 
 //----------------------------------------------------------------------
@@ -40,6 +45,7 @@ type Network struct {
 	trafOut uint64              // total "send" traffic
 	trafIn  uint64              // total "receive" traffic
 	active  bool                // simulation running?
+	cb      core.Listener       // listener for network events
 }
 
 // NewNetwork creates a new network of 'numNodes' randomly distributed nodes
@@ -52,9 +58,15 @@ func NewNetwork(env Environment) *Network {
 	n.nodes = make(map[string]*SimNode)
 	n.index = make(map[string]int)
 	n.running = 0
+	return n
+}
+
+// Run the network simulation
+func (n *Network) Run(cb core.Listener) {
 	// create and run nodes.
+	n.cb = cb
 	for i := 0; i < Cfg.Env.NumNodes; i++ {
-		r2, pos := env.Placement(i)
+		r2, pos := n.env.Placement(i)
 		prv := core.NewPeerPrivate()
 		delay := Vary(Cfg.Node.BootupTime)
 		node := NewSimNode(prv, n.queue, pos, r2)
@@ -66,8 +78,14 @@ func NewNetwork(env Environment) *Network {
 			time.Sleep(delay)
 			if n.active {
 				n.running++
-				log.Printf("Node %s started (#%d)", node.PeerID(), n.running)
-				node.Run()
+				if cb != nil {
+					cb(&core.Event{
+						Type: EvNodeAdded,
+						Peer: node.PeerID(),
+						Val:  n.running,
+					})
+				}
+				node.Run(cb)
 			}
 		}()
 		// shutdown node (delayed)
@@ -77,15 +95,18 @@ func NewNetwork(env Environment) *Network {
 				ttl := Vary(Cfg.Node.PeerTTL) + delay
 				time.Sleep(ttl)
 				n.running--
-				node.Stop(n.running)
+				node.Stop()
+				if cb != nil {
+					cb(&core.Event{
+						Type: EvNodeRemoved,
+						Peer: node.PeerID(),
+						Val:  n.running,
+					})
+				}
 			}
 		}()
 	}
-	return n
-}
-
-// Run the network simulation
-func (n *Network) Run() {
+	// simulate transport layer
 	n.active = true
 	for n.active {
 		// wait for broadcasted message.
@@ -119,7 +140,14 @@ func (n *Network) Stop() int {
 		remain--
 		if node.IsRunning() {
 			n.running--
-			node.Stop(remain)
+			node.Stop()
+			if n.cb != nil {
+				n.cb(&core.Event{
+					Type: EvNodeRemoved,
+					Peer: node.PeerID(),
+					Val:  remain,
+				})
+			}
 		}
 	}
 	// stop network

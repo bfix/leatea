@@ -23,7 +23,6 @@ package sim
 import (
 	"fmt"
 	"leatea/core"
-	"log"
 	"math"
 )
 
@@ -51,15 +50,14 @@ func NewSimNode(prv *core.PeerPrivate, out chan core.Message, pos *Position, r2 
 }
 
 // Run the node
-func (n *SimNode) Run() {
+func (n *SimNode) Run(cb core.Listener) {
 	// run base node
-	n.Node.Run()
+	n.Node.Run(cb)
 }
 
 // Stop the node
-func (n *SimNode) Stop(running int) {
+func (n *SimNode) Stop() {
 	n.Node.Stop()
-	log.Printf("Node %s stopped (%d running)", n.Node.PeerID(), running)
 }
 
 // CanReach returns true if the node can reach another node by broadcast
