@@ -210,7 +210,7 @@ func (c *SDLCanvas) Open() (err error) {
 // IsDynamic returns true if the canvas can draw a
 // sequence of renderings (like UI or video canvases)
 func (c *SDLCanvas) IsDynamic() bool {
-	return false
+	return Cfg.Render.Dynamic
 }
 
 // Start the canvas (new rendering begins)

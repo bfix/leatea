@@ -74,31 +74,20 @@ func (g *Graph) Distance(start int) (dist []int) {
 
 // Render creates an image of the graph
 func (g *Graph) Render(canvas Canvas, final bool) {
-	// find longest reach for offset
-	reach := 0.
-	for _, node := range g.netw.nodes {
-		if node.r2 > reach {
-			reach = node.r2
-		}
-	}
 	// draw nodes
-	list := make([]*SimNode, len(g.netw.nodes))
-	for key, node := range g.netw.nodes {
+	for _, node := range g.netw.nodes {
 		if !final && !node.IsRunning() {
 			continue
 		}
-		id := g.netw.index[key]
-		list[id] = node
 		node.Draw(canvas)
 	}
 	// draw connections
-	for key, node := range g.netw.nodes {
+	for id, node := range g.netw.nodes {
 		if node == nil || (!final && !node.IsRunning()) {
 			continue
 		}
-		id := g.netw.index[key]
 		for _, n := range g.mdl[id] {
-			node2 := list[n]
+			node2 := g.netw.nodes[n]
 			if node2 == nil || (!final && !node2.IsRunning()) {
 				continue
 			}

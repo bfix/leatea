@@ -32,7 +32,13 @@ import (
 	"time"
 )
 
+// Network instance
+var netw *sim.Network
+
 func main() {
+	log.Println("LEArn/TEAch routing simulator")
+	log.Println("(c) 2022, Bernd Fix   >Y<")
+
 	//------------------------------------------------------------------
 	// parse arguments
 	var cfgFile string
@@ -52,15 +58,35 @@ func main() {
 	// get a canvas for drawing
 	c := sim.GetCanvas(sim.Cfg.Render)
 
-	// run simulation
-	run(e, c)
+	// run simulation depending on canvas mode (dynamic/static)
+	if c.IsDynamic() {
+		// start rendering
+		if err := c.Open(); err != nil {
+			log.Fatal(err)
+		}
+		// run simulation in go routine to keep main routine
+		// available for canvas.
+		go run(e, c)
+
+		// run render loop
+		c.Render(func(c sim.Canvas) {
+			if netw != nil {
+				netw.Render(c)
+			}
+		})
+		c.Close()
+	} else {
+		run(e, c)
+	}
+	log.Println("Done.")
 }
 
 func run(e sim.Environment, c sim.Canvas) {
 	//------------------------------------------------------------------
 	// Build and start test network
 	log.Println("Building network...")
-	netw := sim.NewNetwork(e)
+	netw = sim.NewNetwork(e)
+
 	log.Println("Running network...")
 	go netw.Run(func(ev *core.Event) {
 		// listen to network events
@@ -138,8 +164,6 @@ loop:
 			log.Fatal(err)
 		}
 		c.Render(func(c sim.Canvas) {
-			// draw environment
-			e.Draw(c)
 			// render graph
 			switch sim.Cfg.Render.Source {
 			case "graph":
@@ -149,10 +173,11 @@ loop:
 			default:
 				log.Fatal("render: unknown source mode")
 			}
+			// draw environment
+			e.Draw(c)
 		})
 		c.Close()
 	}
-	log.Println("Done")
 }
 
 // ----------------------------------------------------------------------

@@ -59,11 +59,12 @@ type NodeCfg struct {
 
 // RenderCfg options
 type RenderCfg struct {
-	Mode   string `json:"mode"`
-	Source string `json:"source"`
-	File   string `json:"file"`
-	Width  int    `json:"width"`
-	Height int    `json:"height"`
+	Mode    string `json:"mode"`
+	Source  string `json:"source"`
+	File    string `json:"file"`
+	Width   int    `json:"width"`
+	Height  int    `json:"height"`
+	Dynamic bool   `json:"dynamic"`
 }
 
 // Option for comtrol flags/values
