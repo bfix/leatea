@@ -28,7 +28,6 @@
     },
     "render": {
         "mode": "sdl",
-        "source": "rtab",
         "width": 800,
         "height": 800,
         "dynamic": true
