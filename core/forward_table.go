@@ -112,7 +112,7 @@ func (t *ForwardTable) Add(e *Entry) {
 }
 
 // Cleanup forward table and remove expired neighbors and their dependencies.
-func (t *ForwardTable) Cleanup() {
+func (t *ForwardTable) Cleanup(cb Listener) {
 	t.Lock()
 	defer t.Unlock()
 	// remove expired neighbors
@@ -121,7 +121,13 @@ func (t *ForwardTable) Cleanup() {
 		if e.NextHop == nil && e.LastSeen.Expired(time.Duration(cfg.TTLEntry)*time.Second) {
 			nList[e.Peer.Key()] = struct{}{}
 			delete(t.list, k)
-			log.Printf("Neighbor %s of %s expired (%s)", e.Peer, t.self, e.LastSeen)
+			if cb != nil {
+				cb(&Event{
+					Type: EvNeighborExpired,
+					Peer: t.self,
+					Ref:  e.Peer,
+				})
+			}
 		}
 	}
 	// remove forwards depending on removed neighbors
@@ -137,9 +143,9 @@ func (t *ForwardTable) Cleanup() {
 
 // Filter returns a bloomfilter from all table entries (PeerID).
 // Remove expired entries first.
-func (t *ForwardTable) Filter() *data.SaltedBloomFilter {
+func (t *ForwardTable) Filter(cb Listener) *data.SaltedBloomFilter {
 	// cleanup first
-	t.Cleanup()
+	t.Cleanup(cb)
 
 	// generate bloomfilter
 	t.Lock()

@@ -18,20 +18,23 @@
 // SPDX-License-Identifier: AGPL3.0-or-later
 //----------------------------------------------------------------------
 
-package sim
+package core
 
-import "leatea/core"
-
+// Event types
 const (
-	EvNodeAdded = iota
-	EvNodeRemoved
-	EvNodeSend
+	EvBeacon          = 1 // sending out LEARN message
+	EvLearning        = 2 // received TEACH message, learning peers
+	EvTeaching        = 3 // sending out TEACH message
+	EvNeighborExpired = 4 // neighbor expired
+	EvForwardRemoved  = 5 // forward removed from routing table
 )
 
 // Event from network if something interesting happens
 type Event struct {
-	Type int
-	Peer *core.PeerID
+	Type int     // event tpe (see consts)
+	Peer *PeerID // peer identifier
+	Ref  *PeerID // reference peer (optinal)
+	Val  int     // additional data
 }
 
 // Listener for network events

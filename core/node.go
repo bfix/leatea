@@ -35,6 +35,7 @@ type Node struct {
 	inCh   chan Message  // channel for incoming messages
 	outCh  chan Message  // channel for outgoing messages
 	active bool          // node running?
+	cb     Listener      // listen for node events
 }
 
 // NewNode creates a new node with a given private signing key and an input /
@@ -75,7 +76,8 @@ func (n *Node) Forward(target *PeerID) (*PeerID, int) {
 }
 
 // Run the node (with periodic tasks and message handling)
-func (n *Node) Run() {
+func (n *Node) Run(cb Listener) {
+	n.cb = cb
 	// broadcast LEARN message periodically
 	learn := time.NewTicker(time.Duration(cfg.LearnIntv) * time.Second)
 	n.active = true
@@ -83,7 +85,13 @@ func (n *Node) Run() {
 		select {
 		case <-learn.C:
 			// send out our own learn message
-			msg := NewLearnMsg(n.pub, n.rt.Filter())
+			if cb != nil {
+				cb(&Event{
+					Type: EvBeacon,
+					Peer: n.pub,
+				})
+			}
+			msg := NewLearnMsg(n.pub, n.rt.Filter(cb))
 			n.send(msg)
 
 		case msg := <-n.inCh:
@@ -133,6 +141,12 @@ func (n *Node) Receive(msg Message) {
 			// assemble and send TEACH message
 			msg := NewTeachMsg(n.pub, candidates)
 			n.send(msg)
+			if n.cb != nil {
+				n.cb(&Event{
+					Type: EvTeaching,
+					Peer: m.Sender(),
+				})
+			}
 		}
 
 	//------------------------------------------------------------------
@@ -140,6 +154,12 @@ func (n *Node) Receive(msg Message) {
 	//------------------------------------------------------------------
 	case MsgTEACH:
 		m, _ := msg.(*TeachMsg)
+		if n.cb != nil {
+			n.cb(&Event{
+				Type: EvLearning,
+				Peer: n.pub,
+			})
+		}
 		// learn new peers
 		n.rt.Learn(m)
 	}
