@@ -50,6 +50,12 @@ func NewSimNode(prv *core.PeerPrivate, out chan core.Message, pos *Position, r2 
 	}
 }
 
+// Run the node
+func (n *SimNode) Run() {
+	// run base node
+	n.Node.Run()
+}
+
 // Stop the node
 func (n *SimNode) Stop(running int) {
 	n.Node.Stop()

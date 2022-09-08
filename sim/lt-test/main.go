@@ -22,7 +22,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"leatea/sim"
 	"log"
 	"math"
@@ -44,13 +43,22 @@ func main() {
 		log.Fatal(err)
 	}
 
-	//------------------------------------------------------------------
-	// Build and start test network
-	log.Println("Building network...")
+	// Build simulation of "physical" environment
 	e := sim.BuildEnvironment(sim.Cfg.Env)
 	if e == nil {
 		log.Fatalf("No environment class '%s' defined.", sim.Cfg.Env.Class)
 	}
+	// get a canvas for drawing
+	c := sim.GetCanvas(sim.Cfg.Render)
+
+	// run simulation
+	run(e, c)
+}
+
+func run(e sim.Environment, c sim.Canvas) {
+	//------------------------------------------------------------------
+	// Build and start test network
+	log.Println("Building network...")
 	netw := sim.NewNetwork(e)
 	log.Println("Running network...")
 	go netw.Run()
@@ -66,6 +74,7 @@ loop:
 	for {
 		select {
 		case <-tick.C:
+			// start new epoch (ecery 10 seconds)
 			epoch++
 			// show status (coverage)
 			cover := netw.Coverage()
@@ -73,16 +82,6 @@ loop:
 			rt, _, hops := netw.RoutingTable()
 			status(rt, nil, hops)
 
-			// generate SVG if "video" mode is set.
-			if sim.Cfg.Options.Video {
-				f, err := os.Create(fmt.Sprintf("%s.%03d.svg", sim.Cfg.Options.SVGFile, epoch))
-				if err != nil {
-					log.Fatal(err)
-				}
-				defer f.Close()
-				rt.SVG(f, false)
-
-			}
 			// if all nodes are running break loop if coverage has not
 			// changed for some epochs (if defined)
 			if !netw.Booted() || sim.Cfg.Options.MaxRepeat == 0 {
@@ -119,21 +118,23 @@ loop:
 	rt, graph, hops := netw.RoutingTable()
 	status(rt, graph, hops)
 
-	// build SVG on demand
-	if len(sim.Cfg.Options.SVGFile) > 0 {
-		f, err := os.Create(sim.Cfg.Options.SVGFile + ".svg")
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer f.Close()
-		switch sim.Cfg.Options.SVGMode {
+	// draw final network graph if canvas is not dynamic
+	if !c.IsDynamic() {
+		c.Open()
+		c.Start()
+		// draw environment
+		e.Draw(c)
+		// render graph
+		switch sim.Cfg.Render.Source {
 		case "graph":
-			graph.SVG(f, true)
-		case "rt":
-			rt.SVG(f, true)
+			graph.Render(c, true)
+		case "rtab":
+			rt.Render(c, true)
 		default:
-			log.Fatal("unknown SVG mode")
+			log.Fatal("render: unknown source mode")
 		}
+		c.End()
+		c.Close()
 	}
 	log.Println("Done")
 }

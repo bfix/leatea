@@ -23,25 +23,41 @@ package sim
 import (
 	"fmt"
 	"image/color"
-	"io"
+	"log"
+	"math"
+	"os"
 
 	svg "github.com/ajstarks/svgo"
 )
 
 // Color definitions for drawing
 var (
+	ClrWhite = &color.RGBA{255, 255, 255, 0}
 	ClrRed   = &color.RGBA{255, 0, 0, 0}
+	ClrRedTr = &color.RGBA{255, 0, 0, 224}
 	ClrBlack = &color.RGBA{0, 0, 0, 0}
 	ClrBlue  = &color.RGBA{0, 0, 255, 0}
 )
 
 // Canvas for drawing the network diagram and environment
 type Canvas interface {
-	Start(w, h, margin, prec float64)
+	Open()
+	Start()
 	Circle(x, y, r, w float64, clrBorder, clrFill *color.RGBA)
 	Text(x, y, fs float64, s, anchor string)
 	Line(x1, y1, x2, y2, w float64, clr *color.RGBA)
 	End()
+	IsDynamic() bool
+	Close()
+}
+
+// GetCanvas returns a canvas for drawing
+func GetCanvas(cfg *RenderCfg) (c Canvas) {
+	switch cfg.Mode {
+	case "svg":
+		c = NewSVGCanvas(Cfg.Render.File, Cfg.Env.Width, Cfg.Env.Height, math.Sqrt(Cfg.Node.Reach2))
+	}
+	return
 }
 
 //----------------------------------------------------------------------
@@ -52,13 +68,38 @@ type Canvas interface {
 type SVGCanvas struct {
 	off, prec float64
 	svg       *svg.SVG
+	w, h      int
+	fn        string
+	f         *os.File
 }
 
-// Start the canvas
-func (c *SVGCanvas) Start(w, h, margin, prec float64) {
-	c.off = margin
-	c.prec = prec
-	c.svg.Start(c.xlate(w+margin), c.xlate(h+margin))
+func NewSVGCanvas(fn string, w, h, off float64) *SVGCanvas {
+	c := new(SVGCanvas)
+	c.fn = fn
+	c.off = off
+	c.prec = 0.01
+	c.w = c.xlate(w + off)
+	c.h = c.xlate(h + off)
+	return c
+}
+
+func (c *SVGCanvas) Open() {
+	f, err := os.Create(c.fn)
+	if err != nil {
+		log.Printf("file: %s", c.fn)
+		log.Fatal(err)
+	}
+	c.svg = svg.New(f)
+	c.f = f
+}
+
+func (c *SVGCanvas) IsDynamic() bool {
+	return false
+}
+
+// Start the canvas (new drawing begins)
+func (c *SVGCanvas) Start() {
+	c.svg.Start(c.w, c.h)
 }
 
 func (c *SVGCanvas) Circle(x, y, r, w float64, clrBorder, clrFill *color.RGBA) {
@@ -97,9 +138,6 @@ func (c *SVGCanvas) End() {
 	c.svg.End()
 }
 
-func NewSVGCanvas(wrt io.Writer, w, h, off float64) *SVGCanvas {
-	c := new(SVGCanvas)
-	c.svg = svg.New(wrt)
-	c.Start(w, h, off, 0.01)
-	return c
+func (c *SVGCanvas) Close() {
+	c.f.Close()
 }

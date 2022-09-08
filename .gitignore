@@ -1,4 +1,5 @@
 rt/
-.vscode
+.vscode/
+work/
 /lt-test
 /config.json

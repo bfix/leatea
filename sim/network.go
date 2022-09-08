@@ -21,10 +21,8 @@
 package sim
 
 import (
-	"io"
 	"leatea/core"
 	"log"
-	"math"
 	"time"
 )
 
@@ -68,8 +66,8 @@ func NewNetwork(env Environment) *Network {
 			time.Sleep(delay)
 			if n.active {
 				n.running++
-				log.Printf("Node %s started (#%d)", node.Node.PeerID(), n.running)
-				node.Node.Run()
+				log.Printf("Node %s started (#%d)", node.PeerID(), n.running)
+				node.Run()
 			}
 		}()
 		// shutdown node (delayed)
@@ -225,8 +223,8 @@ func NewRoutingTable(n *Network) *RoutingTable {
 	}
 }
 
-// SVG creates an image of the graph
-func (rt *RoutingTable) SVG(wrt io.Writer, final bool) {
+// Render creates an image of the graph
+func (rt *RoutingTable) Render(canvas Canvas, final bool) {
 	// find longest reach for offset
 	reach := 0.
 	for _, node := range rt.netw.nodes {
@@ -234,9 +232,6 @@ func (rt *RoutingTable) SVG(wrt io.Writer, final bool) {
 			reach = node.r2
 		}
 	}
-	// start generating SVG
-	canvas := NewSVGCanvas(wrt, Cfg.Env.Width, Cfg.Env.Height, math.Sqrt(reach))
-
 	// draw environment
 	rt.netw.env.Draw(canvas)
 
@@ -264,5 +259,4 @@ func (rt *RoutingTable) SVG(wrt io.Writer, final bool) {
 			canvas.Line(node1.pos.X, node1.pos.Y, node2.pos.X, node2.pos.Y, 0.15, ClrBlue)
 		}
 	}
-	canvas.End()
 }

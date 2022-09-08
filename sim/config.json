@@ -8,7 +8,7 @@
         "class": "wall",
         "width": 100,
         "height": 100,
-        "numNodes": 100,
+        "numNodes": 75,
         "cooldown": 5,
         "walls": [
             {
@@ -26,10 +26,12 @@
 		"peerTTL": 0,
         "deathRate": 0
     },
+    "render": {
+        "mode": "svg",
+        "file": "rt/out.svg",
+        "source": "rtab"
+    },
     "options": {
-        "video": false,
-        "svgFile": "rt/out",
-        "svgMode": "rt",
-        "maxRepeat": 10
+        "maxRepeat": 3
     }
 }

@@ -57,12 +57,16 @@ type NodeCfg struct {
 	DeathRate  float64 `json:"deathRate"`
 }
 
-// Option for test options
+// RenderCfg options
+type RenderCfg struct {
+	Mode   string `json:"mode"`
+	Source string `json:"source"`
+	File   string `json:"file"`
+}
+
+// Option for comtrol flags/values
 type Option struct {
-	Video     bool   `json:"video"`
-	SVGFile   string `json:"svgFile"`
-	SVGMode   string `json:"svgMode"`
-	MaxRepeat int    `json:"maxRepeat"`
+	MaxRepeat int `json:"maxRepeat"`
 }
 
 // Config for test configuration data
@@ -71,6 +75,7 @@ type Config struct {
 	Env     *EnvironCfg  `json:"environment"`
 	Node    *NodeCfg     `json:"node"`
 	Options *Option      `json:"options"`
+	Render  *RenderCfg   `json:"render"`
 }
 
 // Cfg is the global configuration
@@ -93,10 +98,12 @@ var Cfg = &Config{
 		DeathRate:  0.,
 	},
 	Options: &Option{
-		Video:     false,
-		SVGFile:   "",
-		SVGMode:   "rt",
 		MaxRepeat: 0,
+	},
+	Render: &RenderCfg{
+		Mode:   "none",
+		File:   "",
+		Source: "rtab",
 	},
 }
 

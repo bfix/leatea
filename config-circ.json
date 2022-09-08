@@ -16,9 +16,12 @@
 		"bootup": 60,
 		"peerTTL": 600
     },
+    "render": {
+        "mode": "svg",
+        "file": "rt/out.svg",
+        "source": "rtab"
+    },
     "options": {
-        "video": false,
-        "svgFile": "rt/out",
-        "svgMode": "rt"
+        "maxRepeat": 3
     }
 }

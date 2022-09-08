@@ -21,7 +21,6 @@
 package sim
 
 import (
-	"io"
 	"math"
 )
 
@@ -73,8 +72,8 @@ func (g *Graph) Distance(start int) (dist []int) {
 	}
 }
 
-// SVG creates an image of the graph
-func (g *Graph) SVG(wrt io.Writer, final bool) {
+// Render creates an image of the graph
+func (g *Graph) Render(canvas Canvas, final bool) {
 	// find longest reach for offset
 	reach := 0.
 	for _, node := range g.netw.nodes {
@@ -82,12 +81,6 @@ func (g *Graph) SVG(wrt io.Writer, final bool) {
 			reach = node.r2
 		}
 	}
-	// start generating SVG
-	canvas := NewSVGCanvas(wrt, Cfg.Env.Width, Cfg.Env.Height, math.Sqrt(reach))
-
-	// draw environment
-	g.netw.env.Draw(canvas)
-
 	// draw nodes
 	list := make([]*SimNode, len(g.netw.nodes))
 	for key, node := range g.netw.nodes {
@@ -112,5 +105,4 @@ func (g *Graph) SVG(wrt io.Writer, final bool) {
 			canvas.Line(node.pos.X, node.pos.Y, node2.pos.X, node2.pos.Y, 0.15, ClrBlack)
 		}
 	}
-	canvas.End()
 }
