@@ -23,7 +23,6 @@ package sim
 import (
 	"fmt"
 	"leatea/core"
-	"math"
 )
 
 //----------------------------------------------------------------------
@@ -78,8 +77,8 @@ func (n *SimNode) String() string {
 
 // Draw a node on the canvas
 func (n *SimNode) Draw(c Canvas) {
-	r := math.Sqrt(n.r2)
+	//r := math.Sqrt(n.r2)
 	c.Circle(n.pos.X, n.pos.Y, 0.3, 0, nil, ClrRed)
-	c.Circle(n.pos.X, n.pos.Y, r, 0.03, ClrGray, nil)
-	c.Text(n.pos.X, n.pos.Y+1.3, 1, n.PeerID().String(), "middle")
+	//c.Circle(n.pos.X, n.pos.Y, r, 0.03, ClrGray, nil)
+	c.Text(n.pos.X, n.pos.Y+1.3, 1, n.PeerID().String())
 }
