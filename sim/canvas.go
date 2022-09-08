@@ -21,6 +21,7 @@
 package sim
 
 import (
+	"bytes"
 	"fmt"
 	"image/color"
 	"log"
@@ -41,17 +42,33 @@ var (
 
 // Canvas for drawing the network diagram and environment
 type Canvas interface {
+	// Open a canvas (prepare resources)
 	Open()
+
+	// Start a new graph
 	Start()
+
+	// Circle primitive
 	Circle(x, y, r, w float64, clrBorder, clrFill *color.RGBA)
+
+	// Text primitive
 	Text(x, y, fs float64, s, anchor string)
+
+	// Line primitive
 	Line(x1, y1, x2, y2, w float64, clr *color.RGBA)
+
+	// Finalise graph
 	End()
+
+	// IsDynamic returns true if the canvas can draw a
+	// sequence of renderings (like UI or video canvases)
 	IsDynamic() bool
+
+	// Close a canvas. No further operations are allowed
 	Close()
 }
 
-// GetCanvas returns a canvas for drawing
+// GetCanvas returns a canvas for drawing (factory)
 func GetCanvas(cfg *RenderCfg) (c Canvas) {
 	switch cfg.Mode {
 	case "svg":
@@ -69,12 +86,14 @@ type SVGCanvas struct {
 	off, prec float64
 	svg       *svg.SVG
 	w, h      int
+	buf       *bytes.Buffer
 	fn        string
-	f         *os.File
 }
 
+// NewSVGCanvas creates a new SVG canvas to be stored in a file
 func NewSVGCanvas(fn string, w, h, off float64) *SVGCanvas {
 	c := new(SVGCanvas)
+	c.buf = new(bytes.Buffer)
 	c.fn = fn
 	c.off = off
 	c.prec = 0.01
@@ -83,25 +102,23 @@ func NewSVGCanvas(fn string, w, h, off float64) *SVGCanvas {
 	return c
 }
 
+// Open a canvas (prepare resources)
 func (c *SVGCanvas) Open() {
-	f, err := os.Create(c.fn)
-	if err != nil {
-		log.Printf("file: %s", c.fn)
-		log.Fatal(err)
-	}
-	c.svg = svg.New(f)
-	c.f = f
+	c.svg = svg.New(c.buf)
 }
 
+// IsDynamic returns true if the canvas can draw a
+// sequence of renderings (like UI or video canvases)
 func (c *SVGCanvas) IsDynamic() bool {
 	return false
 }
 
-// Start the canvas (new drawing begins)
+// Start the canvas (new rendering begins)
 func (c *SVGCanvas) Start() {
 	c.svg.Start(c.w, c.h)
 }
 
+// Circle primitive
 func (c *SVGCanvas) Circle(x, y, r, w float64, clrBorder, clrFill *color.RGBA) {
 	fill := "none"
 	if clrFill != nil {
@@ -116,11 +133,13 @@ func (c *SVGCanvas) Circle(x, y, r, w float64, clrBorder, clrFill *color.RGBA) {
 	c.svg.Circle(c.xlate(x), c.xlate(y), int(r/c.prec), style)
 }
 
+// Text primitive
 func (c *SVGCanvas) Text(x, y, fs float64, s, anchor string) {
 	style := fmt.Sprintf("text-anchor:%s;font-size:%dpx", anchor, int(fs/c.prec))
 	c.svg.Text(c.xlate(x), c.xlate(y), s, style)
 }
 
+// Line primitive
 func (c *SVGCanvas) Line(x1, y1, x2, y2, w float64, clr *color.RGBA) {
 	style := "stroke:black;stroke-width:1"
 	if w > 0 && clr != nil {
@@ -130,14 +149,27 @@ func (c *SVGCanvas) Line(x1, y1, x2, y2, w float64, clr *color.RGBA) {
 	c.svg.Line(c.xlate(x1), c.xlate(y1), c.xlate(x2), c.xlate(y2), style)
 }
 
+// coordinate translation
 func (c *SVGCanvas) xlate(x float64) int {
 	return int((x + c.off) / c.prec)
 }
 
+// Finalize graph
 func (c *SVGCanvas) End() {
 	c.svg.End()
+	// write to file
+	if len(c.fn) > 0 {
+		f, err := os.Create(c.fn)
+		if err != nil {
+			log.Printf("file: %s", c.fn)
+			log.Fatal(err)
+		}
+		defer f.Close()
+		_, _ = f.Write(c.buf.Bytes())
+	}
 }
 
+// Close a canvas. No further operations are allowed
 func (c *SVGCanvas) Close() {
-	c.f.Close()
+	c.buf = nil
 }
