@@ -65,6 +65,8 @@ func NewNetwork(env Environment) *Network {
 
 // Run the network simulation
 func (n *Network) Run(cb core.Listener) {
+	n.active = true
+
 	// create and run nodes.
 	n.cb = cb
 	for i := 0; i < Cfg.Env.NumNodes; i++ {
@@ -109,7 +111,6 @@ func (n *Network) Run(cb core.Listener) {
 		}()
 	}
 	// simulate transport layer
-	n.active = true
 	for n.active {
 		// wait for broadcasted message.
 		msg := <-n.queue
@@ -244,14 +245,14 @@ func (n *Network) RoutingTable() (*RoutingTable, *Graph, float64) {
 func (n *Network) Render(c Canvas) {
 	// render nodes and connections
 	for i1, node1 := range n.nodes {
-		if node1.IsRunning() {
+		if !n.active || node1.IsRunning() {
 			node1.Draw(c)
 			for _, id2 := range node1.Neighbors() {
 				node2, i2 := n.getNode(id2)
 				if i2 >= i1 {
 					continue
 				}
-				c.Line(node1.pos.X, node1.pos.Y, node2.pos.X, node2.pos.Y, 0.15, ClrBlack)
+				c.Line(node1.pos.X, node1.pos.Y, node2.pos.X, node2.pos.Y, 0.15, ClrBlue)
 			}
 		}
 	}
