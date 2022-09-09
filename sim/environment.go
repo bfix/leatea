@@ -81,7 +81,7 @@ func (m *WallModel) Placement(i int) (r2 float64, pos *Position) {
 // Draw the environment
 func (m *WallModel) Draw(c Canvas) {
 	for _, wall := range m.walls {
-		c.Line(wall.From.X, wall.From.Y, wall.To.X, wall.To.Y, 0.7, ClrRed)
+		c.Line(wall.From.X, wall.From.Y, wall.To.X, wall.To.Y, 0.7, ClrBlack)
 	}
 }
 
