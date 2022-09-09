@@ -93,6 +93,13 @@ func NewForwardTable(self *PeerID) *ForwardTable {
 	}
 }
 
+// Reset routing table
+func (t *ForwardTable) Reset() {
+	t.Lock()
+	defer t.Unlock()
+	t.list = make(map[string]*Entry)
+}
+
 // Add entry to forward table
 func (t *ForwardTable) Add(e *Entry) {
 	t.Lock()

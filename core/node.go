@@ -114,6 +114,8 @@ func (n *Node) Run(cb Listener) {
 // Stop a running node
 func (n *Node) Stop() {
 	n.active = false
+	// reset routing table
+	n.rt.Reset()
 }
 
 // IsRunning returns true if the node is active
