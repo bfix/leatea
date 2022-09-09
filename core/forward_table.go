@@ -35,17 +35,27 @@ import (
 // the number of hops to reach the target and a timestamp when the peer
 // was last seen in the network. A direct neighbor (within broadcast
 // range) has no next hop and a hop count of 0 in the table.
+//
+// If an entry is removed (because the neighbor expired), the hop
+// count is set to -1 to indicated a deleted entry. Once such entry
+// is forwarded in a teach message, it is removed from the table.
 //----------------------------------------------------------------------
 
 // Forward (target peerid and distance/hops)
 type Forward struct {
-	Peer *PeerID ``           // target node
-	Hops uint16  `size:"big"` // number of hops to target
+	// target node
+	Peer *PeerID
+
+	// number of hops to target
+	// (0 = neighbor, -1 = removed neighbor)
+	Hops int16 `size:"big"`
 }
 
-// Size returns the size of the binary representation
+// Size returns the size of the binary representation (used to calculate
+// size of TEACH message based on number of Forward entries)
 func (f *Forward) Size() uint {
-	return 34
+	var id *PeerID
+	return id.Size() + 2
 }
 
 //......................................................................
@@ -55,12 +65,7 @@ type Entry struct {
 	Forward
 	NextHop  *PeerID // next hop (nil for neighbors)
 	LastSeen *Time   // last time seen
-	Pending  bool    // entry changed but not forwarded
-}
-
-// WithHop returns true if next hop is set (used for serialization).
-func (e *Entry) WithHop() bool {
-	return e.Hops > 0
+	Pending  bool    // entry changed but not forwarded yet
 }
 
 // Equal returns true if the base attributes of the entries are the same
@@ -100,21 +105,26 @@ func (t *ForwardTable) Reset() {
 	t.list = make(map[string]*Entry)
 }
 
-// Add entry to forward table
-func (t *ForwardTable) Add(e *Entry) {
+// AddNeighbor entry to forward table
+func (t *ForwardTable) AddNeighbor(n *PeerID) {
 	t.Lock()
 	defer t.Unlock()
-	key := e.Peer.Key()
 	// check for changes if entry exists
-	if e2, ok := t.list[key]; ok && e.Equal(e2) {
-		// no change
-		e2.LastSeen = TimeNow()
+	if e, ok := t.list[n.Key()]; ok {
+		// no change, but update timestamp
+		e.LastSeen = TimeNow()
 		return
 	}
-	// insert/update into table
-	e.Pending = true
-	e.LastSeen = TimeNow()
-	t.list[key] = e
+	// insert new entry into table
+	t.list[n.Key()] = &Entry{
+		Forward: Forward{
+			Peer: n,
+			Hops: 0,
+		},
+		NextHop:  nil,
+		LastSeen: TimeNow(),
+		Pending:  true,
+	}
 }
 
 // Cleanup forward table and remove expired neighbors and their dependencies.
@@ -123,10 +133,10 @@ func (t *ForwardTable) Cleanup(cb Listener) {
 	defer t.Unlock()
 	// remove expired neighbors
 	nList := make(map[string]struct{})
-	for k, e := range t.list {
-		if e.NextHop == nil && e.LastSeen.Expired(time.Duration(cfg.TTLEntry)*time.Second) {
+	for _, e := range t.list {
+		if e.NextHop == nil && e.Hops != -1 && e.LastSeen.Expired(time.Duration(cfg.TTLEntry)*time.Second) {
 			nList[e.Peer.Key()] = struct{}{}
-			delete(t.list, k)
+			e.Hops = -1
 			if cb != nil {
 				cb(&Event{
 					Type: EvNeighborExpired,
@@ -137,10 +147,10 @@ func (t *ForwardTable) Cleanup(cb Listener) {
 		}
 	}
 	// remove forwards depending on removed neighbors
-	for k, e := range t.list {
-		if e.NextHop != nil {
+	for _, e := range t.list {
+		if e.NextHop != nil && e.Hops != -1 {
 			if _, ok := nList[e.NextHop.Key()]; ok {
-				delete(t.list, k)
+				e.Hops = -1
 				if cb != nil {
 					cb(&Event{
 						Type: EvForwardRemoved,
@@ -180,7 +190,8 @@ func (t *ForwardTable) Candidates(m *LearnMsg) (list []*Forward) {
 	t.Lock()
 	defer t.Unlock()
 
-	// collect unfiltered entries
+	//------------------------------------------------------------------
+	// (1) collect unfiltered entries
 	var fList []*Entry
 	for _, e := range t.list {
 		if !m.Filter.Contains(e.Peer.Bytes()) && !m.Sender().Equal(e.NextHop) {
@@ -191,37 +202,49 @@ func (t *ForwardTable) Candidates(m *LearnMsg) (list []*Forward) {
 	sort.Slice(fList, func(i, j int) bool {
 		return fList[i].Hops < fList[j].Hops
 	})
-	// if list limit is reached, return results.
+	// if list limit is reached (or surpassed), trim results
 	if len(fList) >= cfg.MaxTeachs {
-		for _, e := range fList[:cfg.MaxTeachs] {
-			e.Pending = false
-			list = append(list, e.Target())
+		fList = fList[:cfg.MaxTeachs]
+	}
+	// append results to output list
+	for _, e := range fList {
+		e.Pending = false
+		list = append(list, e.Target())
+		// delete removed entries
+		if e.Hops < 0 {
+			delete(t.list, e.Peer.Key())
 		}
-		return
 	}
 
-	// collect pending entries
-	var pList []*Entry
-	for _, e := range t.list {
-		if e.Pending {
-			pList = append(pList, e)
+	//------------------------------------------------------------------
+	// (2) collect pending entries (if more space is available in TEACH)
+	if len(list) < cfg.MaxTeachs {
+		var pList []*Entry
+		for _, e := range t.list {
+			if e.Pending {
+				pList = append(pList, e)
+			}
 		}
-	}
-	// append pennding entries
-	if len(pList) > 0 {
-		// sort them by ascending hops
-		sort.Slice(pList, func(i, j int) bool {
-			return pList[i].Hops < pList[j].Hops
-		})
-		// append to result list
-		n := cfg.MaxTeachs - len(list)
-		if n > len(pList) {
-			n = len(pList)
-		}
-		for i := 0; i < n; i++ {
-			e := pList[i]
-			e.Pending = false
-			list = append(list, e.Target())
+		// append pennding entries
+		if len(pList) > 0 {
+			// sort them by ascending hops (deleted first)
+			sort.Slice(pList, func(i, j int) bool {
+				return pList[i].Hops < pList[j].Hops
+			})
+			// append to result list
+			n := cfg.MaxTeachs - len(list)
+			if n > len(pList) {
+				n = len(pList)
+			}
+			for i := 0; i < n; i++ {
+				e := pList[i]
+				e.Pending = false
+				list = append(list, e.Target())
+				// delete removed entries
+				if e.Hops < 0 {
+					delete(t.list, e.Peer.Key())
+				}
+			}
 		}
 	}
 	return
@@ -231,20 +254,28 @@ func (t *ForwardTable) Candidates(m *LearnMsg) (list []*Forward) {
 func (t *ForwardTable) Learn(m *TeachMsg) {
 	t.Lock()
 	defer t.Unlock()
+
+	// process all announcements
+	sender := m.Sender()
 	for _, e := range m.Announce {
+		// ignore announcements about ourself
 		if e.Peer.Equal(t.self) {
 			continue
 		}
+		// get corresponding forward entry
 		key := e.Peer.Key()
-		fwt, ok := t.list[key]
+		f, ok := t.list[key]
 		if ok {
-			// already known: shorter path?
-			if fwt.Hops > e.Hops+1 {
+			// entry found; check for "delete" announcement
+			if e.Hops < 0 {
+				// entry tagged as removed.
+				f.Hops = -1
+				f.Pending = true
+			} else if f.Hops > e.Hops+1 {
 				// update with shorter path
-				fwt.Hops = e.Hops + 1
-				fwt.NextHop = m.Sender()
-				fwt.LastSeen = TimeNow()
-				fwt.Pending = true
+				f.Hops = e.Hops + 1
+				f.NextHop = sender
+				f.Pending = true
 			}
 		} else {
 			// not yet known: add to table
@@ -253,9 +284,8 @@ func (t *ForwardTable) Learn(m *TeachMsg) {
 					Peer: e.Peer,
 					Hops: e.Hops + 1,
 				},
-				NextHop:  m.Sender(),
-				LastSeen: TimeNow(),
-				Pending:  true,
+				NextHop: m.Sender(),
+				Pending: true,
 			}
 		}
 	}
