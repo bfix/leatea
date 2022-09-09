@@ -22,9 +22,9 @@
     },
     "node":{
 		"reach2": 500,
-		"bootup": 60,
-		"peerTTL": 0,
-        "deathRate": 0
+		"bootup": 0,
+		"peerTTL": 60,
+        "deathRate": 0.2
     },
     "render": {
         "mode": "sdl",
@@ -33,6 +33,7 @@
         "dynamic": true
     },
     "options": {
-        "maxRepeat": 3
+        "maxRepeat": 0,
+        "stopOnLoop": true
     }
 }

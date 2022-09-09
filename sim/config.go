@@ -69,7 +69,8 @@ type RenderCfg struct {
 
 // Option for comtrol flags/values
 type Option struct {
-	MaxRepeat int `json:"maxRepeat"`
+	MaxRepeat  int  `json:"maxRepeat"`
+	StopOnLoop bool `json:"stopOnLoop"`
 }
 
 // Config for test configuration data
