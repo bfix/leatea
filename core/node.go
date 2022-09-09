@@ -70,12 +70,12 @@ func (n *Node) NumForwards() int {
 	return len(n.rt.list)
 }
 
-// Return a list of direct neighbors
+// Return a list of active direct neighbors
 func (n *Node) Neighbors() (list []*PeerID) {
-	n.rt.Lock()
-	defer n.rt.Unlock()
+	n.rt.RLock()
+	defer n.rt.RUnlock()
 	for _, e := range n.rt.list {
-		if e.NextHop == nil {
+		if e.NextHop == nil && e.Hops == 0 {
 			list = append(list, e.Peer)
 		}
 	}
@@ -86,8 +86,6 @@ func (n *Node) Neighbors() (list []*PeerID) {
 // expected hops. If hop count is less than 0, a next hop doesn't exist
 // (broken route)
 func (n *Node) Forward(target *PeerID) (*PeerID, int) {
-	n.rt.RLock()
-	defer n.rt.RUnlock()
 	return n.rt.Forward(target)
 }
 
@@ -141,15 +139,7 @@ func (n *Node) Receive(msg Message) {
 	// add the sender as direct neighbor to the
 	// forward table.
 	sender := msg.Sender()
-	e := &Entry{
-		Forward: Forward{
-			Peer: sender,
-			Hops: 0,
-		},
-		NextHop:  nil,
-		LastSeen: TimeNow(),
-	}
-	n.rt.Add(e)
+	n.rt.AddNeighbor(sender)
 
 	// handle received message
 	switch msg.Type() {
