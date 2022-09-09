@@ -36,12 +36,12 @@ import (
 
 // shared variable
 var (
-	netw    *sim.Network      // Network instance
-	changed bool              // graph modified?
-	rt      *sim.RoutingTable // compiled routing table
-	graph   *sim.Graph        // reconstructed network graph
-	hops    float64           // avg. number of hops in routing table
-	routes  [][]int           // list of routes
+	netw   *sim.Network      // Network instance
+	redraw bool              // graph modified?
+	rt     *sim.RoutingTable // compiled routing table
+	graph  *sim.Graph        // reconstructed network graph
+	hops   float64           // avg. number of hops in routing table
+	routes [][]int           // list of routes
 )
 
 // run application
@@ -84,8 +84,8 @@ func main() {
 		go run(e)
 
 		// run render loop
-		c.Render(func(c sim.Canvas, redraw bool) {
-			if (redraw || changed) && netw != nil {
+		c.Render(func(c sim.Canvas, forced bool) {
+			if (forced || redraw) && netw != nil {
 				c.Start()
 				// render network
 				netw.Render(c)
@@ -98,7 +98,7 @@ func main() {
 						from = to
 					}
 				}
-				changed = false
+				redraw = false
 			}
 		})
 	} else {
@@ -144,13 +144,13 @@ func run(e sim.Environment) {
 		switch ev.Type {
 		case sim.EvNodeAdded:
 			log.Printf("[%s] started (#%d)", ev.Peer, ev.Val)
-			changed = true
+			redraw = true
 		case sim.EvNodeRemoved:
 			log.Printf("[%s] stopped (%d running)", ev.Peer, ev.Val)
-			changed = true
+			redraw = true
 		case core.EvNeighborExpired:
 			log.Printf("[%s] neighbor %s expired", ev.Peer, ev.Ref)
-			changed = true
+			redraw = true
 		case core.EvForwardRemoved:
 			log.Printf("[%s] forward %s removed", ev.Peer, ev.Ref)
 		}
@@ -160,7 +160,8 @@ func run(e sim.Environment) {
 	// prepare monitoring
 	sigCh := make(chan os.Signal, 5)
 	signal.Notify(sigCh)
-	tick := time.NewTicker(10 * time.Second)
+	tick := time.NewTicker(time.Second)
+	ticks := 0
 	epoch := 0
 	lastCover := -1.0
 	repeat := 1
@@ -168,29 +169,35 @@ loop:
 	for {
 		select {
 		case <-tick.C:
-			// start new epoch (ecery 10 seconds)
-			epoch++
-			// show status (coverage)
-			cover := netw.Coverage()
-			log.Printf("--> Coverage: %.2f%%", cover)
-			rt, graph, hops = netw.RoutingTable()
-			if status(rt, nil, hops) > 0 && sim.Cfg.Options.StopOnLoop {
-				break loop
-			}
-
-			// if all nodes are running break loop if coverage has not
-			// changed for some epochs (if defined)
-			if !netw.Booted() || sim.Cfg.Options.MaxRepeat == 0 {
-				continue
-			}
-			if lastCover == cover {
-				repeat++
-				if repeat == sim.Cfg.Options.MaxRepeat {
+			ticks++
+			// force redraw
+			redraw = true
+			// start new epoch?
+			if ticks%sim.Cfg.Core.LearnIntv == 0 {
+				// start new epoch (every 10 seconds)
+				epoch++
+				// show status (coverage)
+				cover := netw.Coverage()
+				log.Printf("--> Coverage: %.2f%%", cover)
+				rt, graph, hops = netw.RoutingTable()
+				if status(rt, nil, hops) > 0 && sim.Cfg.Options.StopOnLoop {
 					break loop
 				}
-			} else {
-				repeat = 1
-				lastCover = cover
+
+				// if all nodes are running break loop if coverage has not
+				// changed for some epochs (if defined)
+				if !netw.Booted() || sim.Cfg.Options.MaxRepeat == 0 {
+					continue
+				}
+				if lastCover == cover {
+					repeat++
+					if repeat == sim.Cfg.Options.MaxRepeat {
+						break loop
+					}
+				} else {
+					repeat = 1
+					lastCover = cover
+				}
 			}
 		case sig := <-sigCh:
 			// signal received
@@ -377,7 +384,7 @@ func analyzeLoops(rt *sim.RoutingTable) {
 			routes = append(routes, l.cycle)
 		}
 	}
-	changed = true
+	redraw = true
 	log.Printf("      -> %d distinct loops found:", len(routes))
 
 	// show distinct cycles
