@@ -247,17 +247,17 @@ func (n *Network) Render(c Canvas) {
 	for i1, node1 := range n.nodes {
 		if !n.active || node1.IsRunning() {
 			node1.Draw(c)
-			for _, id2 := range node1.Neighbors() {
-				node2, i2 := n.getNode(id2)
-				if i2 >= i1 {
-					continue
-				}
-				clr := ClrBlue
-				if !node2.IsRunning() {
-					clr = ClrRed
-				}
-				c.Line(node1.pos.X, node1.pos.Y, node2.pos.X, node2.pos.Y, 0.15, clr)
+		}
+		for _, id2 := range node1.Neighbors() {
+			node2, i2 := n.getNode(id2)
+			if i2 >= i1 {
+				continue
 			}
+			clr := ClrBlue
+			if n.active && !(node2.IsRunning() && node1.IsRunning()) {
+				clr = ClrRed
+			}
+			c.Line(node1.pos.X, node1.pos.Y, node2.pos.X, node2.pos.Y, 0.15, clr)
 		}
 	}
 	// draw environment
