@@ -21,7 +21,6 @@
 package core
 
 import (
-	"log"
 	"sort"
 	"sync"
 	"time"
@@ -135,7 +134,13 @@ func (t *ForwardTable) Cleanup(cb Listener) {
 		if e.NextHop != nil {
 			if _, ok := nList[e.NextHop.Key()]; ok {
 				delete(t.list, k)
-				log.Printf("Target %s on %s removed", e.Peer, t.self)
+				if cb != nil {
+					cb(&Event{
+						Type: EvForwardRemoved,
+						Peer: t.self,
+						Ref:  e.Peer,
+					})
+				}
 			}
 		}
 	}
