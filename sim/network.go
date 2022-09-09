@@ -120,8 +120,8 @@ func (n *Network) Run(cb core.Listener) {
 		if sender, _ := n.getNode(msg.Sender()); sender != nil {
 			// process all nodes that are in broadcast reach of the sender
 			for _, node := range n.nodes {
-				if n.env.Connectivity(node, sender) && !node.PeerID().Equal(sender.PeerID()) {
-					// node in reach receives message
+				if node.IsRunning() && n.env.Connectivity(node, sender) && !node.PeerID().Equal(sender.PeerID()) {
+					// active node in reach receives message
 					n.trafIn += mSize
 					go node.Receive(msg)
 				}
@@ -252,7 +252,11 @@ func (n *Network) Render(c Canvas) {
 				if i2 >= i1 {
 					continue
 				}
-				c.Line(node1.pos.X, node1.pos.Y, node2.pos.X, node2.pos.Y, 0.15, ClrBlue)
+				clr := ClrBlue
+				if !node2.IsRunning() {
+					clr = ClrRed
+				}
+				c.Line(node1.pos.X, node1.pos.Y, node2.pos.X, node2.pos.Y, 0.15, clr)
 			}
 		}
 	}
