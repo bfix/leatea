@@ -191,12 +191,12 @@ var font []byte
 
 // SDLCanvas for windowed display
 type SDLCanvas struct {
-	w, h, off  float64
-	scale      float64
-	offX, offY float64
-	cw, ch     int
-	win        *sdlcanvas.Window
-	cv         *canvas.Canvas
+	w, h, off         float64 // model size and margin
+	scale, offX, offY float64 // active scale and margin
+	cw, ch            int     // current canvas size
+	dirty             bool    // need to redraw canvas
+	win               *sdlcanvas.Window
+	cv                *canvas.Canvas
 }
 
 // NewSDLCanvas creates a new SDL canvas for display
@@ -231,6 +231,33 @@ func (c *SDLCanvas) IsDynamic() bool {
 
 // Start the canvas (new rendering begins)
 func (c *SDLCanvas) Render(proc func(Canvas, bool)) {
+	// define UI actions
+	c.win.KeyDown = func(scancode int, rn rune, name string) {
+		switch name {
+		case "NumpadSubtract":
+			c.scale = c.scale / 1.5
+			c.offX = (float64(c.cw) - c.w*c.scale) / 2
+			c.offY = (float64(c.ch) - c.h*c.scale) / 2
+		case "NumpadAdd":
+			c.scale = c.scale * 1.5
+			c.offX = (float64(c.cw) - c.w*c.scale) / 2
+			c.offY = (float64(c.ch) - c.h*c.scale) / 2
+		case "ArrowUp":
+			c.offY += 0.1 * float64(c.ch)
+		case "ArrowDown":
+			c.offY -= 0.1 * float64(c.ch)
+		case "ArrowLeft":
+			c.offX += 0.1 * float64(c.cw)
+		case "ArrowRight":
+			c.offX -= 0.1 * float64(c.cw)
+		case "NumpadEnter":
+			c.ch, c.cw = 0, 0
+		default:
+			return
+		}
+		c.dirty = true
+	}
+	// run frame handler
 	c.win.MainLoop(func() {
 		// compute best scale
 		resized := false
@@ -252,7 +279,7 @@ func (c *SDLCanvas) Render(proc func(Canvas, bool)) {
 			resized = true
 		}
 		// draw elements
-		proc(c, resized)
+		proc(c, resized || c.dirty)
 	})
 }
 
