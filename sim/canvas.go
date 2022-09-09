@@ -49,7 +49,10 @@ type Canvas interface {
 	Open() error
 
 	// Start a new rendering
-	Render(func(Canvas))
+	Render(func(Canvas, bool))
+
+	// Start canvas (clear screen/empty buffer/...)
+	Start()
 
 	// Circle primitive
 	Circle(x, y, r, w float64, clrBorder, clrFill *color.RGBA)
@@ -110,6 +113,11 @@ func (c *SVGCanvas) Open() error {
 	return nil
 }
 
+// Start camvas (clear buffer)
+func (c *SVGCanvas) Start() {
+	c.buf.Reset()
+}
+
 // IsDynamic returns true if the canvas can draw a
 // sequence of renderings (like UI or video canvases)
 func (c *SVGCanvas) IsDynamic() bool {
@@ -117,9 +125,9 @@ func (c *SVGCanvas) IsDynamic() bool {
 }
 
 // Start the canvas (new rendering begins)
-func (c *SVGCanvas) Render(proc func(Canvas)) {
+func (c *SVGCanvas) Render(proc func(Canvas, bool)) {
 	c.svg.Start(c.w, c.h)
-	proc(c)
+	proc(c, true)
 	c.svg.End()
 }
 
@@ -185,6 +193,7 @@ type SDLCanvas struct {
 	w, h, off  float64
 	scale      float64
 	offX, offY float64
+	cw, ch     int
 	win        *sdlcanvas.Window
 	cv         *canvas.Canvas
 }
@@ -192,9 +201,8 @@ type SDLCanvas struct {
 // NewSDLCanvas creates a new SDL canvas for display
 func NewSDLCanvas(w, h, off float64) *SDLCanvas {
 	c := new(SDLCanvas)
-	c.w = w
-	c.h = h
-	c.off = off
+	c.w, c.h, c.off = w, h, off
+	c.cw, c.ch = 0, 0
 	return c
 }
 
@@ -207,6 +215,13 @@ func (c *SDLCanvas) Open() (err error) {
 	return
 }
 
+// Start camvas (clear screen)
+func (c *SDLCanvas) Start() {
+	// clear screen
+	c.cv.SetFillStyle("#FFF")
+	c.cv.FillRect(0, 0, float64(c.cw), float64(c.ch))
+}
+
 // IsDynamic returns true if the canvas can draw a
 // sequence of renderings (like UI or video canvases)
 func (c *SDLCanvas) IsDynamic() bool {
@@ -214,25 +229,29 @@ func (c *SDLCanvas) IsDynamic() bool {
 }
 
 // Start the canvas (new rendering begins)
-func (c *SDLCanvas) Render(proc func(Canvas)) {
+func (c *SDLCanvas) Render(proc func(Canvas, bool)) {
 	c.win.MainLoop(func() {
 		// compute best scale
-		w, h := float64(c.cv.Width()), float64(c.cv.Height())
-		sw := w / (c.w + 2*c.off)
-		sh := h / (c.h + 2*c.off)
-		if sw > sh {
-			c.scale = sh
-			c.offX = (w - c.w*sh) / 2
-			c.offY = c.off * sh
-		} else {
-			c.scale = sw
-			c.offX = c.off * sw
-			c.offY = (h - c.h*sh) / 2
+		resized := false
+		w, h := c.cv.Width(), c.cv.Height()
+		if w != c.cw || h != c.ch {
+			c.cw = w
+			c.ch = h
+			sw := float64(w) / (c.w + 2*c.off)
+			sh := float64(h) / (c.h + 2*c.off)
+			if sw > sh {
+				c.scale = sh
+				c.offX = (float64(w) - c.w*sh) / 2
+				c.offY = c.off * sh
+			} else {
+				c.scale = sw
+				c.offX = c.off * sw
+				c.offY = (float64(h) - c.h*sh) / 2
+			}
+			resized = true
 		}
-		// clear screen
-		c.cv.SetFillStyle("#FFF")
-		c.cv.FillRect(0, 0, w, h)
-		proc(c)
+		// draw elements
+		proc(c, resized)
 	})
 }
 
