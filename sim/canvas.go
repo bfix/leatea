@@ -233,27 +233,39 @@ func (c *SDLCanvas) IsDynamic() bool {
 func (c *SDLCanvas) Render(proc func(Canvas, bool)) {
 	// define UI actions
 	c.win.KeyDown = func(scancode int, rn rune, name string) {
+		centerX := (float64(c.cw)/2 - c.offX) / c.scale
+		centerY := (float64(c.ch)/2 - c.offY) / c.scale
+		rescaled := false
 		switch name {
 		case "NumpadSubtract":
+			// zoom out
 			c.scale = c.scale / 1.5
-			c.offX = (float64(c.cw) - c.w*c.scale) / 2
-			c.offY = (float64(c.ch) - c.h*c.scale) / 2
+			rescaled = true
 		case "NumpadAdd":
+			// zoom in
 			c.scale = c.scale * 1.5
-			c.offX = (float64(c.cw) - c.w*c.scale) / 2
-			c.offY = (float64(c.ch) - c.h*c.scale) / 2
+			rescaled = true
 		case "ArrowUp":
+			// pan up
 			c.offY += 0.1 * float64(c.ch)
 		case "ArrowDown":
+			// pan down
 			c.offY -= 0.1 * float64(c.ch)
 		case "ArrowLeft":
+			// pan left
 			c.offX += 0.1 * float64(c.cw)
 		case "ArrowRight":
+			// pan right
 			c.offX -= 0.1 * float64(c.cw)
 		case "NumpadEnter":
+			// reset zoom
 			c.ch, c.cw = 0, 0
 		default:
 			return
+		}
+		if rescaled {
+			c.offX = float64(c.cw)/2 - centerX*c.scale
+			c.offY = float64(c.ch)/2 - centerY*c.scale
 		}
 		c.dirty = true
 	}
