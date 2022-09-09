@@ -252,6 +252,13 @@ func (n *Network) Render(c Canvas) {
 		}
 		for _, id2 := range node1.Neighbors() {
 			node2, i2 := n.getNode(id2)
+			// check that an inactive node1 has a forward from active node2
+			if !node1.IsRunning() && node2.IsRunning() {
+				_, hops := node2.Forward(node1.PeerID())
+				if hops == 0 {
+					continue
+				}
+			}
 			// don't draw if both nodes are inactive
 			if i2 >= i1 || (n.active && !(node2.IsRunning() || node1.IsRunning())) {
 				continue
