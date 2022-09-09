@@ -32,9 +32,16 @@ import (
 	"time"
 )
 
-// Network instance
-var netw *sim.Network
+// shared variable
+var (
+	netw    *sim.Network      // Network instance
+	changed bool              // graph modified?
+	rt      *sim.RoutingTable // compiled routing table
+	graph   *sim.Graph        // reconstructed network graph
+	hops    float64           // avg. number of hops in routing table
+)
 
+// run application
 func main() {
 	log.Println("LEArn/TEAch routing simulator")
 	log.Println("(c) 2022, Bernd Fix   >Y<")
@@ -57,51 +64,86 @@ func main() {
 	}
 	// get a canvas for drawing
 	c := sim.GetCanvas(sim.Cfg.Render)
+	defer c.Close()
 
 	// run simulation depending on canvas mode (dynamic/static)
 	if c.IsDynamic() {
+		//--------------------------------------------------------------
+		// Render to display (update on network change while running)
+		//--------------------------------------------------------------
+
 		// start rendering
 		if err := c.Open(); err != nil {
 			log.Fatal(err)
 		}
 		// run simulation in go routine to keep main routine
 		// available for canvas.
-		go run(e, c)
+		go run(e)
 
 		// run render loop
 		c.Render(func(c sim.Canvas) {
-			if netw != nil {
+			if changed && netw != nil {
+				c.Start()
 				netw.Render(c)
+				changed = false
 			}
 		})
-		c.Close()
 	} else {
-		run(e, c)
+		//--------------------------------------------------------------
+		// Generate final network graph after running the simulation
+		//--------------------------------------------------------------
+
+		// run simulation
+		run(e)
+
+		// draw final network graph if canvas is not dynamic
+		if err := c.Open(); err != nil {
+			log.Fatal(err)
+		}
+		c.Render(func(c sim.Canvas) {
+			// render graph
+			switch sim.Cfg.Render.Source {
+			case "graph":
+				graph.Render(c, true)
+			case "rtab":
+				rt.Render(c, true)
+			default:
+				log.Fatal("render: unknown source mode")
+			}
+			// draw environment
+			e.Draw(c)
+		})
 	}
 	log.Println("Done.")
 }
 
-func run(e sim.Environment, c sim.Canvas) {
+func run(e sim.Environment) {
 	//------------------------------------------------------------------
-	// Build and start test network
+	// Build test network
 	log.Println("Building network...")
 	netw = sim.NewNetwork(e)
 
+	//------------------------------------------------------------------
+	// Run test network
 	log.Println("Running network...")
 	go netw.Run(func(ev *core.Event) {
 		// listen to network events
 		switch ev.Type {
 		case sim.EvNodeAdded:
 			log.Printf("[%s] started (#%d)", ev.Peer, ev.Val)
+			changed = true
 		case sim.EvNodeRemoved:
 			log.Printf("[%s] stopped (%d running)", ev.Peer, ev.Val)
+			changed = true
 		case core.EvNeighborExpired:
 			log.Printf("[%s] neighbor %s expired", ev.Peer, ev.Ref)
+			changed = true
 		case core.EvForwardRemoved:
 			log.Printf("[%s] forward %s removed", ev.Peer, ev.Ref)
 		}
 	})
 
+	//------------------------------------------------------------------
 	// prepare monitoring
 	sigCh := make(chan os.Signal, 5)
 	signal.Notify(sigCh)
@@ -118,7 +160,7 @@ loop:
 			// show status (coverage)
 			cover := netw.Coverage()
 			log.Printf("--> Coverage: %.2f%%", cover)
-			rt, _, hops := netw.RoutingTable()
+			rt, graph, hops = netw.RoutingTable()
 			status(rt, nil, hops)
 
 			// if all nodes are running break loop if coverage has not
@@ -144,40 +186,20 @@ loop:
 			}
 		}
 	}
+	//------------------------------------------------------------------
 	// stop network
 	discarded := netw.Stop()
 	log.Printf("Routing complete, %d messages discarded", discarded)
 
+	//------------------------------------------------------------------
 	// print final statistics
 	trafIn, trafOut := netw.Traffic()
 	in := float64(trafIn) / float64(sim.Cfg.Env.NumNodes)
 	out := float64(trafOut) / float64(sim.Cfg.Env.NumNodes)
 	log.Printf("Avg. traffic per node: %s in / %s out", sim.Scale(in), sim.Scale(out))
 	log.Println("Network routing table constructed - checking routes:")
-	rt, graph, hops := netw.RoutingTable()
+	rt, graph, hops = netw.RoutingTable()
 	status(rt, graph, hops)
-
-	// draw final network graph if canvas is not dynamic
-	if !c.IsDynamic() {
-		// start rendering
-		if err := c.Open(); err != nil {
-			log.Fatal(err)
-		}
-		c.Render(func(c sim.Canvas) {
-			// render graph
-			switch sim.Cfg.Render.Source {
-			case "graph":
-				graph.Render(c, true)
-			case "rtab":
-				rt.Render(c, true)
-			default:
-				log.Fatal("render: unknown source mode")
-			}
-			// draw environment
-			e.Draw(c)
-		})
-		c.Close()
-	}
 }
 
 // ----------------------------------------------------------------------
