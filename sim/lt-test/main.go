@@ -81,8 +81,8 @@ func main() {
 		go run(e)
 
 		// run render loop
-		c.Render(func(c sim.Canvas) {
-			if changed && netw != nil {
+		c.Render(func(c sim.Canvas, redraw bool) {
+			if (redraw || changed) && netw != nil {
 				c.Start()
 				netw.Render(c)
 				changed = false
@@ -100,13 +100,13 @@ func main() {
 		if err := c.Open(); err != nil {
 			log.Fatal(err)
 		}
-		c.Render(func(c sim.Canvas) {
+		c.Render(func(c sim.Canvas, redraw bool) {
 			// render graph
 			switch sim.Cfg.Render.Source {
 			case "graph":
-				graph.Render(c, true)
+				graph.Render(c, redraw)
 			case "rtab":
-				rt.Render(c, true)
+				rt.Render(c, redraw)
 			default:
 				log.Fatal("render: unknown source mode")
 			}
