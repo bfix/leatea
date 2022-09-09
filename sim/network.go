@@ -98,14 +98,16 @@ func (n *Network) Run(cb core.Listener) {
 			if Random.Float64() < Cfg.Node.DeathRate {
 				ttl := Vary(Cfg.Node.PeerTTL) + delay
 				time.Sleep(ttl)
-				n.running--
-				node.Stop()
-				if cb != nil {
-					cb(&core.Event{
-						Type: EvNodeRemoved,
-						Peer: node.PeerID(),
-						Val:  n.running,
-					})
+				if n.active {
+					n.running--
+					node.Stop()
+					if cb != nil {
+						cb(&core.Event{
+							Type: EvNodeRemoved,
+							Peer: node.PeerID(),
+							Val:  n.running,
+						})
+					}
 				}
 			}
 		}()
@@ -250,14 +252,15 @@ func (n *Network) Render(c Canvas) {
 		}
 		for _, id2 := range node1.Neighbors() {
 			node2, i2 := n.getNode(id2)
-			if i2 >= i1 {
+			// don't draw if both nodes are inactive
+			if i2 >= i1 || (n.active && !(node2.IsRunning() || node1.IsRunning())) {
 				continue
 			}
 			clr := ClrBlue
 			if n.active && !(node2.IsRunning() && node1.IsRunning()) {
 				clr = ClrRed
 			}
-			c.Line(node1.pos.X, node1.pos.Y, node2.pos.X, node2.pos.Y, 0.15, clr)
+			c.Line(node1.Pos.X, node1.Pos.Y, node2.Pos.X, node2.Pos.Y, 0.15, clr)
 		}
 	}
 	// draw environment
@@ -286,6 +289,10 @@ func NewRoutingTable(n *Network) *RoutingTable {
 	}
 }
 
+func (rt *RoutingTable) GetNode(i int) *SimNode {
+	return rt.netw.nodes[i]
+}
+
 // Render creates an image of the graph
 func (rt *RoutingTable) Render(canvas Canvas, final bool) {
 	// draw nodes
@@ -306,7 +313,7 @@ func (rt *RoutingTable) Render(canvas Canvas, final bool) {
 				continue
 			}
 			node2 := rt.netw.nodes[to]
-			canvas.Line(node1.pos.X, node1.pos.Y, node2.pos.X, node2.pos.Y, 0.15, ClrBlue)
+			canvas.Line(node1.Pos.X, node1.Pos.Y, node2.Pos.X, node2.Pos.Y, 0.15, ClrBlue)
 		}
 	}
 	// draw environment

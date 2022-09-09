@@ -41,6 +41,7 @@ var (
 	ClrBlack = &color.RGBA{0, 0, 0, 0}
 	ClrGray  = &color.RGBA{240, 240, 240, 0}
 	ClrBlue  = &color.RGBA{0, 0, 255, 0}
+	ClrGreen = &color.RGBA{0, 255, 0, 0}
 )
 
 // Canvas for drawing the network diagram and environment

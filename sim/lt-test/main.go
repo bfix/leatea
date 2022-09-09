@@ -21,7 +21,9 @@
 package main
 
 import (
+	"bytes"
 	"flag"
+	"fmt"
 	"leatea/core"
 	"leatea/sim"
 	"log"
@@ -39,6 +41,7 @@ var (
 	rt      *sim.RoutingTable // compiled routing table
 	graph   *sim.Graph        // reconstructed network graph
 	hops    float64           // avg. number of hops in routing table
+	routes  [][]int           // list of routes
 )
 
 // run application
@@ -84,7 +87,17 @@ func main() {
 		c.Render(func(c sim.Canvas, redraw bool) {
 			if (redraw || changed) && netw != nil {
 				c.Start()
+				// render network
 				netw.Render(c)
+				// render routes (loops)
+				for _, route := range routes {
+					from := rt.GetNode(route[0])
+					for _, hop := range route[1:] {
+						to := rt.GetNode(hop)
+						c.Line(from.Pos.X, from.Pos.Y, to.Pos.X, to.Pos.Y, 0.3, sim.ClrRed)
+						from = to
+					}
+				}
 				changed = false
 			}
 		})
@@ -161,7 +174,9 @@ loop:
 			cover := netw.Coverage()
 			log.Printf("--> Coverage: %.2f%%", cover)
 			rt, graph, hops = netw.RoutingTable()
-			status(rt, nil, hops)
+			if status(rt, nil, hops) > 0 && sim.Cfg.Options.StopOnLoop {
+				break loop
+			}
 
 			// if all nodes are running break loop if coverage has not
 			// changed for some epochs (if defined)
@@ -199,37 +214,46 @@ loop:
 	log.Printf("Avg. traffic per node: %s in / %s out", sim.Scale(in), sim.Scale(out))
 	log.Println("Network routing table constructed - checking routes:")
 	rt, graph, hops = netw.RoutingTable()
-	status(rt, graph, hops)
+	if status(rt, graph, hops) > 0 {
+		// analyze loops
+		analyzeLoops(rt)
+	}
 }
 
 // ----------------------------------------------------------------------
 // Follow the route to target. Returns number of hops on success, 0 for
 // broken routes and -1 for cycles.
-func route(rt [][]int, from, to int) int {
+func route(rt [][]int, from, to int) (hops int, route []int) {
 	ttl := sim.Cfg.Env.NumNodes
-	hops := 0
+	hops = 0
 	for {
 		hops++
+		route = append(route, from)
 		next := rt[from][to]
 		if next == to {
-			return hops
+			route = append(route, to)
+			return
 		}
 		if next < 0 {
-			return 0
+			hops = 0
+			return
 		}
 		from = next
 		if ttl--; ttl < 0 {
-			return -1
+			route = append(route, to)
+			hops = -1
+			return
 		}
 	}
 }
 
+// ----------------------------------------------------------------------
 // Print status information on routing table (and optional on graph)
 // Follow all routes; detect cycles and broken routes
-func status(rt *sim.RoutingTable, g *sim.Graph, allHops1 float64) {
+func status(rt *sim.RoutingTable, g *sim.Graph, allHops1 float64) (loops int) {
 	success := 0
 	broken := 0
-	loop := 0
+	loops = 0
 	allHops2 := 0
 	allHops3 := 0
 	nodes3 := 0
@@ -245,10 +269,10 @@ func status(rt *sim.RoutingTable, g *sim.Graph, allHops1 float64) {
 				continue
 			}
 			count++
-			hops := route(rt.List, from, to)
+			hops, _ := route(rt.List, from, to)
 			switch hops {
 			case -1:
-				loop++
+				loops++
 			case 0:
 				broken++
 			default:
@@ -266,7 +290,7 @@ func status(rt *sim.RoutingTable, g *sim.Graph, allHops1 float64) {
 	perc := func(n int) float64 {
 		return float64(100*n) / total
 	}
-	log.Printf("  * Loops: %d (%.2f%%)", loop, perc(loop))
+	log.Printf("  * Loops: %d (%.2f%%)", loops, perc(loops))
 	log.Printf("  * Broken: %d (%.2f%%)", broken, perc(broken))
 	log.Printf("  * Success: %d (%.2f%%)", success, perc(success))
 	h2 := float64(allHops2) / float64(success)
@@ -278,4 +302,95 @@ func status(rt *sim.RoutingTable, g *sim.Graph, allHops1 float64) {
 	if g != nil {
 		log.Printf("  * Hops (graph): %.2f (%d)", h3, nodes3)
 	}
+	return
+}
+
+// ----------------------------------------------------------------------
+// Analyze loops
+// ----------------------------------------------------------------------
+
+type loop struct {
+	from, to int
+	head     []int
+	cycle    []int
+}
+
+func analyzeLoops(rt *sim.RoutingTable) {
+	log.Println("Analyzing loops:")
+	// collect all loops
+	log.Println("  * collect loops:")
+	var loops []*loop
+	for from, e := range rt.List {
+		for to := range e {
+			if from == to {
+				continue
+			}
+			if hops, route := route(rt.List, from, to); hops == -1 {
+				// analyze loop
+				num := len(route)
+				l := &loop{
+					from: route[0],
+					to:   route[num-1],
+				}
+			loop:
+				for i, hop := range route {
+					for j := i + 1; j < num; j++ {
+						if hop == route[j] {
+							l.head = route[:i]
+							l.cycle = route[i:j]
+							loops = append(loops, l)
+							break loop
+						}
+					}
+				}
+			}
+		}
+	}
+	log.Printf("      -> %d loops found.", len(loops))
+
+	// check for distinct cycles
+	log.Println("  * find distinct loops:")
+	routes = make([][]int, 0)
+	for i, l := range loops {
+		cl := len(l.cycle)
+		found := false
+	search:
+		for _, e := range routes {
+			if cl != len(e) {
+				continue
+			}
+			hop := l.cycle[0]
+			for k, hop2 := range e {
+				if hop2 == hop {
+					// check if rest is the same...
+					for q := 0; q < cl; q++ {
+						if loops[i].cycle[q] != e[(q+k)%cl] {
+							break search
+						}
+					}
+					found = true
+					break search
+				}
+			}
+		}
+		if !found {
+			routes = append(routes, l.cycle)
+		}
+	}
+	changed = true
+	log.Printf("      -> %d distinct loops found:", len(routes))
+
+	// show distinct cycles
+	for i, c := range routes {
+		buf := new(bytes.Buffer)
+		buf.WriteString(fmt.Sprintf("         #%03d: ", i+1))
+		for j, id := range c {
+			if j > 0 {
+				buf.WriteString("-")
+			}
+			buf.WriteString(rt.GetNode(id).PeerID().String())
+		}
+		log.Println(buf.String())
+	}
+	log.Printf("Loop analysis complete.")
 }

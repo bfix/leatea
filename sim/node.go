@@ -30,7 +30,7 @@ import (
 // SimNode represents a node in the test network (extended attributes)
 type SimNode struct {
 	core.Node
-	pos  *Position         // position in the field
+	Pos  *Position         // position in the field
 	v    float64           // velocity (in units per epoch)
 	dir  float64           // direction [0,2π(
 	r2   float64           // square of broadcast distance
@@ -43,7 +43,7 @@ func NewSimNode(prv *core.PeerPrivate, out chan core.Message, pos *Position, r2 
 	return &SimNode{
 		Node: *core.NewNode(prv, recv, out),
 		r2:   r2,
-		pos:  pos,
+		Pos:  pos,
 		recv: recv,
 	}
 }
@@ -61,7 +61,7 @@ func (n *SimNode) Stop() {
 
 // CanReach returns true if the node can reach another node by broadcast
 func (n *SimNode) CanReach(peer *SimNode) bool {
-	dist2 := n.pos.Distance2(peer.pos)
+	dist2 := n.Pos.Distance2(peer.Pos)
 	return dist2 < n.r2
 }
 
@@ -72,13 +72,13 @@ func (n *SimNode) Receive(msg core.Message) {
 
 // String returns a human-readable representation.
 func (n *SimNode) String() string {
-	return fmt.Sprintf("SimNode{%s @ %s}", n.Node.String(), n.pos)
+	return fmt.Sprintf("SimNode{%s @ %s}", n.Node.String(), n.Pos)
 }
 
 // Draw a node on the canvas
 func (n *SimNode) Draw(c Canvas) {
 	//r := math.Sqrt(n.r2)
-	c.Circle(n.pos.X, n.pos.Y, 0.3, 0, nil, ClrRed)
+	c.Circle(n.Pos.X, n.Pos.Y, 0.3, 0, nil, ClrRed)
 	//c.Circle(n.pos.X, n.pos.Y, r, 0.03, ClrGray, nil)
-	c.Text(n.pos.X, n.pos.Y+1.3, 1, n.PeerID().String())
+	c.Text(n.Pos.X, n.Pos.Y+1.3, 1, n.PeerID().String())
 }

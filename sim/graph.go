@@ -91,7 +91,7 @@ func (g *Graph) Render(canvas Canvas, final bool) {
 			if node2 == nil || (!final && !node2.IsRunning()) {
 				continue
 			}
-			canvas.Line(node.pos.X, node.pos.Y, node2.pos.X, node2.pos.Y, 0.15, ClrBlack)
+			canvas.Line(node.Pos.X, node.Pos.Y, node2.Pos.X, node2.Pos.Y, 0.15, ClrBlack)
 		}
 	}
 }

@@ -54,7 +54,7 @@ func NewWallModel() *WallModel {
 
 // Connectivity between two nodes based on a wall model (interface impl)
 func (m *WallModel) Connectivity(n1, n2 *SimNode) bool {
-	los := &Line{n1.pos, n2.pos}
+	los := &Line{n1.Pos, n2.Pos}
 	red := 1.0
 	for _, w := range m.walls {
 		if w.Line.Intersect(los) {
@@ -64,7 +64,7 @@ func (m *WallModel) Connectivity(n1, n2 *SimNode) bool {
 	if red < 1e-8 {
 		return false
 	}
-	d2 := n1.pos.Distance2(n2.pos) / red
+	d2 := n1.Pos.Distance2(n2.Pos) / red
 	return n1.r2 > d2 || n2.r2 > d2
 }
 
@@ -132,7 +132,7 @@ type RndModel struct{}
 
 // Connectivity between two nodes only based on reach (interface impl)
 func (m *RndModel) Connectivity(n1, n2 *SimNode) bool {
-	d2 := n1.pos.Distance2(n2.pos)
+	d2 := n1.Pos.Distance2(n2.Pos)
 	return n1.r2 > d2 || n2.r2 > d2
 }
 
