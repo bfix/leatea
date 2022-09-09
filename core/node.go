@@ -87,13 +87,22 @@ func (n *Node) Forward(target *PeerID) (*PeerID, int) {
 
 // Run the node (with periodic tasks and message handling)
 func (n *Node) Run(cb Listener) {
+	// reset routing table
+	n.rt.Reset()
+
+	// remember listener for events
 	n.cb = cb
+
 	// broadcast LEARN message periodically
 	learn := time.NewTicker(time.Duration(cfg.LearnIntv) * time.Second)
 	n.active = true
 	for n.active {
 		select {
 		case <-learn.C:
+			// node already stopped?
+			if !n.active {
+				return
+			}
 			// send out our own learn message
 			if cb != nil {
 				cb(&Event{
@@ -114,8 +123,6 @@ func (n *Node) Run(cb Listener) {
 // Stop a running node
 func (n *Node) Stop() {
 	n.active = false
-	// reset routing table
-	n.rt.Reset()
 }
 
 // IsRunning returns true if the node is active
