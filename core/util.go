@@ -24,32 +24,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/binary"
-	"time"
 )
-
-//----------------------------------------------------------------------
-// Time
-//----------------------------------------------------------------------
-
-// Time is the number of microseconds since Jan 1st, 1970 (Unix epoch)
-type Time struct {
-	Val int64 `order:"big"`
-}
-
-// Expired returns true if 't+ttl' is in the past
-func (t *Time) Expired(ttl time.Duration) bool {
-	return (time.Now().UnixMicro() - t.Val) > ttl.Microseconds()
-}
-
-// String returns a human-readabe timestamps
-func (t *Time) String() string {
-	return time.UnixMicro(t.Val).Format(time.RFC1123)
-}
-
-// TimeNow returns the current time
-func TimeNow() *Time {
-	return &Time{Val: time.Now().UnixMicro()}
-}
 
 //----------------------------------------------------------------------
 // Random numbers

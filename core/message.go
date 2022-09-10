@@ -27,8 +27,8 @@ import (
 )
 
 const (
-	MsgLEARN = 1 // LEARN message type
-	MsgTEACH = 2 // TEACH message type
+	MsgLEArn = 1 // LEARN message type
+	MsgTEAch = 2 // TEACH message type
 )
 
 //----------------------------------------------------------------------
@@ -69,16 +69,16 @@ func (m *MessageImpl) Sender() *PeerID {
 //----------------------------------------------------------------------
 
 // Learn message: "I want to learn, and here is what I know already..."
-type LearnMsg struct {
+type LEArnMsg struct {
 	MessageImpl
 
 	Filter *data.SaltedBloomFilter // bloomfilter over target peerids in forward table
 }
 
 // NewLearnMsg creates a new message for a learn broadcast
-func NewLearnMsg(sender *PeerID, filter *data.SaltedBloomFilter) *LearnMsg {
-	msg := new(LearnMsg)
-	msg.MsgType = MsgLEARN
+func NewLearnMsg(sender *PeerID, filter *data.SaltedBloomFilter) *LEArnMsg {
+	msg := new(LEArnMsg)
+	msg.MsgType = MsgLEArn
 	msg.MsgSize = uint16(4 + sender.Size() + filter.Size())
 	msg.Sender_ = sender
 	msg.Filter = filter
@@ -86,25 +86,25 @@ func NewLearnMsg(sender *PeerID, filter *data.SaltedBloomFilter) *LearnMsg {
 }
 
 // String returns a human-readable representation of the message
-func (m *LearnMsg) String() string {
+func (m *LEArnMsg) String() string {
 	return fmt.Sprintf("Learn{%s}", m.Sender_)
 }
 
 //----------------------------------------------------------------------
 
 // Teach message: "This is what I know and you don't..."
-type TeachMsg struct {
+type TEAchMsg struct {
 	MessageImpl
 
 	Announce []*Forward `size:"*"` // unfiltered table entries
 }
 
-// NewTeachMsg creates a new message for broadcast
-func NewTeachMsg(sender *PeerID, candidates []*Forward) *TeachMsg {
-	msg := new(TeachMsg)
+// NewTEAchMsg creates a new message for broadcast
+func NewTEAchMsg(sender *PeerID, candidates []*Forward) *TEAchMsg {
+	msg := new(TEAchMsg)
 	msg.Sender_ = sender
 	msg.Announce = candidates
-	msg.MsgType = MsgTEACH
+	msg.MsgType = MsgTEAch
 	msg.MsgSize = uint16(4 + sender.Size())
 	for _, e := range candidates {
 		msg.MsgSize += uint16(e.Size())
@@ -113,6 +113,6 @@ func NewTeachMsg(sender *PeerID, candidates []*Forward) *TeachMsg {
 }
 
 // String returns a human-readable representation of the message
-func (m *TeachMsg) String() string {
+func (m *TEAchMsg) String() string {
 	return fmt.Sprintf("Teach{%s:%d}", m.Sender_, len(m.Announce))
 }

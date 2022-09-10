@@ -29,13 +29,13 @@ import (
 
 // Node represents a node in the network
 type Node struct {
-	prv    *PeerPrivate  // private signing key
-	pub    *PeerID       // peer identifier (public key)
-	rt     *ForwardTable // forward table
-	inCh   chan Message  // channel for incoming messages
-	outCh  chan Message  // channel for outgoing messages
-	active bool          // node running?
-	cb     Listener      // listen for node events
+	ForwardTable // forward table as base type
+
+	prv      *PeerPrivate // private signing key
+	inCh     chan Message // channel for incoming messages
+	outCh    chan Message // channel for outgoing messages
+	active   bool         // node running?
+	listener Listener     // listener for node events
 }
 
 // NewNode creates a new node with a given private signing key and an input /
@@ -43,17 +43,16 @@ type Node struct {
 func NewNode(prv *PeerPrivate, in, out chan Message) *Node {
 	pub := prv.Public()
 	return &Node{
-		prv:   prv,
-		pub:   pub,
-		rt:    NewForwardTable(pub),
-		inCh:  in,
-		outCh: out,
+		ForwardTable: *NewForwardTable(pub),
+		prv:          prv,
+		inCh:         in,
+		outCh:        out,
 	}
 }
 
 // PeerID returns the peerid of the node.
 func (n *Node) PeerID() *PeerID {
-	return n.pub
+	return n.self
 }
 
 // Send message (to outgoing message channel)
@@ -63,39 +62,13 @@ func (n *Node) send(msg Message) {
 	}()
 }
 
-// NumForwards returns the number of targets in the forward table
-func (n *Node) NumForwards() int {
-	n.rt.RLock()
-	defer n.rt.RUnlock()
-	return len(n.rt.list)
-}
-
-// Return a list of active direct neighbors
-func (n *Node) Neighbors() (list []*PeerID) {
-	n.rt.RLock()
-	defer n.rt.RUnlock()
-	for _, e := range n.rt.list {
-		if e.NextHop == nil && e.Hops == 0 {
-			list = append(list, e.Peer)
-		}
-	}
-	return
-}
-
-// Forward returns the next hop on the route to target and the number of
-// expected hops. If hop count is less than 0, a next hop doesn't exist
-// (broken route)
-func (n *Node) Forward(target *PeerID) (*PeerID, int) {
-	return n.rt.Forward(target)
-}
-
 // Run the node (with periodic tasks and message handling)
-func (n *Node) Run(cb Listener) {
-	// reset routing table
-	n.rt.Reset()
+func (n *Node) Run(notify Listener) {
+	// reset routing table (in case the node is restarted)
+	n.Reset()
 
 	// remember listener for events
-	n.cb = cb
+	n.listener = notify
 
 	// broadcast LEARN message periodically
 	learn := time.NewTicker(time.Duration(cfg.LearnIntv) * time.Second)
@@ -108,13 +81,13 @@ func (n *Node) Run(cb Listener) {
 				return
 			}
 			// send out our own learn message
-			if cb != nil {
-				cb(&Event{
+			if notify != nil {
+				notify(&Event{
 					Type: EvBeacon,
-					Peer: n.pub,
+					Peer: n.self,
 				})
 			}
-			msg := NewLearnMsg(n.pub, n.rt.Filter(cb))
+			msg := NewLearnMsg(n.self, n.Filter(notify))
 			n.send(msg)
 
 		case msg := <-n.inCh:
@@ -139,25 +112,25 @@ func (n *Node) Receive(msg Message) {
 	// add the sender as direct neighbor to the
 	// forward table.
 	sender := msg.Sender()
-	n.rt.AddNeighbor(sender)
+	n.AddNeighbor(sender)
 
 	// handle received message
 	switch msg.Type() {
 
 	//------------------------------------------------------------------
-	// LEARN message received
+	// LEArn message received
 	//------------------------------------------------------------------
-	case MsgLEARN:
-		m, _ := msg.(*LearnMsg)
+	case MsgLEArn:
+		m, _ := msg.(*LEArnMsg)
 		// build a list of candidate entries for teaching:
 		// candidates are not included in the learn filter
 		// and don't have the learner as next hop.
-		if candidates := n.rt.Candidates(m); len(candidates) > 0 {
+		if candidates := n.Candidates(m); len(candidates) > 0 {
 			// assemble and send TEACH message
-			msg := NewTeachMsg(n.pub, candidates)
+			msg := NewTEAchMsg(n.self, candidates)
 			n.send(msg)
-			if n.cb != nil {
-				n.cb(&Event{
+			if n.listener != nil {
+				n.listener(&Event{
 					Type: EvTeaching,
 					Peer: m.Sender(),
 				})
@@ -165,22 +138,22 @@ func (n *Node) Receive(msg Message) {
 		}
 
 	//------------------------------------------------------------------
-	// TEACH message received
+	// TEAch message received
 	//------------------------------------------------------------------
-	case MsgTEACH:
-		m, _ := msg.(*TeachMsg)
-		if n.cb != nil {
-			n.cb(&Event{
+	case MsgTEAch:
+		m, _ := msg.(*TEAchMsg)
+		if n.listener != nil {
+			n.listener(&Event{
 				Type: EvLearning,
-				Peer: n.pub,
+				Peer: n.self,
 			})
 		}
 		// learn new peers
-		n.rt.Learn(m)
+		n.Learn(m)
 	}
 }
 
 // String returns a human-readable representation of the node
 func (n *Node) String() string {
-	return fmt.Sprintf("Node{%s: [%d]}", n.pub, len(n.rt.list))
+	return fmt.Sprintf("Node{%s: [%d]}", n.self, n.NumForwards())
 }
