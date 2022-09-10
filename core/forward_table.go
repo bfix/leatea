@@ -377,7 +377,12 @@ func (t *ForwardTable) Learn(m *TEAchMsg) {
 			}
 			// check for update
 			if announce.Hops < 0 {
-				// "delete" announcement: flag entry as removed.
+				// "delete" announcement: check for impact
+				if !sender.Equal(entry.NextHop) {
+					// distinct route: preserve entry
+					continue
+				}
+				// drop forward
 				t.drop(entry.Peer, origin)
 			} else if entry.Hops > announce.Hops+1 {
 				// update with shorter path
