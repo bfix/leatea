@@ -31,11 +31,10 @@ import (
 type Node struct {
 	ForwardTable // forward table as base type
 
-	prv      *PeerPrivate // private signing key
-	inCh     chan Message // channel for incoming messages
-	outCh    chan Message // channel for outgoing messages
-	active   bool         // node running?
-	listener Listener     // listener for node events
+	prv    *PeerPrivate // private signing key
+	inCh   chan Message // channel for incoming messages
+	outCh  chan Message // channel for outgoing messages
+	active bool         // node running?
 }
 
 // NewNode creates a new node with a given private signing key and an input /
@@ -87,7 +86,7 @@ func (n *Node) Run(notify Listener) {
 					Peer: n.self,
 				})
 			}
-			msg := NewLearnMsg(n.self, n.Filter(notify))
+			msg := NewLearnMsg(n.self, n.Filter())
 			n.send(msg)
 
 		case msg := <-n.inCh:
@@ -127,12 +126,15 @@ func (n *Node) Receive(msg Message) {
 		// and don't have the learner as next hop.
 		if candidates := n.Candidates(m); len(candidates) > 0 {
 			// assemble and send TEACH message
-			msg := NewTEAchMsg(n.self, candidates)
-			n.send(msg)
+			outMsg := NewTEAchMsg(n.self, candidates)
+			n.send(outMsg)
+
+			// notify listener
 			if n.listener != nil {
 				n.listener(&Event{
 					Type: EvTeaching,
-					Peer: m.Sender(),
+					Peer: n.self,
+					Ref:  m.Sender(),
 				})
 			}
 		}
@@ -141,15 +143,18 @@ func (n *Node) Receive(msg Message) {
 	// TEAch message received
 	//------------------------------------------------------------------
 	case MsgTEAch:
+		// learn new peers
 		m, _ := msg.(*TEAchMsg)
+		n.Learn(m)
+
+		// notify listener
 		if n.listener != nil {
 			n.listener(&Event{
 				Type: EvLearning,
 				Peer: n.self,
+				Ref:  m.Sender(),
 			})
 		}
-		// learn new peers
-		n.Learn(m)
 	}
 }
 
