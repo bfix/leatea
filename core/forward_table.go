@@ -118,8 +118,10 @@ func DirectEntry(n *PeerID) *Entry {
 // ForwardTable is a map of entries with key "target"
 type ForwardTable struct {
 	sync.RWMutex
-	self *PeerID
-	list map[string]*Entry
+	self     *PeerID           // reference to ourself
+	list     map[string]*Entry // forward table
+	listener Listener          // listener for events
+
 }
 
 // NewForwardTable creates an empty table
@@ -154,21 +156,65 @@ func (t *ForwardTable) AddNeighbor(n *PeerID) {
 	t.list[n.Key()] = DirectEntry(n)
 }
 
+// Drop entries related to a target peer.
+// This is an internal method that must be called in a locked context.
+func (t *ForwardTable) drop(n *PeerID) {
+	// get table entry for target
+	entry, ok := t.list[n.Key()]
+	if !ok {
+		// not found
+		return
+	}
+	// already removed?
+	if entry.Hops < 0 {
+		// yes
+		return
+	}
+	// flag entry as removed
+	entry.Hops = -1
+	entry.Origin = TimeNow()
+	entry.Pending = true
+
+	// check for dropped neighbor
+	if entry.NextHop == nil && entry.Hops == 0 {
+		// notify listener
+		if t.listener != nil {
+			t.listener(&Event{
+				Type: EvNeighborExpired,
+				Peer: t.self,
+				Ref:  entry.Peer,
+			})
+		}
+		// drop forwards depending on removed neighbor
+		for _, dep := range t.list {
+			// skip neighbors and flagged entries
+			if dep.NextHop == nil || dep.Hops < 0 {
+				continue
+			}
+			t.drop(dep.Peer)
+		}
+	} else {
+		// notify listener we removed a dependent forward
+		if t.listener != nil {
+			t.listener(&Event{
+				Type: EvForwardRemoved,
+				Peer: t.self,
+				Ref:  entry.Peer,
+			})
+		}
+	}
+}
+
 // Cleanup forward table and flag expired neighbors (and their dependencies)
 // for removal. The actual deletion of the entry in the table happens after
 // the removed entry was broadcasted in a TEAch message.
-func (t *ForwardTable) Cleanup(notify Listener) {
-	t.Lock()
-	defer t.Unlock()
+func (t *ForwardTable) Cleanup() {
+	t.RLock()
+	defer t.RUnlock()
 
-	//------------------------------------------------------------------
-	// (1) collect expired entries
-	//------------------------------------------------------------------
-
-	// keep a list of expired neighbors
-	nList := make(map[string]struct{})
+	// remove expired neighbors
 	for _, entry := range t.list {
-		// is entry a neighbor forward?
+		// is entry a neighbor?
 		if entry.NextHop != nil {
 			// no:
 			continue
@@ -183,58 +229,16 @@ func (t *ForwardTable) Cleanup(notify Listener) {
 			// no:
 			continue
 		}
-		// expired entries are added to the list and are flagged for deletion.
-		// The timestamp is set to current time, since a deletion must be newer
-		// than the original route, so that deletions can update entries in
-		// the forward table of remote peers.
-		nList[entry.Peer.Key()] = struct{}{}
-		entry.Hops = -1
-		entry.Origin = TimeNow()
-
-		// notify listener
-		if notify != nil {
-			notify(&Event{
-				Type: EvNeighborExpired,
-				Peer: t.self,
-				Ref:  entry.Peer,
-			})
-		}
-	}
-	//------------------------------------------------------------------
-	// (2) Flag dependencies for deletion. A dependent entry has the
-	// expired entry as next hop
-	//------------------------------------------------------------------
-
-	// remove forwards depending on removed neighbors
-	for _, entry := range t.list {
-		// skip neighbors and flagged entries
-		if entry.NextHop == nil || entry.Hops < 0 {
-			continue
-		}
-		// check if next hop in entry is a removed neighbor
-		if _, ok := nList[entry.NextHop.Key()]; !ok {
-			continue
-		}
-		// flag entry for deletion
-		entry.Hops = -1
-		entry.Origin = TimeNow()
-
-		// notify listener
-		if notify != nil {
-			notify(&Event{
-				Type: EvForwardRemoved,
-				Peer: t.self,
-				Ref:  entry.Peer,
-			})
-		}
+		// Drop neighbor
+		t.drop(entry.Peer)
 	}
 }
 
 // Filter returns a bloomfilter from all table entries (PeerID).
 // Remove expired entries first.
-func (t *ForwardTable) Filter(notify Listener) *data.SaltedBloomFilter {
+func (t *ForwardTable) Filter() *data.SaltedBloomFilter {
 	// clean-up first
-	t.Cleanup(notify)
+	t.Cleanup()
 
 	// create bloomfilter
 	t.Lock()
@@ -366,9 +370,7 @@ func (t *ForwardTable) Learn(m *TEAchMsg) {
 			// check for update
 			if announce.Hops < 0 {
 				// "delete" announcement: flag entry as removed.
-				entry.Hops = -1
-				entry.Origin = origin
-				entry.Pending = true
+				t.drop(entry.Peer)
 			} else if entry.Hops > announce.Hops+1 {
 				// update with shorter path
 				entry.Hops = announce.Hops + 1
