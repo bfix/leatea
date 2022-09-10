@@ -156,9 +156,11 @@ func (t *ForwardTable) AddNeighbor(n *PeerID) {
 	t.list[n.Key()] = DirectEntry(n)
 }
 
-// Drop entries related to a target peer.
-// This is an internal method that must be called in a locked context.
-func (t *ForwardTable) drop(n *PeerID) {
+// Drop entries related to a target peer:
+// The timestamp is the creation time of the root removal; it is
+// the current time if we are the originator of the deletion.
+// N.B.: This is an internal method that must be called in a locked context.
+func (t *ForwardTable) drop(n *PeerID, ts *Time) {
 	// get table entry for target
 	entry, ok := t.list[n.Key()]
 	if !ok {
@@ -170,9 +172,14 @@ func (t *ForwardTable) drop(n *PeerID) {
 		// yes
 		return
 	}
+	// is the existing entry newer than the removal request?
+	if ts.Before(entry.Origin) {
+		// yes
+		return
+	}
 	// flag entry as removed
 	entry.Hops = -1
-	entry.Origin = TimeNow()
+	entry.Origin = ts
 	entry.Pending = true
 
 	// check for dropped neighbor
@@ -191,7 +198,7 @@ func (t *ForwardTable) drop(n *PeerID) {
 			if dep.NextHop == nil || dep.Hops < 0 {
 				continue
 			}
-			t.drop(dep.Peer)
+			t.drop(dep.Peer, ts)
 		}
 	} else {
 		// notify listener we removed a dependent forward
@@ -229,8 +236,9 @@ func (t *ForwardTable) Cleanup() {
 			// no:
 			continue
 		}
-		// Drop neighbor
-		t.drop(entry.Peer)
+		// Drop neighbor:
+		// We are the origin of the removal request, so use current time.
+		t.drop(entry.Peer, TimeNow())
 	}
 }
 
@@ -370,7 +378,7 @@ func (t *ForwardTable) Learn(m *TEAchMsg) {
 			// check for update
 			if announce.Hops < 0 {
 				// "delete" announcement: flag entry as removed.
-				t.drop(entry.Peer)
+				t.drop(entry.Peer, origin)
 			} else if entry.Hops > announce.Hops+1 {
 				// update with shorter path
 				entry.Hops = announce.Hops + 1
