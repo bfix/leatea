@@ -313,7 +313,6 @@ func main() {
 		switch time {
 		case 30:
 			delete(nodes, 6)
-		case 35:
 			delete(nodes, 5)
 		}
 		ui(false)
