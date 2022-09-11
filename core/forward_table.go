@@ -160,13 +160,7 @@ func (t *ForwardTable) AddNeighbor(n *PeerID) {
 // The timestamp is the creation time of the root removal; it is
 // the current time if we are the originator of the deletion.
 // N.B.: This is an internal method that must be called in a locked context.
-func (t *ForwardTable) drop(n *PeerID, ts *Time) {
-	// get table entry for target
-	entry, ok := t.list[n.Key()]
-	if !ok {
-		// not found
-		return
-	}
+func (t *ForwardTable) drop(entry *Entry, ts *Time) {
 	// already removed?
 	if entry.Hops < 0 {
 		// yes
@@ -177,13 +171,16 @@ func (t *ForwardTable) drop(n *PeerID, ts *Time) {
 		// yes
 		return
 	}
+	// is this a neighbor?
+	isNeighbor := (entry.NextHop == nil && entry.Hops == 0)
+
 	// flag entry as removed
 	entry.Hops = -1
 	entry.Origin = ts
 	entry.Pending = true
 
 	// check for dropped neighbor
-	if entry.NextHop == nil && entry.Hops == 0 {
+	if isNeighbor {
 		// notify listener
 		if t.listener != nil {
 			t.listener(&Event{
@@ -198,10 +195,10 @@ func (t *ForwardTable) drop(n *PeerID, ts *Time) {
 			if dep.NextHop == nil || dep.Hops < 0 {
 				continue
 			}
-			t.drop(dep.Peer, ts)
+			t.drop(dep, ts)
 		}
 	} else {
-		// notify listener we removed a dependent forward
+		// notify listener we removed a forward
 		if t.listener != nil {
 			t.listener(&Event{
 				Type: EvForwardRemoved,
@@ -238,7 +235,7 @@ func (t *ForwardTable) Cleanup() {
 		}
 		// Drop neighbor:
 		// We are the origin of the removal request, so use current time.
-		t.drop(entry.Peer, TimeNow())
+		t.drop(entry, TimeNow())
 	}
 }
 
@@ -376,14 +373,26 @@ func (t *ForwardTable) Learn(m *TEAchMsg) {
 				continue
 			}
 			// check for update
-			if announce.Hops < 0 {
-				// "delete" announcement: check for impact
-				if !sender.Equal(entry.NextHop) {
-					// distinct route: preserve entry
-					continue
+			if announce.Hops < 0 && entry.Hops >= 0 {
+				// "removal" announced
+				if announce.Hops == -2 {
+					// removed neighbor
+					entry.Hops = -2
+					entry.NextHop = nil
+					entry.Origin = origin
+					entry.Pending = true
+					// remove dependent forwards
+					for _, fw := range t.list {
+						fw.Hops = -1
+						fw.Origin = origin
+						fw.Pending = true
+					}
+				} else if entry.NextHop.Equal(sender) {
+					// remove dependent forward
+					entry.Hops = -1
+					entry.Origin = origin
+					entry.Pending = true
 				}
-				// drop forward
-				t.drop(entry.Peer, origin)
 			} else if entry.Hops > announce.Hops+1 {
 				// update with shorter path
 				entry.Hops = announce.Hops + 1
@@ -398,7 +407,7 @@ func (t *ForwardTable) Learn(m *TEAchMsg) {
 					Peer: announce.Peer,
 					Hops: announce.Hops + 1,
 				},
-				NextHop: m.Sender(),
+				NextHop: sender,
 				Origin:  origin,
 				Pending: true,
 			}
