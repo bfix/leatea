@@ -41,7 +41,6 @@ var (
 		7: NewPeer(7, 3, 6, 8),
 		8: NewPeer(8, 7),
 	}
-	numNodes = len(nodes)
 )
 
 func NewPeer(id int, nbs ...int) *Peer {
@@ -75,7 +74,7 @@ func (e *Entry) String() string {
 
 func (p *Peer) Learn() (m *LearnMsg) {
 	for _, e := range p.ft {
-		if e.next == 0 && time-e.ts > 15 {
+		if e.hops >= 0 && e.next == 0 && time-e.ts > 15 {
 			fmt.Printf("Neighbor peer %d expired on %d\n", e.peer, p.id)
 			e.hops = -2
 			e.ts = time
@@ -105,7 +104,7 @@ func (p *Peer) addNeighbor(n int) {
 }
 
 func (p *Peer) HandleLearn(m *LearnMsg) *TeachMsg {
-	fmt.Printf("Peer %d learning from %d\n", p.id, m.sender)
+	fmt.Printf("Peer %d wants to learn from %d\n", m.sender, p.id)
 	p.addNeighbor(m.sender)
 	list := make([]*Entry, 0)
 	for _, e := range p.ft {
@@ -210,39 +209,32 @@ func main() {
 	}
 
 	//------------------------------------------------------------------
-	nextLearner := 0
-	for time = 1; time < 120; time++ {
+	for time = 1; time < 100; time++ {
 		fmt.Printf("Time %d -------------------------------------------\n", time)
+		for _, sender := range nodes {
+			learn := sender.Learn()
+			fmt.Printf("Learn from %d: %v\n", learn.sender, learn.known)
 
-		var sender *Peer
-		var ok bool
-		for !ok {
-			sender, ok = nodes[nextLearner+1]
-			nextLearner = (nextLearner + 1) % numNodes
-		}
-		learn := sender.Learn()
-		fmt.Printf("Learn from %d: %v\n", learn.sender, learn.known)
-
-		teaches := make([]*TeachMsg, 0)
-		for id := range sender.nb {
-			rcv := nodes[id]
-			if rcv == nil {
-				continue
-			}
-			if tm := rcv.HandleLearn(learn); tm != nil {
-				teaches = append(teaches, tm)
-			}
-		}
-
-		for _, teach := range teaches {
-			fmt.Printf("Teach from %d: %v\n", teach.sender, teach.announce)
-			for id := range nodes[teach.sender].nb {
-				if id == teach.sender {
+			teaches := make([]*TeachMsg, 0)
+			for id := range sender.nb {
+				rcv := nodes[id]
+				if rcv == nil {
 					continue
 				}
-				rcv := nodes[id]
-				if rcv != nil {
-					rcv.HandleTeach(teach)
+				if tm := rcv.HandleLearn(learn); tm != nil {
+					teaches = append(teaches, tm)
+				}
+			}
+			for _, teach := range teaches {
+				fmt.Printf("Teach from %d: %v\n", teach.sender, teach.announce)
+				for id := range nodes[teach.sender].nb {
+					if id == teach.sender {
+						continue
+					}
+					rcv := nodes[id]
+					if rcv != nil {
+						rcv.HandleTeach(teach)
+					}
 				}
 			}
 		}
@@ -251,7 +243,7 @@ func main() {
 		case 30:
 			delete(nodes, 6)
 		case 35:
-			//delete(nodes, 5)
+			delete(nodes, 5)
 		}
 		ui(false)
 	}
