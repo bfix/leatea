@@ -246,72 +246,46 @@ func (tbl *ForwardTable) Candidates(m *LEArnMsg) (list []*Forward) {
 	tbl.Lock()
 	defer tbl.Unlock()
 
-	//------------------------------------------------------------------
-	// (1) collect unfiltered entries
-	//------------------------------------------------------------------
-	fList := make([]*Entry, 0)
+	// collect forwards for response
 	for _, entry := range tbl.recs {
-		// entry filtered out?
-		if m.Filter.Contains(entry.Peer.Bytes()) {
-			continue
+		// add entry if not filtered
+		add := !m.Filter.Contains(entry.Peer.Bytes())
+		// create forward for response
+		forward := entry.Target()
+		switch entry.Hops {
+		// removed forward
+		case -1:
+			// forced add
+			add = true
+		// removed neighbor
+		case -2:
+			// tag as deleted neighbor
+			entry.Hops = -3
+			// forced add
+			add = true
+		case -3:
+			// do not add deleted neighbors (even when unfiltered)
+			add = false
 		}
-		// skip if sender is next hop
-		if m.Sender().Equal(entry.NextHop) {
-			continue
-		}
-		// add entr to list
-		fList = append(fList, entry)
-	}
-	// sort list by ascending number of hops
-	sort.Slice(fList, func(i, j int) bool {
-		return fList[i].Hops < fList[j].Hops
-	})
-	// if list limit is reached (or surpassed), trim results
-	if len(fList) >= cfg.MaxTeachs {
-		fList = fList[:cfg.MaxTeachs]
-	}
-	// append results to candidate list
-	for _, entry := range fList {
-		// entry no longer dirty
-		entry.Pending = false
-		list = append(list, entry.Target())
-		// delete removed entries
-		if entry.Hops < 0 {
-			delete(tbl.recs, entry.Peer.Key())
+		// add forward to response if required
+		if add {
+			list = append(list, forward)
 		}
 	}
-
-	//------------------------------------------------------------------
-	// (2) collect pending entries (if more space is available in TEAch)
-	//------------------------------------------------------------------
-	if len(list) < cfg.MaxTeachs {
-		// keep list of pending entries
-		var pList []*Entry
-		for _, entry := range tbl.recs {
-			if entry.Pending {
-				pList = append(pList, entry)
-			}
-		}
-		// append pending entries to candidate list
-		if len(pList) > 0 {
-			// sort list by ascending hops (deleted first)
-			sort.Slice(pList, func(i, j int) bool {
-				return pList[i].Hops < pList[j].Hops
-			})
-			// append best entries to candidates list
-			n := cfg.MaxTeachs - len(list)
-			if n > len(pList) {
-				n = len(pList)
-			}
-			for i := 0; i < n; i++ {
-				e := pList[i]
-				e.Pending = false
-				list = append(list, e.Target())
-				// delete removed entries
-				if e.Hops < 0 {
-					delete(tbl.recs, e.Peer.Key())
-				}
-			}
+	// honor TEAch limit.
+	if len(list) > cfg.MaxTeachs {
+		// sort list by ascending number of hops
+		sort.Slice(list, func(i, j int) bool {
+			return list[i].Hops < list[j].Hops
+		})
+		list = list[:cfg.MaxTeachs]
+	}
+	// if we have removed forwards in our response, remove them
+	// from the forward table
+	for _, forward := range list {
+		if forward.Hops == -1 {
+			// remove forward from table
+			delete(tbl.recs, forward.Peer.Key())
 		}
 	}
 	return
