@@ -27,6 +27,7 @@ const (
 	EvTeaching        = 3 // sending out TEACH message
 	EvNeighborExpired = 4 // neighbor expired
 	EvForwardRemoved  = 5 // forward removed from routing table
+	EvShorterPath     = 6 // shorter path for forward entry found
 )
 
 // Event from network if something interesting happens
