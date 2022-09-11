@@ -29,8 +29,10 @@ import (
 )
 
 var (
-	time int // global time source
+	// global time source, incremented in epochs
+	time int
 
+	// pre-defined list of nodes (id, neighbors...)
 	nodes = map[int]*Peer{
 		1: NewPeer(1, 2, 4),
 		2: NewPeer(2, 1, 3, 6),
@@ -43,153 +45,222 @@ var (
 	}
 )
 
+// NewPeer creates a new node
 func NewPeer(id int, nbs ...int) *Peer {
+	// create neighbors map
 	nb := make(map[int]struct{})
 	for _, n := range nbs {
 		nb[n] = struct{}{}
 	}
+	// create peer
 	return &Peer{
-		id: id,
-		ft: make(map[int]*Entry),
-		nb: nb,
+		id:        id,
+		tbl:       make(map[int]*Entry),
+		neighbors: nb,
 	}
 }
 
+// Peer is a participant in the ad-hoc network.
 type Peer struct {
-	id int
-	ft map[int]*Entry
-	nb map[int]struct{}
+	id        int              // PeerID
+	tbl       map[int]*Entry   // forward table
+	neighbors map[int]struct{} // neighbors
 }
 
+// Forward as used in TEAch messages
+type Forward struct {
+	peer   int // target (route destination)
+	hops   int // expected number of hops
+	origin int // timestamp of origin
+}
+
+// String returns a human-readable representation
+func (f *Forward) String() string {
+	return fmt.Sprintf("{%d,%d,%d}", f.peer, f.hops, f.origin)
+}
+
+// Entry in forward table
 type Entry struct {
-	peer int
-	next int
-	hops int
-	ts   int
+	Forward
+	next int // next hop
 }
 
+// NewEntry creates an entry with specified values
+func NewEntry(id, next, hops, origin int) *Entry {
+	return &Entry{
+		Forward: Forward{
+			peer:   id,
+			hops:   hops,
+			origin: origin,
+		},
+		next: next,
+	}
+}
+
+// String returns a human-readable representation
 func (e *Entry) String() string {
-	return fmt.Sprintf("{%d,%d,%d,%d}", e.peer, e.next, e.hops, e.ts)
+	return fmt.Sprintf("{%s,%d}", e.Forward.String(), e.next)
 }
 
+// Learn creates a new LEArn message
 func (p *Peer) Learn() (m *LearnMsg) {
-	for _, e := range p.ft {
-		if e.hops >= 0 && e.next == 0 && time-e.ts > 15 {
+	// check for expired neighbors in the table
+	for _, e := range p.tbl {
+		if e.hops >= 0 && e.next == 0 && time-e.origin > 15 {
 			fmt.Printf("Neighbor peer %d expired on %d\n", e.peer, p.id)
+			// tag as "removed neighbor"
 			e.hops = -2
-			e.ts = time
-			for _, d := range p.ft {
+			e.origin = time
+			// remove dependent forward if next hop is neighbor
+			for _, d := range p.tbl {
 				if d.next == e.peer {
+					// tag as "removed forward"
 					d.hops = -1
-					d.ts = time
+					d.origin = time
 				}
 			}
 		}
 	}
+	// add all known forwards to learn request
 	list := make([]int, 0)
-	for id := range p.ft {
+	for id := range p.tbl {
 		list = append(list, id)
 	}
+	// add ourself
 	list = append(list, p.id)
+	// assemble message
 	return &LearnMsg{p.id, list}
 }
 
-func (p *Peer) addNeighbor(n int) {
-	if e, ok := p.ft[n]; ok {
-		e.ts = time
+// add a neighbor node (when receiving a message from it)
+func (p *Peer) addNeighbor(node int) {
+	if entry, ok := p.tbl[node]; ok {
+		// update existing entry
+		entry.origin = time
 	} else {
-		e := &Entry{n, 0, 0, time}
-		p.ft[n] = e
+		// insert new entry
+		p.tbl[node] = NewEntry(node, 0, 0, time)
 	}
 }
 
-func (p *Peer) HandleLearn(m *LearnMsg) *TeachMsg {
-	fmt.Printf("Peer %d wants to learn from %d\n", m.sender, p.id)
-	p.addNeighbor(m.sender)
-	list := make([]*Entry, 0)
-	for _, e := range p.ft {
-		el := &Entry{e.peer, e.next, e.hops, e.ts}
-		add := index(e.peer, m.known) == -1
-		switch e.hops {
+// HandleLearn processes received a LEArn message
+func (p *Peer) HandleLearn(msg *LearnMsg) *TeachMsg {
+	fmt.Printf("Peer %d wants to learn from %d\n", msg.sender, p.id)
+
+	// add/update sender as neighbor
+	p.addNeighbor(msg.sender)
+
+	// collect entries for TEAch response
+	resp := make([]*Forward, 0)
+	for _, entry := range p.tbl {
+		// add entry if not filtered
+		add := index(entry.peer, msg.known) == -1
+		// create forward for response
+		forward := &Forward{entry.peer, entry.hops, entry.origin}
+		switch entry.hops {
+		// removed forward
 		case -1:
+			// forced add
 			add = true
-			delete(p.ft, e.peer)
+			// remove forward from table
+			delete(p.tbl, entry.peer)
+		// removed neighbor
 		case -2:
-			e.hops = -3
-			el.hops = -2
+			// tag as deleted neighbor
+			entry.hops = -3
+			// forced add
 			add = true
 		case -3:
+			// do not add deleted neighbors (even when unfiltered)
 			add = false
 		}
+		// add forward to response if required
 		if add {
-			list = append(list, el)
+			resp = append(resp, forward)
 		}
 	}
-	if len(list) > 0 {
+	// return TEach message if response is not empty
+	if len(resp) > 0 {
 		return &TeachMsg{
-			sender:   p.id,
-			announce: list,
+			sender:    p.id,
+			announces: resp,
 		}
 	}
 	return nil
 }
 
-func (p *Peer) HandleTeach(tm *TeachMsg) {
-	fmt.Printf("Peer %d taught by peer %d\n", p.id, tm.sender)
-	p.addNeighbor(tm.sender)
-	for _, e := range tm.announce {
-		if e.peer == p.id {
+// HandleTeach processes an incoming TEAch message
+func (p *Peer) HandleTeach(msg *TeachMsg) {
+	fmt.Printf("Peer %d taught by peer %d\n", p.id, msg.sender)
+
+	// add/update sender as neighbor
+	p.addNeighbor(msg.sender)
+
+	// for all forwards in message
+	for _, announce := range msg.announces {
+		// ignore forwards of ourself
+		if announce.peer == p.id {
 			continue
 		}
-		f, ok := p.ft[e.peer]
-		if ok {
-			if f.ts > e.ts {
-				continue
-			}
-			if e.hops < 0 && f.hops >= 0 {
-				s1 := f.String()
-				h1 := f.next
-				if f.peer == e.peer {
-					if e.next == 0 {
-						f.hops = -2
-						f.next = 0
-						f.ts = e.ts
-						for _, g := range p.ft {
-							if g.next == e.peer {
-								g.hops = -1
-								g.ts = e.ts
-							}
-						}
-					} else if f.next == tm.sender {
-						f.hops = -1
-						f.ts = e.ts
+		// get matching table entry for forward
+		entry, ok := p.tbl[announce.peer]
+		if !ok {
+			// not found: insert new entry
+			p.tbl[announce.peer] = NewEntry(announce.peer, msg.sender, announce.hops+1, announce.origin)
+			return
+		}
+		// skip if announce is older than entry
+		if announce.origin < entry.origin {
+			continue
+		}
+		// "removal" announce on active entry?
+		if announce.hops < 0 && entry.hops >= 0 {
+			s1 := entry.String()
+			h1 := entry.next
+			// removed neighbor?
+			if announce.hops == -2 {
+				// update entry: tag as removed neighbor
+				entry.hops = -2
+				entry.next = 0
+				entry.origin = announce.origin
+				// remove dependent forward if next hop is removed neighbor
+				for _, forward := range p.tbl {
+					if forward.next == entry.peer {
+						forward.hops = -1
+						forward.origin = entry.origin
 					}
 				}
-				fmt.Printf("MUT [%d<%d] %s --> %s on %s\n", p.id, tm.sender, s1, f, e)
-				if h1 == -1 && f.next != -1 {
-					panic("resurrected deletion")
-				}
-			} else if e.hops+1 < f.hops {
-				f.hops = e.hops + 1
-				f.next = tm.sender
-				f.ts = e.ts
+			} else if entry.next == msg.sender {
+				// remove entry if next hop is sender
+				entry.hops = -1
+				entry.origin = announce.origin
 			}
-		} else {
-			p.ft[e.peer] = &Entry{e.peer, tm.sender, e.hops + 1, e.ts}
+			fmt.Printf("MUT [%d<%d] %s --> %s on %s\n", p.id, msg.sender, s1, entry, announce)
+			if h1 == -1 && entry.next != -1 {
+				panic("resurrected deletion")
+			}
+		} else if announce.hops+1 < entry.hops {
+			// short route found
+			entry.hops = announce.hops + 1
+			entry.next = msg.sender
+			entry.origin = announce.origin
 		}
 	}
 }
 
+// TeachMsg as a response to LEArn requests
 type TeachMsg struct {
-	sender   int
-	announce []*Entry
+	sender    int
+	announces []*Forward
 }
 
+// LearnMsg to periodically asked for new information
 type LearnMsg struct {
 	sender int
 	known  []int
 }
 
+// run simulation
 func main() {
 	keyb := bufio.NewReader(os.Stdin)
 	ui := func(flag bool) {
@@ -216,7 +287,7 @@ func main() {
 			fmt.Printf("Learn from %d: %v\n", learn.sender, learn.known)
 
 			teaches := make([]*TeachMsg, 0)
-			for id := range sender.nb {
+			for id := range sender.neighbors {
 				rcv := nodes[id]
 				if rcv == nil {
 					continue
@@ -226,8 +297,8 @@ func main() {
 				}
 			}
 			for _, teach := range teaches {
-				fmt.Printf("Teach from %d: %v\n", teach.sender, teach.announce)
-				for id := range nodes[teach.sender].nb {
+				fmt.Printf("Teach from %d: %v\n", teach.sender, teach.announces)
+				for id := range nodes[teach.sender].neighbors {
 					if id == teach.sender {
 						continue
 					}
@@ -254,23 +325,23 @@ func check() {
 		if p == nil {
 			continue
 		}
-		fmt.Printf("Node %d: %v\n", p.id, p.ft)
+		fmt.Printf("Node %d: %v\n", p.id, p.tbl)
 
-		for _, e := range p.ft {
+		for _, e := range p.tbl {
 			if e.peer == p.id {
-				fmt.Printf("self forward detected: peer %d, ft: %v, nb: %v\n", p.id, p.ft, p.nb)
+				fmt.Printf("self forward detected: peer %d, ft: %v, nb: %v\n", p.id, p.tbl, p.neighbors)
 				panic("")
 			}
 			if e.next == p.id {
-				fmt.Printf("forward to self detected: peer %d, ft: %v, nb: %v\n", p.id, p.ft, p.nb)
+				fmt.Printf("forward to self detected: peer %d, ft: %v, nb: %v\n", p.id, p.tbl, p.neighbors)
 				panic("")
 			}
 			if e.next != 0 {
-				if _, ok := p.nb[e.next]; !ok {
-					fmt.Printf("next %d not a neighbor(%v)\n", e.next, p.nb)
+				if _, ok := p.neighbors[e.next]; !ok {
+					fmt.Printf("next %d not a neighbor(%v)\n", e.next, p.neighbors)
 					panic("")
 				} else {
-					t := p.ft[e.next]
+					t := p.tbl[e.next]
 					if t.hops < 0 && e.hops >= 0 {
 						fmt.Printf("Peer %d, next %d (%s) removed on %s\n", p.id, e.next, e.String(), t.String())
 						panic("")
@@ -303,7 +374,7 @@ func check() {
 					panic("")
 					//continue targets
 				}
-				n, ok := hop.ft[to]
+				n, ok := hop.tbl[to]
 				if !ok {
 					failed++
 					continue targets
