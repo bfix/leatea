@@ -96,7 +96,7 @@ func (n *Network) Run(cb core.Listener) {
 		go func() {
 			// only some peers stop working
 			if Random.Float64() < Cfg.Node.DeathRate {
-				ttl := Vary(Cfg.Node.PeerTTL) + delay
+				ttl := Vary(Cfg.Node.PeerTTL) + delay + 2*time.Minute
 				time.Sleep(ttl)
 				if n.active {
 					n.running--
@@ -254,8 +254,7 @@ func (n *Network) Render(c Canvas) {
 			node2, i2 := n.getNode(id2)
 			// check that an inactive node1 has a forward from active node2
 			if !node1.IsRunning() && node2.IsRunning() {
-				_, hops := node2.Forward(node1.PeerID())
-				if hops == 0 {
+				if _, hops := node2.Forward(node1.PeerID()); hops == 0 {
 					continue
 				}
 			}
