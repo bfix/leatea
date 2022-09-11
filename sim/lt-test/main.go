@@ -151,8 +151,14 @@ func run(e sim.Environment) {
 		case core.EvNeighborExpired:
 			log.Printf("[%s] neighbor %s expired", ev.Peer, ev.Ref)
 			redraw = true
+		case core.EvShorterPath:
+			// log.Printf("[%s] short path to %s learned", ev.Peer, ev.Ref)
 		case core.EvForwardRemoved:
-			log.Printf("[%s] forward %s removed", ev.Peer, ev.Ref)
+			// log.Printf("[%s] forward %s removed", ev.Peer, ev.Ref)
+		case core.EvLearning:
+			// log.Printf("[%s] learning from %s", ev.Peer, ev.Ref)
+		case core.EvTeaching:
+			// log.Printf("[%s] teaching %s", ev.Peer, ev.Ref)
 		}
 	})
 
