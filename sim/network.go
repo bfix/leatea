@@ -63,6 +63,15 @@ func NewNetwork(env Environment) *Network {
 	return n
 }
 
+// GetShortID returns a short identifier for a node.
+func (n *Network) GetShortID(p *core.PeerID) int {
+	i, ok := n.index[p.Key()]
+	if !ok {
+		return 0
+	}
+	return n.nodes[i].id
+}
+
 // Run the network simulation
 func (n *Network) Run(cb core.Listener) {
 	n.active = true
