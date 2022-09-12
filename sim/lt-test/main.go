@@ -184,7 +184,7 @@ loop:
 				epoch++
 				// show status (coverage)
 				cover := netw.Coverage()
-				log.Printf("--> Coverage: %.2f%%", cover)
+				log.Printf("Epoch %d: --> Coverage: %.2f%%", epoch, cover)
 				rt, graph, hops = netw.RoutingTable()
 				if status(rt, nil, hops) > 0 && sim.Cfg.Options.StopOnLoop {
 					break loop
