@@ -26,9 +26,10 @@
 		"peerTTL": 600
     },
     "render": {
-        "mode": "svg",
-        "file": "rt/out.svg",
-        "source": "rtab"
+        "mode": "sdl",
+        "width": 800,
+        "height": 800,
+        "dynamic": true
     },
     "options": {
         "maxRepeat": 3
