@@ -30,7 +30,7 @@ import (
 // Random generator (deterministic) for reproducible tests
 var Random = rand.New(rand.NewSource(19031962)) //nolint:gosec // deterministic testing
 
-// Wall definition in environment
+// WallDef definition in environment
 type WallDef struct {
 	X1 float64 `json:"x1"`
 	Y1 float64 `json:"y1"`
@@ -39,14 +39,28 @@ type WallDef struct {
 	F  float64 `json:"f"`
 }
 
+// NodeDef definition in environment
+type NodeDef struct {
+	ID    int     `json:"id"`
+	X     float64 `json:"x"`
+	Y     float64 `json:"y"`
+	Links []int   `json:"links"`
+}
+
 // EnvironCfg holds configuration data for the environment
 type EnvironCfg struct {
-	Class    string     `json:"class"`
-	Width    float64    `json:"width"`
-	Height   float64    `json:"height"`
-	NumNodes int        `json:"numNodes"`
-	CoolDown int        `json:"cooldown"`
-	Walls    []*WallDef `json:"walls"`
+	Class    string  `json:"class"`
+	Width    float64 `json:"width"`
+	Height   float64 `json:"height"`
+	NumNodes int     `json:"numNodes"`
+	CoolDown int     `json:"cooldown"`
+
+	// used in WallModel
+	Walls []*WallDef `json:"walls"`
+
+	// used in LinkModel
+	NodesRef string     `json:"nodesRef"` // reference to JSON file with node defs
+	Nodes    []*NodeDef `json:"nodes"`    // explicit node list
 }
 
 // NodeCfg holds configuration data for simulated nodes
