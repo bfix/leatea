@@ -21,7 +21,10 @@
 package sim
 
 import (
+	"encoding/json"
+	"log"
 	"math"
+	"os"
 )
 
 type Environment interface {
@@ -31,6 +34,9 @@ type Environment interface {
 
 	// Placement decides where to place i.th node with calculated reach.
 	Placement(i int) (r2 float64, pos *Position)
+
+	// Register node with environment
+	Register(i int, node *SimNode)
 
 	// Draw the environment
 	Draw(Canvas)
@@ -76,6 +82,11 @@ func (m *WallModel) Placement(i int) (r2 float64, pos *Position) {
 	}
 	r2 = Cfg.Node.Reach2
 	return
+}
+
+// Register node with environment
+func (m *WallModel) Register(i int, node *SimNode) {
+	node.id = i + 1
 }
 
 // Draw the environment
@@ -146,6 +157,11 @@ func (m *RndModel) Placement(i int) (r2 float64, pos *Position) {
 	return
 }
 
+// Register node with environment
+func (m *RndModel) Register(i int, node *SimNode) {
+	node.id = i + 1
+}
+
 // Draw the environment
 func (m *RndModel) Draw(Canvas) {}
 
@@ -175,8 +191,72 @@ func (m *CircModel) Placement(i int) (r2 float64, pos *Position) {
 	return
 }
 
+// Register node with environment
+func (m *CircModel) Register(i int, node *SimNode) {
+	node.id = i + 1
+}
+
 // Draw the environment
 func (m *CircModel) Draw(Canvas) {}
+
+//----------------------------------------------------------------------
+// Model with explicit links
+//----------------------------------------------------------------------
+
+// LinkedNodes for a LinkModel
+type LinkedNode struct {
+	n *SimNode
+	d *NodeDef
+}
+
+// LinkModel ia list of nodes with explicit connections (neighbors)
+type LinkModel struct {
+	nodes map[int]*LinkedNode
+	defs  []*NodeDef
+}
+
+func NewLinkModel() *LinkModel {
+	return &LinkModel{
+		nodes: make(map[int]*LinkedNode),
+	}
+}
+
+// Connectivity between two nodes based on link (interface impl)
+func (m *LinkModel) Connectivity(n1, n2 *SimNode) bool {
+	check := func(n *SimNode, t int) bool {
+		for _, l := range m.nodes[n.id].d.Links {
+			if l == t {
+				return true
+			}
+		}
+		return false
+	}
+	rc1 := check(n1, n2.id)
+	rc2 := check(n2, n1.id)
+	if rc1 != rc2 {
+		log.Printf("%d -> %d: %v", n1.id, n2.id, rc1)
+		log.Printf("%d: %v", n1.id, m.nodes[n1.id].d.Links)
+		log.Printf("%d -> %d: %v", n2.id, n1.id, rc2)
+		log.Printf("%d: %v", n2.id, m.nodes[n2.id].d.Links)
+		panic("")
+	}
+	return rc1
+}
+
+// Placement decides where to place i.th node (interface impl)
+func (m *LinkModel) Placement(i int) (r2 float64, pos *Position) {
+	def := m.defs[i]
+	return 0, &Position{def.X, def.Y}
+}
+
+// Register node with environment
+func (m *LinkModel) Register(i int, node *SimNode) {
+	node.id = m.defs[i].ID
+	m.nodes[node.id].n = node
+}
+
+// Draw the environment
+func (m *LinkModel) Draw(Canvas) {}
 
 //----------------------------------------------------------------------
 
@@ -184,10 +264,24 @@ func (m *CircModel) Draw(Canvas) {}
 // controls connectivity and movement of nodes
 func BuildEnvironment(env *EnvironCfg) Environment {
 	switch env.Class {
+
+	//------------------------------------------------------------------
+	// Random distribution of env.NumNodes over given area
+	//------------------------------------------------------------------
 	case "rand":
 		return new(RndModel)
+
+	//------------------------------------------------------------------
+	// Evenly space env.NumNodes nodes on a circle so that each node
+	// only reaches its two direct neighbors (Shortcut for calculating
+	// nodes in a LinkModel)
+	//------------------------------------------------------------------
 	case "circ":
 		return new(CircModel)
+
+	//------------------------------------------------------------------
+	// Randomly distributed nodes over given area with obstacles (walls)
+	//------------------------------------------------------------------
 	case "wall":
 		mdl := NewWallModel()
 		for _, wall := range env.Walls {
@@ -195,6 +289,31 @@ func BuildEnvironment(env *EnvironCfg) Environment {
 				&Position{X: wall.X1, Y: wall.Y1},
 				&Position{X: wall.X2, Y: wall.Y2},
 				wall.F)
+		}
+		return mdl
+	//------------------------------------------------------------------
+	// Use explicit node definitions and connectivity
+	//------------------------------------------------------------------
+	case "link":
+		mdl := NewLinkModel()
+		// get node definitions
+		if len(env.NodesRef) != 0 {
+			// we read nodes from a file
+			buf, err := os.ReadFile(env.NodesRef)
+			if err != nil {
+				log.Fatal(err)
+			}
+			// read node definitions
+			if err = json.Unmarshal(buf, &mdl.defs); err != nil {
+				log.Fatal(err)
+			}
+		} else {
+			mdl.defs = env.Nodes
+		}
+		Cfg.Env.NumNodes = len(mdl.defs)
+		// create linked nodes
+		for _, def := range mdl.defs {
+			mdl.nodes[def.ID] = &LinkedNode{d: def}
 		}
 		return mdl
 	}
