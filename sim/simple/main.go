@@ -216,7 +216,7 @@ func (p *Peer) HandleTeach(msg *TeachMsg) {
 		// "removal" announce on active entry?
 		if announce.hops < 0 && entry.hops >= 0 {
 			s1 := entry.String()
-			h1 := entry.next
+			h1 := entry.hops
 			// removed neighbor?
 			if announce.hops == -2 {
 				// update entry: tag as removed neighbor
@@ -236,8 +236,8 @@ func (p *Peer) HandleTeach(msg *TeachMsg) {
 				entry.origin = announce.origin
 			}
 			fmt.Printf("MUT [%d<%d] %s --> %s on %s\n", p.id, msg.sender, s1, entry, announce)
-			if h1 == -1 && entry.next != -1 {
-				panic("resurrected deletion")
+			if h1 == -1 && entry.hops >= 0 {
+				panic("resurrected removed forward")
 			}
 		} else if announce.hops+1 < entry.hops {
 			// short route found
