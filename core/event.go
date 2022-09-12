@@ -22,12 +22,13 @@ package core
 
 // Event types
 const (
-	EvBeacon          = 1 // sending out LEARN message
-	EvLearning        = 2 // received TEACH message, learning peers
-	EvTeaching        = 3 // sending out TEACH message
-	EvNeighborExpired = 4 // neighbor expired
-	EvForwardRemoved  = 5 // forward removed from routing table
-	EvShorterPath     = 6 // shorter path for forward entry found
+	EvBeacon            = 1 // sending out LEARN message
+	EvLearning          = 2 // received TEACH message, learning peers
+	EvTeaching          = 3 // sending out TEACH message
+	EvNeighborExpired   = 4 // neighbor expired
+	EvForwardRemoved    = 5 // forward removed from routing table
+	EvShorterPath       = 6 // shorter path for forward entry found
+	EvForwardTblChanged = 7 // change in the forward table
 )
 
 // Event from network if something interesting happens
@@ -35,7 +36,13 @@ type Event struct {
 	Type int     // event tpe (see consts)
 	Peer *PeerID // peer identifier
 	Ref  *PeerID // reference peer (optinal)
-	Val  int     // additional data
+	Val  any     // additional data
+}
+
+// GetVal returns a type value from an event
+func GetVal[T any](ev *Event) (val T) {
+	val, _ = ev.Val.(T)
+	return val
 }
 
 // Listener for network events

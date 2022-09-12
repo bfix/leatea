@@ -21,6 +21,7 @@
 package core
 
 import (
+	"fmt"
 	"sort"
 	"sync"
 	"time"
@@ -67,6 +68,11 @@ func (f *Forward) Size() uint {
 	return id.Size() + age.Size() + 2
 }
 
+// String returns a human-readable representation
+func (f *Forward) String() string {
+	return fmt.Sprintf("{%s,%d,%s}", f.Peer, f.Hops, f.Age.String())
+}
+
 //......................................................................
 
 // Entry in forward table
@@ -95,6 +101,12 @@ func (e *Entry) Target() *Forward {
 		Hops: e.Hops,
 		Age:  e.Origin.Age(),
 	}
+}
+
+// String returns a human-readable representation
+func (e *Entry) String() string {
+	e.Age = e.Origin.Age()
+	return fmt.Sprintf("{%s,%s}", e.Forward.String(), e.NextHop)
 }
 
 //----------------------------------------------------------------------
@@ -317,6 +329,8 @@ func (tbl *ForwardTable) Learn(m *TEAchMsg) {
 				continue
 			}
 			// check for update
+			oldForward := entry.Target()
+			changed := false
 			if announce.Hops < 0 && entry.Hops >= 0 {
 				// "removal" announced
 				if announce.Hops == -2 {
@@ -325,6 +339,7 @@ func (tbl *ForwardTable) Learn(m *TEAchMsg) {
 					entry.NextHop = nil
 					entry.Origin = origin
 					entry.Pending = true
+					changed = true
 					// remove dependent forwards
 					for _, fw := range tbl.recs {
 						if fw.NextHop.Equal(sender) {
@@ -362,6 +377,7 @@ func (tbl *ForwardTable) Learn(m *TEAchMsg) {
 				entry.NextHop = sender
 				entry.Origin = origin
 				entry.Pending = true
+				changed = true
 				// notify listener we removed a forward
 				if tbl.listener != nil {
 					tbl.listener(&Event{
@@ -370,6 +386,15 @@ func (tbl *ForwardTable) Learn(m *TEAchMsg) {
 						Ref:  entry.Peer,
 					})
 				}
+			}
+			// notify listener if table entr has changed
+			if changed && tbl.listener != nil {
+				tbl.listener(&Event{
+					Type: EvForwardTblChanged,
+					Peer: tbl.self,
+					Ref:  sender,
+					Val:  [3]*Forward{oldForward, announce, entry.Target()},
+				})
 			}
 		} else {
 			// entry not yet known: add new entry to table
