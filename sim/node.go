@@ -30,6 +30,7 @@ import (
 // SimNode represents a node in the test network (extended attributes)
 type SimNode struct {
 	core.Node
+	id   int               // simplified node identifier
 	Pos  *Position         // position in the field
 	v    float64           // velocity (in units per epoch)
 	dir  float64           // direction [0,2π(
