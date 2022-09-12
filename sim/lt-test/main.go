@@ -130,11 +130,11 @@ func main() {
 	log.Println("Done.")
 }
 
-func run(e sim.Environment) {
+func run(env sim.Environment) {
 	//------------------------------------------------------------------
 	// Build test network
 	log.Println("Building network...")
-	netw = sim.NewNetwork(e)
+	netw = sim.NewNetwork(env)
 
 	//------------------------------------------------------------------
 	// Run test network
@@ -143,14 +143,28 @@ func run(e sim.Environment) {
 		// listen to network events
 		switch ev.Type {
 		case sim.EvNodeAdded:
-			log.Printf("[%s] started (#%d)", ev.Peer, ev.Val)
+			log.Printf("[%s] started as #%d (%d running)",
+				ev.Peer, netw.GetShortID(ev.Peer), core.GetVal[int](ev))
 			redraw = true
 		case sim.EvNodeRemoved:
-			log.Printf("[%s] stopped (%d running)", ev.Peer, ev.Val)
+			log.Printf("[%s] #%d stopped (%d running)",
+				ev.Peer, netw.GetShortID(ev.Peer), core.GetVal[int](ev))
 			redraw = true
 		case core.EvNeighborExpired:
-			log.Printf("[%s] neighbor %s expired", ev.Peer, ev.Ref)
+			log.Printf("[#%d] neighbor #%d expired",
+				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
 			redraw = true
+		case core.EvForwardTblChanged:
+			fw := core.GetVal[[3]*core.Forward](ev)
+			show := func(f *core.Forward) string {
+				return fmt.Sprintf("{%d,%d,%s}",
+					netw.GetShortID(f.Peer),
+					netw.GetShortID(f.Peer),
+					f.Age.String())
+			}
+			log.Printf("[#%d] %s < %s > %s",
+				netw.GetShortID(ev.Peer),
+				show(fw[0]), show(fw[1]), show(fw[2]))
 		case core.EvShorterPath:
 			// log.Printf("[%s] short path to %s learned", ev.Peer, ev.Ref)
 		case core.EvForwardRemoved:
