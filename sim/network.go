@@ -74,6 +74,7 @@ func (n *Network) Run(cb core.Listener) {
 		prv := core.NewPeerPrivate()
 		delay := Vary(Cfg.Node.BootupTime)
 		node := NewSimNode(prv, n.queue, pos, r2)
+		n.env.Register(i, node)
 		key := node.PeerID().Key()
 		n.index[key] = len(n.nodes)
 		n.nodes = append(n.nodes, node)
