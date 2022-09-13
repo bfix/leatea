@@ -204,7 +204,7 @@ func (p *Peer) HandleTeach(msg *TeachMsg) {
 		}
 		// get matching table entry for forward
 		entry, ok := p.tbl[announce.peer]
-		if !ok {
+		if !ok && announce.hops >= 0 {
 			// not found: insert new entry
 			p.tbl[announce.peer] = NewEntry(announce.peer, msg.sender, announce.hops+1, announce.origin)
 			return
