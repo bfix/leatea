@@ -22,7 +22,9 @@ package core
 
 import (
 	"fmt"
+	"log"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -57,14 +59,14 @@ type Forward struct {
 	Hops int16 `size:"big"`
 
 	// age of entry since creation (set when sending message)
-	Age *Age
+	Age Age
 }
 
 // Size returns the size of the binary representation (used to calculate
 // size of TEAch message based on number of Forward entries)
 func (f *Forward) Size() uint {
 	var id *PeerID
-	var age *Age
+	var age Age
 	return id.Size() + age.Size() + 2
 }
 
@@ -85,7 +87,10 @@ type Entry struct {
 	// Timestamp of the forward (route)
 	// It is the time the target was seen by its neighbor from which
 	// this route originated.
-	Origin *Time
+	Origin Time
+
+	// Timestamp when the entry was learned/added/updated
+	Changed Time
 
 	// Entry changed but not forwarded yet
 	// It is set to true of new and changed entries. It flags forwards
@@ -131,6 +136,39 @@ func NewForwardTable(self *PeerID) *ForwardTable {
 	}
 }
 
+// TableList returns a stringified forward table based on a conversion function
+// for PeerIDs. If cv is nil, the default String() method on PeerID is used.
+func (tbl *ForwardTable) TableList(cv func(*PeerID) string) string {
+	// check for conversion function
+	if cv == nil {
+		// use default String()
+		cv = func(p *PeerID) string {
+			return p.String()
+		}
+	}
+	// compile list
+	list := make([]string, 0)
+	for _, entry := range tbl.recs {
+		s := fmt.Sprintf("{%s,%d,%s,%.2f}",
+			cv(entry.Peer), entry.Hops, cv(entry.NextHop),
+			entry.Origin.Age().Seconds())
+		list = append(list, s)
+	}
+	// sort list by ascending peer
+	sort.Slice(list, func(i, j int) bool {
+		s1 := list[i][1:strings.Index(list[i], ",")]
+		s2 := list[j][1:strings.Index(list[j], ",")]
+		if len(s1) < len(s2) {
+			return true
+		}
+		if len(s1) > len(s2) {
+			return false
+		}
+		return s1 < s2
+	})
+	return "[" + strings.Join(list, ",") + "]"
+}
+
 // Reset routing table
 func (tbl *ForwardTable) Reset() {
 	tbl.Lock()
@@ -148,11 +186,20 @@ func (tbl *ForwardTable) AddNeighbor(node *PeerID) {
 	if entry, ok := tbl.recs[node.Key()]; ok {
 		// exists: update timestamp
 		entry.Origin = TimeNow()
+		entry.Changed = entry.Origin
 		entry.Pending = true
+		// notify listener
+		if tbl.listener != nil {
+			tbl.listener(&Event{
+				Type: EvNeighborUpdated,
+				Peer: tbl.self,
+				Ref:  node,
+			})
+		}
 		return
 	}
 	// new neighbor: insert new entry into table
-	tbl.recs[node.Key()] = &Entry{
+	entry := &Entry{
 		Forward: Forward{
 			Peer: node,
 			Hops: 0,
@@ -160,6 +207,15 @@ func (tbl *ForwardTable) AddNeighbor(node *PeerID) {
 		NextHop: nil,
 		Origin:  TimeNow(),
 		Pending: true,
+	}
+	tbl.recs[node.Key()] = entry
+	// notify listener
+	if tbl.listener != nil {
+		tbl.listener(&Event{
+			Type: EvNeighborAdded,
+			Peer: tbl.self,
+			Ref:  node,
+		})
 	}
 }
 
@@ -195,10 +251,13 @@ func (tbl *ForwardTable) Cleanup() {
 				Ref:  entry.Peer,
 			})
 		}
+		now := TimeNow()
+
 		// remove neighbor
 		entry.Hops = -2
 		entry.NextHop = nil
 		entry.Pending = true
+		entry.Changed = now
 
 		// remove dependent forwards
 		for _, fw := range tbl.recs {
@@ -207,6 +266,7 @@ func (tbl *ForwardTable) Cleanup() {
 				// remove forward
 				fw.Hops = -1
 				fw.Origin = entry.Origin
+				fw.Changed = now
 				fw.Pending = true
 				// notify listener we removed a forward
 				if tbl.listener != nil {
@@ -239,6 +299,10 @@ func (tbl *ForwardTable) Filter() *data.SaltedBloomFilter {
 	for _, entry := range tbl.recs {
 		// skip removed entry
 		if entry.Hops < 0 {
+			continue
+		}
+		// skip entries that were learned long ago
+		if entry.Changed.Age().Seconds() > float64(cfg.TTLEntry) {
 			continue
 		}
 		// add entry to filter
@@ -310,6 +374,7 @@ func (tbl *ForwardTable) Learn(m *TEAchMsg) {
 
 	// process all announcements
 	sender := m.Sender()
+	now := TimeNow()
 	for _, announce := range m.Announce {
 		// ignore announcements about ourself
 		if announce.Peer.Equal(tbl.self) {
@@ -320,92 +385,137 @@ func (tbl *ForwardTable) Learn(m *TEAchMsg) {
 
 		// get corresponding forward entry
 		key := announce.Peer.Key()
-		if entry, ok := tbl.recs[key]; ok {
-			// entry exists in the forward table:
-
-			// out-dated announcement?
-			if origin.Before(entry.Origin) {
-				// yes: ignore old information
-				continue
-			}
-			// check for update
-			oldForward := entry.Target()
-			changed := false
-			if announce.Hops < 0 && entry.Hops >= 0 {
-				// "removal" announced
-				if announce.Hops == -2 {
-					// removed neighbor
-					entry.Hops = -2
-					entry.NextHop = nil
-					entry.Origin = origin
-					entry.Pending = true
-					changed = true
-					// remove dependent forwards
-					for _, fw := range tbl.recs {
-						if fw.NextHop.Equal(sender) {
-							// flag forward for removal
-							fw.Hops = -1
-							fw.Origin = origin
-							fw.Pending = true
-							// notify listener we removed a forward
-							if tbl.listener != nil {
-								tbl.listener(&Event{
-									Type: EvForwardRemoved,
-									Peer: tbl.self,
-									Ref:  fw.Peer,
-								})
-							}
-						}
-					}
-				} else if entry.NextHop.Equal(sender) {
-					// remove dependent forward
-					entry.Hops = -1
-					entry.Origin = origin
-					entry.Pending = true
-					// notify listener we removed a forward
-					if tbl.listener != nil {
-						tbl.listener(&Event{
-							Type: EvForwardRemoved,
-							Peer: tbl.self,
-							Ref:  entry.Peer,
-						})
-					}
+		entry, ok := tbl.recs[key]
+		if !ok {
+			// no entry found: add new entry if not a "delete" announcement
+			if announce.Hops >= 0 {
+				e := &Entry{
+					Forward: Forward{
+						Peer: announce.Peer,
+						Hops: announce.Hops + 1,
+					},
+					NextHop: sender,
+					Origin:  origin,
+					Changed: now,
+					Pending: true,
 				}
-			} else if entry.Hops > announce.Hops+1 {
-				// update with shorter path
-				entry.Hops = announce.Hops + 1
-				entry.NextHop = sender
+				tbl.recs[key] = e
+				// send event
+				tbl.listener(&Event{
+					Type: EvForwardLearned,
+					Peer: tbl.self,
+					Ref:  sender,
+					Val:  e,
+				})
+			}
+			return
+		}
+		// entry exists in the forward table:
+
+		// out-dated announcement?
+		if origin.Before(entry.Origin) {
+			// yes: ignore old information
+			continue
+		}
+		// check for update
+		oldEntry := &Entry{
+			Forward: *entry.Target(),
+			NextHop: entry.NextHop,
+			Origin:  entry.Origin,
+		}
+		changed := false
+		if announce.Hops < 0 && entry.Hops >= 0 {
+			// "removal" announced
+			if announce.Hops == -2 {
+				// removed neighbor
+				entry.Hops = -2
+				entry.NextHop = nil
 				entry.Origin = origin
+				entry.Changed = now
 				entry.Pending = true
 				changed = true
+				// remove dependent forwards
+				for _, fw := range tbl.recs {
+					if fw.NextHop.Equal(sender) {
+						// flag forward for removal
+						fw.Hops = -1
+						fw.Origin = origin
+						fw.Changed = now
+						fw.Pending = true
+						// notify listener we removed a forward
+						if tbl.listener != nil {
+							tbl.listener(&Event{
+								Type: EvForwardRemoved,
+								Peer: tbl.self,
+								Ref:  fw.Peer,
+							})
+						}
+					}
+				}
+			} else if entry.NextHop.Equal(sender) {
+				// remove dependent forward
+				entry.Hops = -1
+				entry.Origin = origin
+				entry.Changed = now
+				entry.Pending = true
 				// notify listener we removed a forward
 				if tbl.listener != nil {
 					tbl.listener(&Event{
-						Type: EvShorterPath,
+						Type: EvForwardRemoved,
 						Peer: tbl.self,
 						Ref:  entry.Peer,
 					})
 				}
 			}
-			// notify listener if table entr has changed
-			if changed && tbl.listener != nil {
+		} else if entry.Hops > announce.Hops+1 {
+			// update with shorter path
+			entry.Hops = announce.Hops + 1
+			entry.NextHop = sender
+			entry.Origin = origin
+			entry.Changed = now
+			entry.Pending = true
+			changed = true
+			// notify listener we removed a forward
+			if tbl.listener != nil {
 				tbl.listener(&Event{
-					Type: EvForwardTblChanged,
+					Type: EvShorterPath,
 					Peer: tbl.self,
-					Ref:  sender,
-					Val:  [3]*Forward{oldForward, announce, entry.Target()},
+					Ref:  entry.Peer,
 				})
 			}
-		} else {
-			// entry not yet known: add new entry to table
-			tbl.recs[key] = &Entry{
-				Forward: Forward{
-					Peer: announce.Peer,
-					Hops: announce.Hops + 1,
-				},
+		}
+		// notify listener if table entry has changed
+		if changed && tbl.listener != nil {
+			// construct helper entry for annuncement
+			annEntry := &Entry{
+				Forward: *announce,
 				NextHop: sender,
 				Origin:  origin,
-				Pending: true,
+			}
+			// send event
+			tbl.listener(&Event{
+				Type: EvForwardChanged,
+				Peer: tbl.self,
+				Ref:  sender,
+				Val:  [3]*Entry{oldEntry, annEntry, entry},
+			})
+		}
+	}
+	// sanity check: make sure all forwards have a valid neighbor as next hop
+	for _, entry := range tbl.recs {
+		if entry.Peer.Equal(tbl.self) {
+			log.Printf("!!! peer %s forward to self", tbl.self)
+			panic("")
+		}
+		if entry.NextHop != nil {
+			nb, ok := tbl.recs[entry.NextHop.Key()]
+			if !ok {
+				log.Printf("!!! peer %s has forward with unknown next hop", tbl.self)
+				panic("")
+			}
+			if nb.NextHop != nil {
+				log.Printf("!!! peer %s has forward with invalid next hop", tbl.self)
+				panic("")
 			}
 		}
 	}
