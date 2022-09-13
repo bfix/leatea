@@ -63,17 +63,19 @@ func (n *Node) send(msg Message) {
 
 // Run the node (with periodic tasks and message handling)
 func (n *Node) Run(notify Listener) {
-	// reset routing table (in case the node is restarted)
-	n.Reset()
-
 	// remember listener for events
 	n.listener = notify
 
 	// broadcast LEARN message periodically
 	learn := time.NewTicker(time.Duration(cfg.LearnIntv) * time.Second)
+	beacon := time.NewTicker(time.Duration(cfg.BeaconIntv) * time.Second)
 	n.active = true
 	for n.active {
 		select {
+		case <-beacon.C:
+			msg := NewBeaconMsg(n.self)
+			n.send(msg)
+
 		case <-learn.C:
 			// node already stopped?
 			if !n.active {
@@ -85,7 +87,7 @@ func (n *Node) Run(notify Listener) {
 			// notify listener
 			if notify != nil {
 				notify(&Event{
-					Type: EvBeacon,
+					Type: EvWantToLearn,
 					Peer: n.self,
 					Val:  msg,
 				})
@@ -101,6 +103,9 @@ func (n *Node) Run(notify Listener) {
 // Stop a running node
 func (n *Node) Stop() {
 	n.active = false
+
+	// reset routing table
+	n.Reset()
 }
 
 // IsRunning returns true if the node is active
@@ -117,6 +122,11 @@ func (n *Node) Receive(msg Message) {
 
 	// handle received message
 	switch msg.Type() {
+	//------------------------------------------------------------------
+	// Beacon received
+	//------------------------------------------------------------------
+	case MsgBeacon:
+		// no actions
 
 	//------------------------------------------------------------------
 	// LEArn message received
