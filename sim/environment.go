@@ -41,7 +41,7 @@ type Environment interface {
 	Placement(i int) (r2 float64, pos *Position)
 
 	// Register node with environment
-	Register(i int, node *SimNode)
+	Register(i int, node *SimNode) int
 
 	// Epoch started
 	Epoch(epoch int) []*core.Event
@@ -93,8 +93,9 @@ func (m *WallModel) Placement(i int) (r2 float64, pos *Position) {
 }
 
 // Register node with environment
-func (m *WallModel) Register(i int, node *SimNode) {
+func (m *WallModel) Register(i int, node *SimNode) int {
 	node.id = i + 1
+	return node.id
 }
 
 // Epoch started
@@ -171,8 +172,9 @@ func (m *RndModel) Placement(i int) (r2 float64, pos *Position) {
 }
 
 // Register node with environment
-func (m *RndModel) Register(i int, node *SimNode) {
+func (m *RndModel) Register(i int, node *SimNode) int {
 	node.id = i + 1
+	return node.id
 }
 
 // Epoch started
@@ -210,8 +212,9 @@ func (m *CircModel) Placement(i int) (r2 float64, pos *Position) {
 }
 
 // Register node with environment
-func (m *CircModel) Register(i int, node *SimNode) {
+func (m *CircModel) Register(i int, node *SimNode) int {
 	node.id = i + 1
+	return node.id
 }
 
 // Epoch started
@@ -275,10 +278,11 @@ func (m *LinkModel) Placement(i int) (r2 float64, pos *Position) {
 }
 
 // Register node with environment
-func (m *LinkModel) Register(i int, node *SimNode) {
+func (m *LinkModel) Register(i int, node *SimNode) int {
 	node.id = m.defs[i].ID
 	m.nodes[node.id].n = node
 	m.ids[node.PeerID().Key()] = node.id
+	return node.id
 }
 
 // Epoch started
@@ -286,7 +290,7 @@ func (m *LinkModel) Epoch(epoch int) (events []*core.Event) {
 	// check if nodes expire
 	for _, def := range m.defs {
 		if def.TTL == epoch {
-			// stop node signal
+			// stop node
 			node := m.nodes[def.ID].n
 			events = append(events, &core.Event{
 				Type: EvNodeRemoved,
@@ -304,6 +308,9 @@ func (m *LinkModel) Epoch(epoch int) (events []*core.Event) {
 	}
 	list := make([]string, 0)
 	for _, ln := range m.nodes {
+		if ln.n == nil || !ln.n.IsRunning() {
+			continue
+		}
 		tbl := ln.n.TableList(show)
 		list = append(list, fmt.Sprintf("[%d] Tbl = %s", ln.n.id, tbl))
 	}
@@ -323,47 +330,49 @@ func (m *LinkModel) Epoch(epoch int) (events []*core.Event) {
 	for _, out := range list {
 		log.Println(out)
 	}
-	// show all routes
-	for i1, n1 := range m.nodes {
-		if !n1.n.IsRunning() {
-			continue
-		}
-		for i2, n2 := range m.nodes {
-			if !n2.n.IsRunning() {
+	/*
+		// show all routes
+		for i1, n1 := range m.nodes {
+			if !n1.n.IsRunning() {
 				continue
 			}
-			if i1 == i2 {
-				continue
-			}
-			var route []int
-			from := n1.n
-			to := n2.n.PeerID()
-			ttl := len(m.nodes)
-			hops := 0
-			for {
-				route = append(route, from.id)
-				next, steps := from.Forward(to)
-				if steps == 0 {
-					route = append(route, -1)
-					break
+			for i2, n2 := range m.nodes {
+				if !n2.n.IsRunning() {
+					continue
 				}
-				if next == nil {
-					if steps == 1 {
-						route = append(route, i2)
-					} else {
-						route = append(route, -2)
+				if i1 == i2 {
+					continue
+				}
+				var route []int
+				from := n1.n
+				to := n2.n.PeerID()
+				ttl := len(m.nodes)
+				hops := 0
+				for {
+					route = append(route, from.id)
+					next, steps := from.Forward(to)
+					if steps == 0 {
+						route = append(route, -1)
+						break
 					}
-					break
+					if next == nil {
+						if steps == 1 {
+							route = append(route, i2)
+						} else {
+							route = append(route, -2)
+						}
+						break
+					}
+					from = m.nodes[m.ids[next.Key()]].n
+					if hops++; hops > ttl {
+						route = append(route, -3)
+						break
+					}
 				}
-				from = m.nodes[m.ids[next.Key()]].n
-				if hops++; hops > ttl {
-					route = append(route, -3)
-					break
-				}
+				log.Printf("[%d --> %d]: %v", i1, i2, route)
 			}
-			log.Printf("[%d --> %d]: %v", i1, i2, route)
 		}
-	}
+	*/
 	return
 }
 
