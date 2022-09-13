@@ -181,11 +181,18 @@ func (tbl *ForwardTable) Reset() {
 // so the entry for the neighbor is either added to or updated in the table.
 func (tbl *ForwardTable) AddNeighbor(node *PeerID) {
 	tbl.Lock()
-	defer tbl.Unlock()
+	defer func() {
+		tbl.sanityCheck("add neighbor")
+		tbl.Unlock()
+	}()
+
 	// check if entry exists
+	now := TimeNow()
 	if entry, ok := tbl.recs[node.Key()]; ok {
-		// exists: update timestamp
-		entry.Origin = TimeNow()
+		// entry exists: update
+		entry.NextHop = nil
+		entry.Hops = 0
+		entry.Origin = now
 		entry.Changed = entry.Origin
 		entry.Pending = true
 		// notify listener
@@ -205,7 +212,8 @@ func (tbl *ForwardTable) AddNeighbor(node *PeerID) {
 			Hops: 0,
 		},
 		NextHop: nil,
-		Origin:  TimeNow(),
+		Origin:  now,
+		Changed: now,
 		Pending: true,
 	}
 	tbl.recs[node.Key()] = entry
@@ -224,7 +232,10 @@ func (tbl *ForwardTable) AddNeighbor(node *PeerID) {
 // the removed entry was broadcasted in a TEAch message.
 func (tbl *ForwardTable) Cleanup() {
 	tbl.RLock()
-	defer tbl.RUnlock()
+	defer func() {
+		tbl.sanityCheck("clean-up")
+		tbl.RUnlock()
+	}()
 
 	// remove expired neighbors (and their dependent forwards)
 	for _, entry := range tbl.recs {
@@ -238,8 +249,8 @@ func (tbl *ForwardTable) Cleanup() {
 			// yes: already flagged
 			continue
 		}
-		// has the entry expired?
-		if !entry.Origin.Expired(time.Duration(cfg.TTLEntry) * time.Second) {
+		// has the neighbor expired?
+		if !entry.Origin.Expired(time.Duration(cfg.TTLBeacon) * time.Second) {
 			// no:
 			continue
 		}
@@ -302,7 +313,7 @@ func (tbl *ForwardTable) Filter() *data.SaltedBloomFilter {
 			continue
 		}
 		// skip entries that were learned long ago
-		if entry.Changed.Age().Seconds() > float64(cfg.TTLEntry) {
+		if entry.Changed.Age().Seconds() > float64(cfg.TTLBeacon) {
 			continue
 		}
 		// add entry to filter
@@ -320,7 +331,10 @@ func (tbl *ForwardTable) Filter() *data.SaltedBloomFilter {
 // space for them in the result list.
 func (tbl *ForwardTable) Candidates(m *LEArnMsg) (list []*Forward) {
 	tbl.Lock()
-	defer tbl.Unlock()
+	defer func() {
+		tbl.sanityCheck("candidates")
+		tbl.Unlock()
+	}()
 
 	// collect forwards for response
 	for _, entry := range tbl.recs {
@@ -368,14 +382,17 @@ func (tbl *ForwardTable) Candidates(m *LEArnMsg) (list []*Forward) {
 }
 
 // Learn from announcements in a TEAch message
-func (tbl *ForwardTable) Learn(m *TEAchMsg) {
+func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 	tbl.Lock()
-	defer tbl.Unlock()
+	sender := msg.Sender()
+	now := TimeNow()
+	defer func() {
+		tbl.sanityCheck("learn", sender, msg.Announce)
+		tbl.Unlock()
+	}()
 
 	// process all announcements
-	sender := m.Sender()
-	now := TimeNow()
-	for _, announce := range m.Announce {
+	for _, announce := range msg.Announce {
 		// ignore announcements about ourself
 		if announce.Peer.Equal(tbl.self) {
 			continue
@@ -389,6 +406,7 @@ func (tbl *ForwardTable) Learn(m *TEAchMsg) {
 		if !ok {
 			// no entry found: add new entry if not a "delete" announcement
 			if announce.Hops >= 0 {
+				// add entry to forward table
 				e := &Entry{
 					Forward: Forward{
 						Peer: announce.Peer,
@@ -501,24 +519,6 @@ func (tbl *ForwardTable) Learn(m *TEAchMsg) {
 			})
 		}
 	}
-	// sanity check: make sure all forwards have a valid neighbor as next hop
-	for _, entry := range tbl.recs {
-		if entry.Peer.Equal(tbl.self) {
-			log.Printf("!!! peer %s forward to self", tbl.self)
-			panic("")
-		}
-		if entry.NextHop != nil {
-			nb, ok := tbl.recs[entry.NextHop.Key()]
-			if !ok {
-				log.Printf("!!! peer %s has forward with unknown next hop", tbl.self)
-				panic("")
-			}
-			if nb.NextHop != nil {
-				log.Printf("!!! peer %s has forward with invalid next hop", tbl.self)
-				panic("")
-			}
-		}
-	}
 }
 
 // Forward returns the peerid of the next hop to target and the number of
@@ -563,4 +563,36 @@ func (tbl *ForwardTable) Neighbors() (list []*PeerID) {
 		}
 	}
 	return
+}
+
+func (tbl *ForwardTable) sanityCheck(label string, args ...any) {
+	// sanity check: make sure all forwards have a valid neighbor as next hop
+	for _, entry := range tbl.recs {
+		if entry.Peer.Equal(tbl.self) {
+			log.Printf("[%s] peer %s forward to self", label, tbl.self)
+			log.Printf("Tbl = %s", tbl.TableList(nil))
+			panic(label)
+		}
+		if entry.NextHop != nil {
+			nb, ok := tbl.recs[entry.NextHop.Key()]
+			if !ok {
+				log.Printf("[%s] peer %s has forward with unknown next hop", label, tbl.self)
+				for i, arg := range args {
+					log.Printf("Arg #%d: %v", i+1, arg)
+				}
+				log.Printf("Bad entry: %s / %s", entry, nb)
+				log.Printf("Tbl = %s", tbl.TableList(nil))
+				panic(label)
+			}
+			if nb.NextHop != nil {
+				log.Printf("[%s] peer %s has forward with invalid next hop", label, tbl.self)
+				for i, arg := range args {
+					log.Printf("Arg #%d: %v", i+1, arg)
+				}
+				log.Printf("Bad entry: %s / %s", entry, nb)
+				log.Printf("Tbl = %s", tbl.TableList(nil))
+				panic(label)
+			}
+		}
+	}
 }
