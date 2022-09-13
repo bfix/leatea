@@ -76,7 +76,6 @@ type NodeCfg struct {
 // RenderCfg options
 type RenderCfg struct {
 	Mode    string `json:"mode"`
-	Source  string `json:"source"`
 	File    string `json:"file"`
 	Width   int    `json:"width"`
 	Height  int    `json:"height"`
@@ -85,8 +84,9 @@ type RenderCfg struct {
 
 // Option for comtrol flags/values
 type Option struct {
-	MaxRepeat  int  `json:"maxRepeat"`
-	StopOnLoop bool `json:"stopOnLoop"`
+	MaxRepeat  int   `json:"maxRepeat"`
+	StopOnLoop bool  `json:"stopOnLoop"`
+	ShowEvents []int `json:"showEvents"`
 }
 
 // Config for test configuration data
@@ -101,9 +101,11 @@ type Config struct {
 // Cfg is the global configuration
 var Cfg = &Config{
 	Core: &core.Config{
-		MaxTeachs: 10,
-		TTLEntry:  60,
-		LearnIntv: 10,
+		MaxTeachs:  10,
+		LearnIntv:  10,
+		Outdated:   60,
+		BeaconIntv: 1,
+		TTLBeacon:  5,
 	},
 	Env: &EnvironCfg{
 		Width:    100.,
@@ -118,12 +120,13 @@ var Cfg = &Config{
 		DeathRate:  0.,
 	},
 	Options: &Option{
-		MaxRepeat: 0,
+		MaxRepeat:  0,
+		StopOnLoop: false,
+		ShowEvents: nil,
 	},
 	Render: &RenderCfg{
-		Mode:   "none",
-		File:   "",
-		Source: "rtab",
+		Mode: "none",
+		File: "",
 	},
 }
 
