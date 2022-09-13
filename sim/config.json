@@ -22,6 +22,7 @@
     },
     "options": {
         "maxRepeat": 0,
-        "stopOnLoop": false
+        "stopOnLoop": false,
+        "showEvents": []
     }
 }

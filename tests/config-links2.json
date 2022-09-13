@@ -7,7 +7,7 @@
     "environment": {
         "class": "link",
         "cooldown": 5,
-        "stopAt": 25,
+        "stopAt": 900,
         "nodesRef": "tests/test-nodes.json"
     },
     "node": {
@@ -18,7 +18,7 @@
         "mode": "sdl",
         "width": 800,
         "height": 800,
-        "dynamic": true
+        "dynamic": false
     },
     "options": {
         "maxRepeat": 0,

@@ -1,8 +1,10 @@
 {
     "core": {
         "maxTeachs": 10,
-        "ttlEntry":  60,
-        "learnIntv": 10
+        "learnIntv": 10,
+        "outdated": 60,
+        "beaconIntv": 1,
+        "ttlBeacon":  5
     },
     "environment": {
         "class": "wall",
