@@ -22,7 +22,7 @@ package core
 
 // Event types
 const (
-	EvBeacon          = 1  // sending out LEARN message
+	EvWantToLearn     = 1  // sending out LEARN message
 	EvLearning        = 2  // received TEACH message, learning peers
 	EvTeaching        = 3  // sending out TEACH message
 	EvNeighborExpired = 4  // neighbor expired
