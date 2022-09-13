@@ -80,14 +80,16 @@ func (n *Node) Run(notify Listener) {
 				return
 			}
 			// send out our own learn message
+			msg := NewLearnMsg(n.self, n.Filter())
+			n.send(msg)
+			// notify listener
 			if notify != nil {
 				notify(&Event{
 					Type: EvBeacon,
 					Peer: n.self,
+					Val:  msg,
 				})
 			}
-			msg := NewLearnMsg(n.self, n.Filter())
-			n.send(msg)
 
 		case msg := <-n.inCh:
 			// handle incoming message
@@ -135,6 +137,7 @@ func (n *Node) Receive(msg Message) {
 					Type: EvTeaching,
 					Peer: n.self,
 					Ref:  m.Sender(),
+					Val:  outMsg,
 				})
 			}
 		}
@@ -153,6 +156,7 @@ func (n *Node) Receive(msg Message) {
 				Type: EvLearning,
 				Peer: n.self,
 				Ref:  m.Sender(),
+				Val:  m,
 			})
 		}
 	}
