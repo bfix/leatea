@@ -22,9 +22,14 @@ package sim
 
 import (
 	"encoding/json"
+	"fmt"
+	"leatea/core"
 	"log"
 	"math"
 	"os"
+	"sort"
+	"strconv"
+	"strings"
 )
 
 type Environment interface {
@@ -37,6 +42,9 @@ type Environment interface {
 
 	// Register node with environment
 	Register(i int, node *SimNode)
+
+	// Epoch started
+	Epoch(epoch int) []*core.Event
 
 	// Draw the environment
 	Draw(Canvas)
@@ -87,6 +95,11 @@ func (m *WallModel) Placement(i int) (r2 float64, pos *Position) {
 // Register node with environment
 func (m *WallModel) Register(i int, node *SimNode) {
 	node.id = i + 1
+}
+
+// Epoch started
+func (m *WallModel) Epoch(epoch int) []*core.Event {
+	return nil
 }
 
 // Draw the environment
@@ -162,6 +175,11 @@ func (m *RndModel) Register(i int, node *SimNode) {
 	node.id = i + 1
 }
 
+// Epoch started
+func (m *RndModel) Epoch(epoch int) []*core.Event {
+	return nil
+}
+
 // Draw the environment
 func (m *RndModel) Draw(Canvas) {}
 
@@ -196,6 +214,11 @@ func (m *CircModel) Register(i int, node *SimNode) {
 	node.id = i + 1
 }
 
+// Epoch started
+func (m *CircModel) Epoch(epoch int) []*core.Event {
+	return nil
+}
+
 // Draw the environment
 func (m *CircModel) Draw(Canvas) {}
 
@@ -213,11 +236,13 @@ type LinkedNode struct {
 type LinkModel struct {
 	nodes map[int]*LinkedNode
 	defs  []*NodeDef
+	ids   map[string]int
 }
 
 func NewLinkModel() *LinkModel {
 	return &LinkModel{
 		nodes: make(map[int]*LinkedNode),
+		ids:   make(map[string]int),
 	}
 }
 
@@ -253,6 +278,93 @@ func (m *LinkModel) Placement(i int) (r2 float64, pos *Position) {
 func (m *LinkModel) Register(i int, node *SimNode) {
 	node.id = m.defs[i].ID
 	m.nodes[node.id].n = node
+	m.ids[node.PeerID().Key()] = node.id
+}
+
+// Epoch started
+func (m *LinkModel) Epoch(epoch int) (events []*core.Event) {
+	// check if nodes expire
+	for _, def := range m.defs {
+		if def.TTL == epoch {
+			// stop node signal
+			node := m.nodes[def.ID].n
+			events = append(events, &core.Event{
+				Type: EvNodeRemoved,
+				Peer: node.PeerID(),
+				Val:  -1,
+			})
+		}
+	}
+	// show forward tables
+	show := func(p *core.PeerID) string {
+		if p == nil {
+			return "0"
+		}
+		return strconv.Itoa(m.ids[p.Key()])
+	}
+	list := make([]string, 0)
+	for _, ln := range m.nodes {
+		tbl := ln.n.TableList(show)
+		list = append(list, fmt.Sprintf("[%d] Tbl = %s", ln.n.id, tbl))
+	}
+	// sort list by ascending peer
+	sort.Slice(list, func(i, j int) bool {
+		s1 := list[i][1:strings.Index(list[i], "]")]
+		s2 := list[j][1:strings.Index(list[j], "]")]
+		if len(s1) < len(s2) {
+			return true
+		}
+		if len(s1) > len(s2) {
+			return false
+		}
+		return s1 < s2
+	})
+	// print table
+	for _, out := range list {
+		log.Println(out)
+	}
+	// show all routes
+	for i1, n1 := range m.nodes {
+		if !n1.n.IsRunning() {
+			continue
+		}
+		for i2, n2 := range m.nodes {
+			if !n2.n.IsRunning() {
+				continue
+			}
+			if i1 == i2 {
+				continue
+			}
+			var route []int
+			from := n1.n
+			to := n2.n.PeerID()
+			ttl := len(m.nodes)
+			hops := 0
+			for {
+				route = append(route, from.id)
+				next, steps := from.Forward(to)
+				if steps == 0 {
+					route = append(route, -1)
+					break
+				}
+				if next == nil {
+					if steps == 1 {
+						route = append(route, i2)
+					} else {
+						route = append(route, -2)
+					}
+					break
+				}
+				from = m.nodes[m.ids[next.Key()]].n
+				if hops++; hops > ttl {
+					route = append(route, -3)
+					break
+				}
+			}
+			log.Printf("[%d --> %d]: %v", i1, i2, route)
+		}
+	}
+	return
 }
 
 // Draw the environment
