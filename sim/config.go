@@ -44,6 +44,7 @@ type NodeDef struct {
 	ID    int     `json:"id"`
 	X     float64 `json:"x"`
 	Y     float64 `json:"y"`
+	TTL   int     `json:"ttl"` // dies at given epoch
 	Links []int   `json:"links"`
 }
 
@@ -54,6 +55,7 @@ type EnvironCfg struct {
 	Height   float64 `json:"height"`
 	NumNodes int     `json:"numNodes"`
 	CoolDown int     `json:"cooldown"`
+	StopAt   int     `json:"stopAt"`
 
 	// used in WallModel
 	Walls []*WallDef `json:"walls"`
