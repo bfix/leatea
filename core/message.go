@@ -27,8 +27,9 @@ import (
 )
 
 const (
-	MsgLEArn = 1 // LEARN message type
-	MsgTEAch = 2 // TEACH message type
+	MsgBeacon = 1 // Beacon message type
+	MsgLEArn  = 2 // LEARN message type
+	MsgTEAch  = 3 // TEACH message type
 )
 
 //----------------------------------------------------------------------
@@ -64,6 +65,24 @@ func (m *MessageImpl) Type() uint16 {
 // Sender returns the peer id of the message sender
 func (m *MessageImpl) Sender() *PeerID {
 	return m.Sender_
+}
+
+//----------------------------------------------------------------------
+
+type BeaconMsg struct {
+	MessageImpl
+}
+
+func NewBeaconMsg(sender *PeerID) *BeaconMsg {
+	msg := new(BeaconMsg)
+	msg.MsgType = MsgBeacon
+	msg.MsgSize = uint16(4 + sender.Size())
+	msg.Sender_ = sender
+	return msg
+}
+
+func (m *BeaconMsg) String() string {
+	return fmt.Sprintf("Beacon{%s}", m.Sender_)
 }
 
 //----------------------------------------------------------------------
