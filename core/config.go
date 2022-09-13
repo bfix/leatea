@@ -32,9 +32,10 @@ type Config struct {
 // package-local configuration data (with default values)
 var cfg = &Config{
 	MaxTeachs:  10,
-	TTLBeacon:  5,
 	LearnIntv:  10,
+	Outdated:   60,
 	BeaconIntv: 1,
+	TTLBeacon:  5,
 }
 
 // SetConfiguration before use
