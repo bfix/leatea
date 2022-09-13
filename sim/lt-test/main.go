@@ -30,6 +30,7 @@ import (
 	"math"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -130,6 +131,73 @@ func main() {
 	log.Println("Done.")
 }
 
+func printEntry(f *core.Entry) string {
+	return fmt.Sprintf("{%d,%d,%d,%.2f}",
+		netw.GetShortID(f.Peer), f.Hops,
+		netw.GetShortID(f.NextHop), f.Origin.Age().Seconds())
+}
+
+func handleEvent(ev *core.Event) {
+	// listen to network events
+	switch ev.Type {
+	case sim.EvNodeAdded:
+		log.Printf("[%s] started as #%d (%d running)",
+			ev.Peer, netw.GetShortID(ev.Peer), core.GetVal[int](ev))
+		redraw = true
+	case sim.EvNodeRemoved:
+		remain := core.GetVal[int](ev)
+		if remain < 0 {
+			remain = netw.StopNode(ev.Peer)
+		}
+		log.Printf("[%s] #%d stopped (%d running)",
+			ev.Peer, netw.GetShortID(ev.Peer), remain)
+		redraw = true
+	case core.EvNeighborAdded:
+		log.Printf("[%d] neighbor #%d added",
+			netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
+	case core.EvNeighborUpdated:
+		// log.Printf("[%d] neighbor #%d updated",
+		//	netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
+	case core.EvNeighborExpired:
+		log.Printf("[%d] neighbor #%d expired",
+			netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
+		redraw = true
+	case core.EvForwardLearned:
+		e := core.GetVal[*core.Entry](ev)
+		log.Printf("[%d < %d] learned %s",
+			netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref), printEntry(e))
+	case core.EvForwardChanged:
+		fw := core.GetVal[[3]*core.Entry](ev)
+		log.Printf("[%d < %d] %s < %s > %s",
+			netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref),
+			printEntry(fw[0]), printEntry(fw[1]), printEntry(fw[2]))
+	case core.EvShorterPath:
+		log.Printf("[%d] shorter path to %d learned",
+			netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
+	case core.EvForwardRemoved:
+		log.Printf("[%d] forward to %d removed",
+			netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
+	case core.EvLearning:
+		// log.Printf("[%d] learning from %d",
+		//	netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
+	case core.EvTeaching:
+		msg := core.GetVal[*core.TEAchMsg](ev)
+		announced := make([]string, 0)
+		for _, ann := range msg.Announce {
+			e := &core.Entry{
+				Forward: *ann,
+				NextHop: msg.Sender(),
+				Origin:  core.TimeFromAge(ann.Age),
+			}
+			announced = append(announced, printEntry(e))
+		}
+		log.Printf("[%d] teaching [%s]",
+			netw.GetShortID(ev.Peer), strings.Join(announced, ","))
+	case core.EvBeacon:
+		//log.Printf("[%d] broadcasting LEArn", netw.GetShortID(ev.Peer))
+	}
+}
+
 func run(env sim.Environment) {
 	//------------------------------------------------------------------
 	// Build test network
@@ -139,42 +207,7 @@ func run(env sim.Environment) {
 	//------------------------------------------------------------------
 	// Run test network
 	log.Println("Running network...")
-	go netw.Run(func(ev *core.Event) {
-		// listen to network events
-		switch ev.Type {
-		case sim.EvNodeAdded:
-			log.Printf("[%s] started as #%d (%d running)",
-				ev.Peer, netw.GetShortID(ev.Peer), core.GetVal[int](ev))
-			redraw = true
-		case sim.EvNodeRemoved:
-			log.Printf("[%s] #%d stopped (%d running)",
-				ev.Peer, netw.GetShortID(ev.Peer), core.GetVal[int](ev))
-			redraw = true
-		case core.EvNeighborExpired:
-			log.Printf("[#%d] neighbor #%d expired",
-				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
-			redraw = true
-		case core.EvForwardTblChanged:
-			fw := core.GetVal[[3]*core.Forward](ev)
-			show := func(f *core.Forward) string {
-				return fmt.Sprintf("{%d,%d,%s}",
-					netw.GetShortID(f.Peer),
-					netw.GetShortID(f.Peer),
-					f.Age.String())
-			}
-			log.Printf("[#%d] %s < %s > %s",
-				netw.GetShortID(ev.Peer),
-				show(fw[0]), show(fw[1]), show(fw[2]))
-		case core.EvShorterPath:
-			// log.Printf("[%s] short path to %s learned", ev.Peer, ev.Ref)
-		case core.EvForwardRemoved:
-			// log.Printf("[%s] forward %s removed", ev.Peer, ev.Ref)
-		case core.EvLearning:
-			// log.Printf("[%s] learning from %s", ev.Peer, ev.Ref)
-		case core.EvTeaching:
-			// log.Printf("[%s] teaching %s", ev.Peer, ev.Ref)
-		}
-	})
+	go netw.Run(handleEvent)
 
 	//------------------------------------------------------------------
 	// prepare monitoring
@@ -196,11 +229,19 @@ loop:
 			if ticks%sim.Cfg.Core.LearnIntv == 0 {
 				// start new epoch (every 10 seconds)
 				epoch++
+				log.Printf("[Epoch %d]", epoch)
+				for _, ev := range env.Epoch(epoch) {
+					handleEvent(ev)
+				}
+				// check if simulation ends
+				if epoch == sim.Cfg.Env.StopAt {
+					break loop
+				}
 				// show status (coverage)
 				cover := netw.Coverage()
-				log.Printf("Epoch %d: --> Coverage: %.2f%%", epoch, cover)
+				log.Printf("Coverage: %.2f%%", cover)
 				rt, graph, hops = netw.RoutingTable()
-				if status(rt, nil, hops) > 0 && sim.Cfg.Options.StopOnLoop {
+				if status(rt, graph, hops) > 0 && sim.Cfg.Options.StopOnLoop {
 					break loop
 				}
 
