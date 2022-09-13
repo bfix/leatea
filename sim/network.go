@@ -27,8 +27,8 @@ import (
 
 // Event types for network events
 const (
-	EvNodeAdded   = 10 // node added to network
-	EvNodeRemoved = 11 // node removed from network
+	EvNodeAdded   = 100 // node added to network
+	EvNodeRemoved = 101 // node removed from network
 )
 
 //----------------------------------------------------------------------
@@ -65,9 +65,12 @@ func NewNetwork(env Environment) *Network {
 
 // GetShortID returns a short identifier for a node.
 func (n *Network) GetShortID(p *core.PeerID) int {
+	if p == nil {
+		return 0
+	}
 	i, ok := n.index[p.Key()]
 	if !ok {
-		return 0
+		return -1
 	}
 	return n.nodes[i].id
 }
@@ -142,7 +145,17 @@ func (n *Network) Run(cb core.Listener) {
 	}
 }
 
-// Botted returns true if all nodes have started
+// StopNode request
+func (n *Network) StopNode(p *core.PeerID) int {
+	node, _ := n.getNode(p)
+	if node.IsRunning() {
+		n.running--
+		node.Stop()
+	}
+	return n.running
+}
+
+// Booted returns true if all nodes have started
 func (n *Network) Booted() bool {
 	return n.running == len(n.nodes)
 }
