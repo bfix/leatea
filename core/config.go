@@ -22,16 +22,19 @@ package core
 
 // Config for LEArn/TEAch core processes
 type Config struct {
-	MaxTeachs int `json:"maxTeach"`  // max. number of entries in TEACH message
-	TTLEntry  int `json:"ttlEntry"`  // time to live for a table entry (neighbor)
-	LearnIntv int `json:"learnIntv"` // LEARN intervall
+	MaxTeachs  int `json:"maxTeach"`   // max. number of entries in TEACH message
+	LearnIntv  int `json:"learnIntv"`  // LEARN interval
+	Outdated   int `json:"outdated"`   // time after a learned entry s considered outdated
+	BeaconIntv int `json:"beaconIntv"` // BEACON interval
+	TTLBeacon  int `json:"ttlEntry"`   // time to live for a neighbor without beacons
 }
 
 // package-local configuration data (with default values)
 var cfg = &Config{
-	MaxTeachs: 10,
-	TTLEntry:  60,
-	LearnIntv: 10,
+	MaxTeachs:  10,
+	TTLBeacon:  5,
+	LearnIntv:  10,
+	BeaconIntv: 1,
 }
 
 // SetConfiguration before use
@@ -39,8 +42,8 @@ func SetConfiguration(c *Config) {
 	if c.MaxTeachs > 0 {
 		cfg.MaxTeachs = c.MaxTeachs
 	}
-	if c.TTLEntry > 0 {
-		cfg.TTLEntry = c.TTLEntry
+	if c.TTLBeacon > 0 {
+		cfg.TTLBeacon = c.TTLBeacon
 	}
 	if c.LearnIntv > 0 {
 		cfg.LearnIntv = c.LearnIntv
