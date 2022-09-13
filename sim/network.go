@@ -39,8 +39,8 @@ const (
 type Network struct {
 	env Environment // model of the environment
 
-	index map[string]int // node index map
-	nodes []*SimNode     // list of nodes
+	index map[string]int   // node index map
+	nodes map[int]*SimNode // list of nodes
 
 	running int               // number of running nodes
 	queue   chan core.Message // "ether" for message transport
@@ -57,7 +57,7 @@ func NewNetwork(env Environment) *Network {
 	n := new(Network)
 	n.env = env
 	n.queue = make(chan core.Message, 10)
-	n.nodes = make([]*SimNode, 0)
+	n.nodes = make(map[int]*SimNode)
 	n.index = make(map[string]int)
 	n.running = 0
 	return n
@@ -86,15 +86,19 @@ func (n *Network) Run(cb core.Listener) {
 		prv := core.NewPeerPrivate()
 		delay := Vary(Cfg.Node.BootupTime)
 		node := NewSimNode(prv, n.queue, pos, r2)
-		n.env.Register(i, node)
-		key := node.PeerID().Key()
-		n.index[key] = len(n.nodes)
-		n.nodes = append(n.nodes, node)
+
 		// run node (delayed)
-		go func() {
+		go func(i int) {
 			time.Sleep(delay)
 			if n.active {
+				// register node with environment and get an integer identifier.
+				idx := n.env.Register(i, node)
+				// add node to network
+				n.index[node.PeerID().Key()] = idx
+				n.nodes[idx] = node
 				n.running++
+
+				// notify listener
 				if cb != nil {
 					cb(&core.Event{
 						Type: EvNodeAdded,
@@ -104,7 +108,7 @@ func (n *Network) Run(cb core.Listener) {
 				}
 				node.Run(cb)
 			}
-		}()
+		}(i)
 		// shutdown node (delayed)
 		go func() {
 			// only some peers stop working
@@ -112,8 +116,17 @@ func (n *Network) Run(cb core.Listener) {
 				ttl := Vary(Cfg.Node.PeerTTL) + delay + 2*time.Minute
 				time.Sleep(ttl)
 				if n.active {
-					n.running--
+					// stop node
 					node.Stop()
+
+					// remove from network
+					n.running--
+					key := node.PeerID().Key()
+					idx := n.index[key]
+					delete(n.index, key)
+					delete(n.nodes, idx)
+
+					// notify listener
 					if cb != nil {
 						cb(&core.Event{
 							Type: EvNodeRemoved,
@@ -145,6 +158,10 @@ func (n *Network) Run(cb core.Listener) {
 	}
 }
 
+func (n *Network) NumRunning() int {
+	return len(n.nodes)
+}
+
 // StopNode request
 func (n *Network) StopNode(p *core.PeerID) int {
 	node, _ := n.getNode(p)
@@ -153,11 +170,6 @@ func (n *Network) StopNode(p *core.PeerID) int {
 		node.Stop()
 	}
 	return n.running
-}
-
-// Booted returns true if all nodes have started
-func (n *Network) Booted() bool {
-	return n.running == len(n.nodes)
 }
 
 // Stop the network (message exchange)
@@ -209,16 +221,6 @@ func (n *Network) getNode(p *core.PeerID) (node *SimNode, idx int) {
 // Analysis helpers
 //----------------------------------------------------------------------
 
-// Coverage returns the mean coverage of all forward tables (known targets)
-func (n *Network) Coverage() float64 {
-	total := 0
-	num := len(n.nodes)
-	for _, node := range n.nodes {
-		total += node.NumForwards()
-	}
-	return float64(100*total) / float64(num*(num-1))
-}
-
 // Traffic returns traffic volumes (in and out)
 func (n *Network) Traffic() (in, out uint64) {
 	return n.trafIn, n.trafOut
@@ -226,15 +228,21 @@ func (n *Network) Traffic() (in, out uint64) {
 
 // RoutingTable returns the routing table for the whole
 // network and the average number of hops.
-func (n *Network) RoutingTable() (*RoutingTable, *Graph, float64) {
+func (n *Network) RoutingTable() (*RoutingTable, float64) {
+	// create new routing table and graph
+	rt := NewRoutingTable()
+
+	// add nodes to routing table
+	for i, node := range n.nodes {
+		rt.AddNode(i, node)
+	}
+
+	// build routing table and graph
 	allHops := 0
 	numRoute := 0
-	rt := NewRoutingTable(n)
-	// index maps a peerid to an integer
 	for i1, node1 := range n.nodes {
 		for i2, node2 := range n.nodes {
 			if i1 == i2 {
-				rt.List[i1][i1] = -2 // "self" route
 				continue
 			}
 			if next, hops := node1.Forward(node2.PeerID()); hops > 0 {
@@ -242,28 +250,14 @@ func (n *Network) RoutingTable() (*RoutingTable, *Graph, float64) {
 				numRoute++
 				ref := i2
 				if next != nil {
-					ref = n.index[next.Key()]
+					ref = rt.Index[next.Key()]
 				}
-				rt.List[i1][i2] = ref
-			} else {
-				rt.List[i1][i2] = -1
+				rt.List[i1].Forwards[i2] = ref
 			}
 		}
-	}
-	// construct graph
-	g := NewGraph(n)
-	for i1, node1 := range n.nodes {
-		neighbors := make([]int, 0)
-		for i2, node2 := range n.nodes {
-			if i1 == i2 || !n.env.Connectivity(node1, node2) {
-				continue
-			}
-			neighbors = append(neighbors, i2)
-		}
-		g.mdl[i1] = neighbors
 	}
 	// return results
-	return rt, g, float64(allHops) / float64(numRoute)
+	return rt, float64(allHops) / float64(numRoute)
 }
 
 // Render the network directly.
@@ -294,57 +288,4 @@ func (n *Network) Render(c Canvas) {
 	}
 	// draw environment
 	n.env.Draw(c)
-}
-
-//----------------------------------------------------------------------
-// Routing table
-//----------------------------------------------------------------------
-
-type RoutingTable struct {
-	netw *Network
-	List [][]int
-}
-
-func NewRoutingTable(n *Network) *RoutingTable {
-	// create empty routing table
-	num := len(n.nodes)
-	res := make([][]int, num)
-	for i := range res {
-		res[i] = make([]int, num)
-	}
-	return &RoutingTable{
-		netw: n,
-		List: res,
-	}
-}
-
-func (rt *RoutingTable) GetNode(i int) *SimNode {
-	return rt.netw.nodes[i]
-}
-
-// Render creates an image of the graph
-func (rt *RoutingTable) Render(canvas Canvas, final bool) {
-	// draw nodes
-	for _, node := range rt.netw.nodes {
-		if !final && !node.IsRunning() {
-			continue
-		}
-		node.Draw(canvas)
-	}
-	// draw connections
-	for from, neighbors := range rt.List {
-		node1 := rt.netw.nodes[from]
-		if node1 == nil || (!final && !node1.IsRunning()) {
-			continue
-		}
-		for _, to := range neighbors {
-			if to < 0 {
-				continue
-			}
-			node2 := rt.netw.nodes[to]
-			canvas.Line(node1.Pos.X, node1.Pos.Y, node2.Pos.X, node2.Pos.Y, 0.15, ClrBlue)
-		}
-	}
-	// draw environment
-	rt.netw.env.Draw(canvas)
 }
