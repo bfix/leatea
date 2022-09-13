@@ -22,13 +22,16 @@ package core
 
 // Event types
 const (
-	EvBeacon            = 1 // sending out LEARN message
-	EvLearning          = 2 // received TEACH message, learning peers
-	EvTeaching          = 3 // sending out TEACH message
-	EvNeighborExpired   = 4 // neighbor expired
-	EvForwardRemoved    = 5 // forward removed from routing table
-	EvShorterPath       = 6 // shorter path for forward entry found
-	EvForwardTblChanged = 7 // change in the forward table
+	EvBeacon          = 1  // sending out LEARN message
+	EvLearning        = 2  // received TEACH message, learning peers
+	EvTeaching        = 3  // sending out TEACH message
+	EvNeighborExpired = 4  // neighbor expired
+	EvForwardRemoved  = 5  // forward removed from routing table
+	EvShorterPath     = 6  // shorter path for forward entry found
+	EvForwardChanged  = 7  // change in the forward table
+	EvForwardLearned  = 8  // new forward learned
+	EvNeighborAdded   = 9  // new neighbor added
+	EvNeighborUpdated = 10 // old neighbor updated
 )
 
 // Event from network if something interesting happens
