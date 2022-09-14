@@ -295,7 +295,7 @@ func (m *LinkModel) Epoch(epoch int) (events []*core.Event) {
 			events = append(events, &core.Event{
 				Type: EvNodeRemoved,
 				Peer: node.PeerID(),
-				Val:  -1,
+				Val:  []int{node.id, -1},
 			})
 		}
 	}
