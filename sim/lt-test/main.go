@@ -41,6 +41,7 @@ var (
 	rt     *sim.RoutingTable // compiled routing table
 	hops   float64           // avg. number of hops in routing table
 	routes [][]int           // list of routes
+	csv    *os.File          // statistics output
 )
 
 // run application
@@ -55,8 +56,20 @@ func main() {
 	flag.Parse()
 
 	// read configuration
-	if err := sim.ReadConfig(cfgFile); err != nil {
+	err := sim.ReadConfig(cfgFile)
+	if err != nil {
 		log.Fatal(err)
+	}
+
+	// if we write statistics, create output file
+	if len(sim.Cfg.Options.Statistics) > 0 {
+		// create file
+		if csv, err = os.Create(sim.Cfg.Options.Statistics); err != nil {
+			log.Fatal(err)
+		}
+		defer csv.Close()
+		// write header
+		_, _ = csv.WriteString("Epoch;Loops;Broken;Success;Total;MeanHops\n")
 	}
 
 	// Build simulation of "physical" environment
@@ -150,7 +163,7 @@ func handleEvent(ev *core.Event) {
 	case sim.EvNodeRemoved:
 		remain := core.GetVal[int](ev)
 		if remain < 0 {
-			remain = netw.StopNode(ev.Peer)
+			remain = netw.StopNodeByID(ev.Peer)
 		}
 		log.Printf("[%s] #%d stopped (%d running)",
 			ev.Peer, netw.GetShortID(ev.Peer), remain)
@@ -159,11 +172,11 @@ func handleEvent(ev *core.Event) {
 		log.Printf("[%d] neighbor #%d added",
 			netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
 	case core.EvNeighborUpdated:
-		// log.Printf("[%d] neighbor #%d updated",
-		//	netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
-	case core.EvNeighborExpired:
-		log.Printf("[%d] neighbor #%d expired",
+		log.Printf("[%d] neighbor #%d updated",
 			netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
+	case core.EvNeighborExpired:
+		log.Printf("[%d] neighbor %s expired",
+			netw.GetShortID(ev.Peer), ev.Ref)
 		redraw = true
 	case core.EvForwardLearned:
 		e := core.GetVal[*core.Entry](ev)
@@ -181,8 +194,8 @@ func handleEvent(ev *core.Event) {
 		log.Printf("[%d] forward to %d removed",
 			netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
 	case core.EvLearning:
-		// log.Printf("[%d] learning from %d",
-		//	netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
+		log.Printf("[%d] learning from %d",
+			netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
 	case core.EvTeaching:
 		msg := core.GetVal[*core.TEAchMsg](ev)
 		announced := make([]string, 0)
@@ -197,7 +210,7 @@ func handleEvent(ev *core.Event) {
 		log.Printf("[%d] teaching [%s]",
 			netw.GetShortID(ev.Peer), strings.Join(announced, ","))
 	case core.EvWantToLearn:
-		//log.Printf("[%d] broadcasting LEArn", netw.GetShortID(ev.Peer))
+		log.Printf("[%d] broadcasting LEArn", netw.GetShortID(ev.Peer))
 	}
 }
 
@@ -229,7 +242,7 @@ loop:
 			// force redraw
 			redraw = true
 			// check if simulation ends
-			if sim.Cfg.Env.StopAt > 0 && ticks > sim.Cfg.Env.StopAt {
+			if sim.Cfg.Options.StopAt > 0 && ticks > sim.Cfg.Options.StopAt {
 				break loop
 			}
 
@@ -239,14 +252,11 @@ loop:
 				epoch++
 				log.Printf("[Epoch %d]", epoch)
 				for _, ev := range env.Epoch(epoch) {
-					if ev.Type == sim.EvNodeRemoved {
-						netw.StopNode(ev.Peer)
-					}
 					handleEvent(ev)
 				}
 				// show status
 				rt, hops = netw.RoutingTable()
-				loops, broken, _ := status(rt, hops)
+				loops, broken, _ := status(epoch, rt, hops)
 				if loops > 0 && sim.Cfg.Options.StopOnLoop {
 					log.Printf("Stopped on detected loop(s)")
 					break loop
@@ -281,7 +291,7 @@ loop:
 	log.Printf("Avg. traffic per node: %s in / %s out", sim.Scale(in), sim.Scale(out))
 	log.Println("Network routing table constructed - checking routes:")
 	rt, hops = netw.RoutingTable()
-	loops, _, _ := status(rt, hops)
+	loops, _, _ := status(epoch, rt, hops)
 	if loops > 0 {
 		analyzeLoops(rt)
 	}
@@ -294,21 +304,29 @@ loop:
 // ----------------------------------------------------------------------
 // Print status information on routing table (and optional on graph)
 // Follow all routes; detect cycles and broken routes
-func status(rt *sim.RoutingTable, allHops1 float64) (loops, broken, success int) {
+func status(epoch int, rt *sim.RoutingTable, allHops1 float64) (loops, broken, success int) {
 	var totalHops int
 	loops, broken, success, totalHops = rt.Status()
 	num := netw.NumRunning()
 	total := num * (num - 1)
 	if total > 0 {
+		// log statistics to console
 		perc := func(n int) float64 {
 			return float64(100*n) / float64(total)
 		}
 		log.Printf("  * Loops: %d (%.2f%%)", loops, perc(loops))
 		log.Printf("  * Broken: %d (%.2f%%)", broken, perc(broken))
 		log.Printf("  * Success: %d (%.2f%%)", success, perc(success))
+		mean := 0.
 		if success > 0 {
-			mean := float64(totalHops) / float64(success)
+			mean = float64(totalHops) / float64(success)
 			log.Printf("  * Hops (routg): %.2f (%d)", mean, success)
+		}
+		// log statistics to file if requested
+		if csv != nil {
+			line := fmt.Sprintf("%d,%d,%d,%d,%d,%.2f\n",
+				epoch, loops, broken, success, total, mean)
+			_, _ = csv.WriteString(line)
 		}
 	} else {
 		log.Println("  * No routes yet (routing table)")
