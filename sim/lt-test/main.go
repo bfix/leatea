@@ -157,16 +157,18 @@ func handleEvent(ev *core.Event) {
 	// log network events
 	switch ev.Type {
 	case sim.EvNodeAdded:
+		val := core.GetVal[[]int](ev)
 		log.Printf("[%s] started as #%d (%d running)",
-			ev.Peer, netw.GetShortID(ev.Peer), core.GetVal[int](ev))
+			ev.Peer, val[0], val[1])
 		redraw = true
 	case sim.EvNodeRemoved:
-		remain := core.GetVal[int](ev)
+		val := core.GetVal[[]int](ev)
+		remain := val[1]
 		if remain < 0 {
 			remain = netw.StopNodeByID(ev.Peer)
 		}
 		log.Printf("[%s] #%d stopped (%d running)",
-			ev.Peer, netw.GetShortID(ev.Peer), remain)
+			ev.Peer, val[0], remain)
 		redraw = true
 	case core.EvNeighborAdded:
 		log.Printf("[%d] neighbor #%d added",
@@ -241,10 +243,6 @@ loop:
 			ticks++
 			// force redraw
 			redraw = true
-			// check if simulation ends
-			if sim.Cfg.Options.StopAt > 0 && ticks > sim.Cfg.Options.StopAt {
-				break loop
-			}
 
 			// start new epoch?
 			if ticks%sim.Cfg.Core.LearnIntv == 0 {
@@ -254,6 +252,12 @@ loop:
 				for _, ev := range env.Epoch(epoch) {
 					handleEvent(ev)
 				}
+				// check if simulation ends
+				if sim.Cfg.Options.StopAt > 0 && epoch > sim.Cfg.Options.StopAt {
+					log.Printf("Stopped on request")
+					break loop
+				}
+
 				// show status
 				rt, hops = netw.RoutingTable()
 				loops, broken, _ := status(epoch, rt, hops)
