@@ -22,6 +22,7 @@ package sim
 
 import (
 	"leatea/core"
+	"sync"
 	"time"
 )
 
@@ -41,6 +42,7 @@ type Network struct {
 
 	index map[string]int   // node index map
 	nodes map[int]*SimNode // list of nodes
+	lock  sync.RWMutex     // manage access to nodes
 
 	running int               // number of running nodes
 	queue   chan core.Message // "ether" for message transport
@@ -93,10 +95,11 @@ func (n *Network) Run(cb core.Listener) {
 			if n.active {
 				// register node with environment and get an integer identifier.
 				idx := n.env.Register(i, node)
-				// add node to network
+				// add node to network and run it
 				n.index[node.PeerID().Key()] = idx
 				n.nodes[idx] = node
 				n.running++
+				node.Run(cb)
 
 				// notify listener
 				if cb != nil {
@@ -106,7 +109,6 @@ func (n *Network) Run(cb core.Listener) {
 						Val:  n.running,
 					})
 				}
-				node.Run(cb)
 			}
 		}(i)
 		// shutdown node (delayed)
@@ -117,23 +119,7 @@ func (n *Network) Run(cb core.Listener) {
 				time.Sleep(ttl)
 				if n.active {
 					// stop node
-					node.Stop()
-
-					// remove from network
-					n.running--
-					key := node.PeerID().Key()
-					idx := n.index[key]
-					delete(n.index, key)
-					delete(n.nodes, idx)
-
-					// notify listener
-					if cb != nil {
-						cb(&core.Event{
-							Type: EvNodeRemoved,
-							Peer: node.PeerID(),
-							Val:  n.running,
-						})
-					}
+					n.StopNode(node)
 				}
 			}
 		}()
@@ -147,6 +133,7 @@ func (n *Network) Run(cb core.Listener) {
 		// lookup sender in node table
 		if sender, _ := n.getNode(msg.Sender()); sender != nil {
 			// process all nodes that are in broadcast reach of the sender
+			n.lock.RLock()
 			for _, node := range n.nodes {
 				if node.IsRunning() && n.env.Connectivity(node, sender) && !node.PeerID().Equal(sender.PeerID()) {
 					// active node in reach receives message
@@ -154,20 +141,45 @@ func (n *Network) Run(cb core.Listener) {
 					go node.Receive(msg)
 				}
 			}
+			n.lock.RUnlock()
 		}
 	}
 }
 
 func (n *Network) NumRunning() int {
-	return len(n.nodes)
+	return n.running
+}
+
+func (n *Network) StopNodeByID(p *core.PeerID) int {
+	node, _ := n.getNode(p)
+	if node == nil {
+		panic("stop node by id: no node")
+	}
+	return n.StopNode(node)
 }
 
 // StopNode request
-func (n *Network) StopNode(p *core.PeerID) int {
-	node, _ := n.getNode(p)
+func (n *Network) StopNode(node *SimNode) int {
 	if node.IsRunning() {
-		n.running--
+		// remove from network
+		key := node.PeerID().Key()
+		idx := n.index[key]
+		n.lock.Lock()
+		delete(n.index, key)
+		delete(n.nodes, idx)
+		n.lock.Unlock()
 		node.Stop()
+		n.running--
+
+		// notify listener
+		if n.cb != nil {
+			n.cb(&core.Event{
+				Type: EvNodeRemoved,
+				Peer: node.PeerID(),
+				Val:  n.running,
+			})
+		}
+
 	}
 	return n.running
 }
@@ -179,21 +191,13 @@ func (n *Network) Stop() int {
 	for _, node := range n.nodes {
 		remain--
 		if node.IsRunning() {
-			n.running--
-			node.Stop()
-			if n.cb != nil {
-				n.cb(&core.Event{
-					Type: EvNodeRemoved,
-					Peer: node.PeerID(),
-					Val:  remain,
-				})
-			}
+			n.StopNode(node)
 		}
 	}
 	// stop network
 	n.active = false
 
-	// discard messages in queue
+	// discard pending messages in queue
 	discard := 0
 	wdog := time.NewTicker(time.Duration(Cfg.Env.CoolDown) * time.Second)
 loop:
@@ -229,6 +233,9 @@ func (n *Network) Traffic() (in, out uint64) {
 // RoutingTable returns the routing table for the whole
 // network and the average number of hops.
 func (n *Network) RoutingTable() (*RoutingTable, float64) {
+	n.lock.RLock()
+	defer n.lock.RUnlock()
+
 	// create new routing table and graph
 	rt := NewRoutingTable()
 
@@ -262,9 +269,12 @@ func (n *Network) RoutingTable() (*RoutingTable, float64) {
 
 // Render the network directly.
 func (n *Network) Render(c Canvas) {
+	n.lock.RLock()
+	defer n.lock.RUnlock()
+
 	// render nodes and connections
 	for i1, node1 := range n.nodes {
-		if !n.active || node1.IsRunning() {
+		if node1.IsRunning() {
 			node1.Draw(c)
 		}
 		for _, id2 := range node1.Neighbors() {
@@ -276,7 +286,10 @@ func (n *Network) Render(c Canvas) {
 				}
 			}
 			// don't draw if both nodes are inactive
-			if i2 >= i1 || (n.active && !(node2.IsRunning() || node1.IsRunning())) {
+			r1 := node1.IsRunning()
+			r2 := node2.IsRunning()
+			//			if i2 >= i1 || (n.active && !(node2.IsRunning() || node1.IsRunning())) {
+			if i2 >= i1 || (n.active && !(r1 || r2)) {
 				continue
 			}
 			clr := ClrBlue
