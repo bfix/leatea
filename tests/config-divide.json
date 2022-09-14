@@ -10,7 +10,7 @@
         "class": "wall",
         "width": 100,
         "height": 100,
-        "numNodes": 60,
+        "numNodes": 75,
         "cooldown": 5,
         "walls": [
             {
@@ -25,7 +25,8 @@
     "node":{
 		"reach2": 500,
 		"bootup": 60,
-		"peerTTL": 600
+		"peerTTL": 600,
+        "deathRate": 0.2
     },
     "render": {
         "mode": "sdl",
@@ -34,6 +35,9 @@
         "dynamic": true
     },
     "options": {
-        "maxRepeat": 3
+        "maxRepeat": 0,
+        "stopAt": 250,
+        "showEvents": [4, 101],
+        "statistics": "rt/stat.csv"
     }
 }

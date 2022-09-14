@@ -55,7 +55,6 @@ type EnvironCfg struct {
 	Height   float64 `json:"height"`
 	NumNodes int     `json:"numNodes"`
 	CoolDown int     `json:"cooldown"`
-	StopAt   int     `json:"stopAt"`
 
 	// used in WallModel
 	Walls []*WallDef `json:"walls"`
@@ -84,9 +83,11 @@ type RenderCfg struct {
 
 // Option for comtrol flags/values
 type Option struct {
-	MaxRepeat  int   `json:"maxRepeat"`
-	StopOnLoop bool  `json:"stopOnLoop"`
-	ShowEvents []int `json:"showEvents"`
+	MaxRepeat  int    `json:"maxRepeat"`
+	StopOnLoop bool   `json:"stopOnLoop"`
+	StopAt     int    `json:"stopAt"`
+	ShowEvents []int  `json:"showEvents"`
+	Statistics string `json:"statistics"`
 }
 
 // Config for test configuration data
