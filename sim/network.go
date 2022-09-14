@@ -213,6 +213,9 @@ loop:
 }
 
 func (n *Network) getNode(p *core.PeerID) (node *SimNode, idx int) {
+	n.lock.RLock()
+	defer n.lock.RUnlock()
+
 	var ok bool
 	if idx, ok = n.index[p.Key()]; !ok {
 		return
@@ -279,6 +282,9 @@ func (n *Network) Render(c Canvas) {
 		}
 		for _, id2 := range node1.Neighbors() {
 			node2, i2 := n.getNode(id2)
+			if node2 == nil {
+				continue
+			}
 			// check that an inactive node1 has a forward from active node2
 			if !node1.IsRunning() && node2.IsRunning() {
 				if _, hops := node2.Forward(node1.PeerID()); hops == 0 {
