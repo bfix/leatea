@@ -70,6 +70,9 @@ func (n *Network) GetShortID(p *core.PeerID) int {
 	if p == nil {
 		return 0
 	}
+
+	n.lock.RLock()
+	defer n.lock.RUnlock()
 	i, ok := n.index[p.Key()]
 	if !ok {
 		return -1
@@ -95,20 +98,23 @@ func (n *Network) Run(cb core.Listener) {
 			if n.active {
 				// register node with environment and get an integer identifier.
 				idx := n.env.Register(i, node)
-				// add node to network and run it
+				// add node to network
+				n.lock.Lock()
 				n.index[node.PeerID().Key()] = idx
 				n.nodes[idx] = node
 				n.running++
-				node.Run(cb)
+				n.lock.Unlock()
 
 				// notify listener
 				if cb != nil {
 					cb(&core.Event{
 						Type: EvNodeAdded,
 						Peer: node.PeerID(),
-						Val:  n.running,
+						Val:  []int{idx, n.running},
 					})
 				}
+				// run node
+				node.Run(cb)
 			}
 		}(i)
 		// shutdown node (delayed)
@@ -167,19 +173,18 @@ func (n *Network) StopNode(node *SimNode) int {
 		n.lock.Lock()
 		delete(n.index, key)
 		delete(n.nodes, idx)
+		n.running--
 		n.lock.Unlock()
 		node.Stop()
-		n.running--
 
 		// notify listener
 		if n.cb != nil {
 			n.cb(&core.Event{
 				Type: EvNodeRemoved,
 				Peer: node.PeerID(),
-				Val:  n.running,
+				Val:  []int{node.id, n.running},
 			})
 		}
-
 	}
 	return n.running
 }
