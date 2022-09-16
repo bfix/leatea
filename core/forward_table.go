@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"log"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -141,39 +140,6 @@ func NewForwardTable(self *PeerID) *ForwardTable {
 		self: self,
 		recs: make(map[string]*Entry),
 	}
-}
-
-// TableList returns a stringified forward table based on a conversion function
-// for PeerIDs. If cv is nil, the default String() method on PeerID is used.
-func (tbl *ForwardTable) TableList(cv func(*PeerID) string) string {
-	// check for conversion function
-	if cv == nil {
-		// use default String()
-		cv = func(p *PeerID) string {
-			return p.String()
-		}
-	}
-	// compile list
-	list := make([]string, 0)
-	for _, entry := range tbl.recs {
-		s := fmt.Sprintf("{%s,%d,%s,%.2f}",
-			cv(entry.Peer), entry.Hops, cv(entry.NextHop),
-			entry.Origin.Age().Seconds())
-		list = append(list, s)
-	}
-	// sort list by ascending peer
-	sort.Slice(list, func(i, j int) bool {
-		s1 := list[i][1:strings.Index(list[i], ",")]
-		s2 := list[j][1:strings.Index(list[j], ",")]
-		if len(s1) < len(s2) {
-			return true
-		}
-		if len(s1) > len(s2) {
-			return false
-		}
-		return s1 < s2
-	})
-	return "[" + strings.Join(list, ",") + "]"
 }
 
 // Reset routing table
@@ -600,7 +566,6 @@ func (tbl *ForwardTable) sanityCheck(label string, args ...any) {
 	for _, entry := range tbl.recs {
 		if entry.Peer.Equal(tbl.self) {
 			log.Printf("[%s] peer %s forward to self", label, tbl.self)
-			log.Printf("Tbl = %s", tbl.TableList(nil))
 			panic(label)
 		}
 		if entry.NextHop != nil {
@@ -610,8 +575,7 @@ func (tbl *ForwardTable) sanityCheck(label string, args ...any) {
 				for i, arg := range args {
 					log.Printf("Arg #%d: %v", i+1, arg)
 				}
-				log.Printf("Bad entry: %s / %s", entry, nb)
-				log.Printf("Tbl = %s", tbl.TableList(nil))
+				log.Printf("Bad entry: %s", entry)
 				panic(label)
 			}
 			if nb.NextHop != nil {
@@ -620,7 +584,6 @@ func (tbl *ForwardTable) sanityCheck(label string, args ...any) {
 					log.Printf("Arg #%d: %v", i+1, arg)
 				}
 				log.Printf("Bad entry: %s / %s", entry, nb)
-				log.Printf("Tbl = %s", tbl.TableList(nil))
 				panic(label)
 			}
 		}
