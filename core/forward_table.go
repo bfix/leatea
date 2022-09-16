@@ -313,7 +313,7 @@ func (tbl *ForwardTable) Filter() *data.SaltedBloomFilter {
 			continue
 		}
 		// skip entries that were learned long ago
-		if entry.Changed.Age().Seconds() > float64(cfg.TTLBeacon) {
+		if entry.Changed.Age().Seconds() > float64(cfg.Outdated) {
 			continue
 		}
 		// add entry to filter
@@ -324,59 +324,98 @@ func (tbl *ForwardTable) Filter() *data.SaltedBloomFilter {
 	return pf
 }
 
+// Candidate entry for inclusion in a TEAch message
+type _Candidate struct {
+	e    *Entry // reference to entry
+	kind int    // entry classification (lower value = higher priority)
+}
+
 // Candiates returns a list of table entries that are not filtered out by the
 // bloomfilter contained in the LEArn message.
-// Candiates also can't have sender as next hop. (TODO: check!!)
 // Pending entries (updated but not forwarded yet) are collected if there is
 // space for them in the result list.
-func (tbl *ForwardTable) Candidates(m *LEArnMsg) (list []*Forward) {
+func (tbl *ForwardTable) Candidates(m *LEArnMsg) (list []*Forward, counts [4]int) {
 	tbl.Lock()
 	defer func() {
 		tbl.sanityCheck("candidates")
 		tbl.Unlock()
 	}()
-
 	// collect forwards for response
+	collect := make([]*_Candidate, 0)
 	for _, entry := range tbl.recs {
+		// new candidate and flag for inclusion
+		cnd := &_Candidate{entry, -1}
+		add := false
+
 		// add entry if not filtered
-		add := !m.Filter.Contains(entry.Peer.Bytes())
-		// create forward for response
-		forward := entry.Target()
-		switch entry.Hops {
-		// removed forward
-		case -1:
-			// forced add
+		if !m.Filter.Contains(entry.Peer.Bytes()) {
 			add = true
-		// removed neighbor
-		case -2:
-			// tag as deleted neighbor
-			entry.Hops = -3
-			// forced add
+			cnd.kind = 0 // unfiltered entry
+		}
+		// handle removed entries
+		if entry.Hops < 0 {
+			switch entry.Hops {
+			case -1:
+				// removed forward
+				add = true
+				cnd.kind = 2
+			case -2:
+				// removed neighbor
+				add = true
+				cnd.kind = 1
+			case -3:
+				// zombie neighbor
+				add = false
+			}
+		} else if entry.Pending {
+			// pending entry
 			add = true
-		case -3:
-			// do not add deleted neighbors (even when unfiltered)
-			add = false
+			cnd.kind = 3
 		}
 		// add forward to response if required
 		if add {
-			list = append(list, forward)
+			collect = append(collect, cnd)
 		}
 	}
 	// honor TEAch limit.
-	if len(list) > cfg.MaxTeachs {
-		// sort list by ascending number of hops
-		sort.Slice(list, func(i, j int) bool {
-			return list[i].Hops < list[j].Hops
+	counts[3] = len(collect)
+	if counts[3] > cfg.MaxTeachs {
+		// sort list by descending kind (primary) and ascending number
+		// of hops (secondary)
+		sort.Slice(collect, func(i, j int) bool {
+			ci := collect[i]
+			cj := collect[j]
+			if ci.kind < cj.kind {
+				return true
+			} else if ci.kind > cj.kind {
+				return false
+			}
+			return ci.e.Hops < cj.e.Hops
 		})
-		list = list[:cfg.MaxTeachs]
+		// trim list to max. length
+		collect = collect[:cfg.MaxTeachs]
 	}
 	// if we have removed forwards in our response, remove them
-	// from the forward table
-	for _, forward := range list {
-		if forward.Hops == -1 {
+	// from the forward table. Reset pending flag on entry and
+	// correct for removed meighbors
+	for _, cnd := range collect {
+		entry := cnd.e
+		forward := entry.Target()
+		if entry.Hops == -1 {
 			// remove forward from table
-			delete(tbl.recs, forward.Peer.Key())
+			delete(tbl.recs, entry.Peer.Key())
+			counts[0]++
+		} else if entry.Hops == -2 {
+			// tag neighbor as zombie
+			entry.Hops = -3
+			counts[0]++
+		} else if entry.Pending {
+			counts[2]++
+		} else {
+			counts[1]++
 		}
+		entry.Pending = false
+		list = append(list, forward)
 	}
 	return
 }
@@ -442,40 +481,20 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 			Origin:  entry.Origin,
 		}
 		changed := false
-		if announce.Hops < 0 && entry.Hops >= 0 {
-			// "removal" announced
-			if announce.Hops == -2 {
-				// removed neighbor
-				entry.Hops = -2
-				entry.NextHop = nil
-				entry.Origin = origin
-				entry.Changed = now
-				entry.Pending = true
-				changed = true
-				// remove dependent forwards
-				for _, fw := range tbl.recs {
-					if fw.NextHop.Equal(sender) {
-						// flag forward for removal
-						fw.Hops = -1
-						fw.Origin = origin
-						fw.Changed = now
-						fw.Pending = true
-						// notify listener we removed a forward
-						if tbl.listener != nil {
-							tbl.listener(&Event{
-								Type: EvForwardRemoved,
-								Peer: tbl.self,
-								Ref:  fw.Peer,
-							})
-						}
-					}
-				}
-			} else if entry.NextHop.Equal(sender) {
-				// remove dependent forward
+
+		// "removal" announced?
+		if announce.Hops < 0 {
+			// yes: continue if entry is already removed
+			if entry.Hops < 0 {
+				continue
+			}
+			// remove dependent forward
+			if entry.NextHop.Equal(sender) {
 				entry.Hops = -1
 				entry.Origin = origin
 				entry.Changed = now
 				entry.Pending = true
+				changed = true
 				// notify listener we removed a forward
 				if tbl.listener != nil {
 					tbl.listener(&Event{
