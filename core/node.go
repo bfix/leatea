@@ -136,7 +136,8 @@ func (n *Node) Receive(msg Message) {
 		// build a list of candidate entries for teaching:
 		// candidates are not included in the learn filter
 		// and don't have the learner as next hop.
-		if candidates := n.Candidates(m); len(candidates) > 0 {
+		candidates, counts := n.Candidates(m)
+		if len(candidates) > 0 {
 			// assemble and send TEACH message
 			outMsg := NewTEAchMsg(n.self, candidates)
 			n.send(outMsg)
@@ -147,7 +148,7 @@ func (n *Node) Receive(msg Message) {
 					Type: EvTeaching,
 					Peer: n.self,
 					Ref:  m.Sender(),
-					Val:  outMsg,
+					Val:  []any{outMsg, counts},
 				})
 			}
 		}
