@@ -275,6 +275,7 @@ func (tbl *ForwardTable) Cleanup() {
 		// remove neighbor
 		entry.Hops = -2
 		entry.NextHop = nil
+		entry.Origin = now
 		entry.Pending = true
 		entry.Changed = now
 
@@ -284,7 +285,7 @@ func (tbl *ForwardTable) Cleanup() {
 			if fw.NextHop.Equal(entry.Peer) {
 				// remove forward
 				fw.Hops = -1
-				fw.Origin = entry.Origin
+				fw.Origin = now
 				fw.Changed = now
 				fw.Pending = true
 				// notify listener we removed a forward
