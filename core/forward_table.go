@@ -464,7 +464,8 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 					Pending: true,
 				}
 				tbl.recs[key] = e
-				// send event
+
+				// notify listener
 				tbl.listener(&Event{
 					Type: EvForwardLearned,
 					Peer: tbl.self,
@@ -502,6 +503,7 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 				entry.Changed = now
 				entry.Pending = true
 				changed = true
+
 				// notify listener we removed a forward
 				if tbl.listener != nil {
 					tbl.listener(&Event{
@@ -511,15 +513,16 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 					})
 				}
 			}
-		} else if entry.Hops > announce.Hops+1 {
-			// update with shorter path
+		} else if entry.NextHop != nil && entry.Hops > announce.Hops+1 {
+			// update relay with newer relay if we have a shorter path
 			entry.Hops = announce.Hops + 1
 			entry.NextHop = sender
 			entry.Origin = origin
 			entry.Changed = now
 			entry.Pending = true
 			changed = true
-			// notify listener we updated a relay
+
+			// notify listener if a shorter route was found
 			if tbl.listener != nil {
 				tbl.listener(&Event{
 					Type: EvShorterRoute,
