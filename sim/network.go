@@ -70,14 +70,11 @@ func (n *Network) GetShortID(p *core.PeerID) int {
 	if p == nil {
 		return 0
 	}
-
-	n.lock.RLock()
-	defer n.lock.RUnlock()
 	i, ok := n.index[p.Key()]
 	if !ok {
 		return -1
 	}
-	return n.nodes[i].id
+	return i
 }
 
 // Run the network simulation
