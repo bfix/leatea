@@ -26,8 +26,8 @@ const (
 	EvLearning        = 2  // received TEACH message, learning peers
 	EvTeaching        = 3  // sending out TEACH message
 	EvNeighborExpired = 4  // neighbor expired
-	EvForwardRemoved  = 5  // forward removed from routing table
-	EvShorterPath     = 6  // shorter path for forward entry found
+	EvRelayRemoved    = 5  // forward removed from routing table
+	EvShorterRoute    = 6  // shorter path for forward entry found
 	EvForwardChanged  = 7  // change in the forward table
 	EvForwardLearned  = 8  // new forward learned
 	EvNeighborAdded   = 9  // new neighbor added
