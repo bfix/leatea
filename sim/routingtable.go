@@ -53,9 +53,9 @@ func (rt *RoutingTable) AddNode(i int, node *SimNode) {
 }
 
 func (rt *RoutingTable) Status() (loops, broken, success, totalHops int) {
-	for from, entry := range rt.List {
-		for to := range entry.Forwards {
-			if to < 0 {
+	for from := range rt.List {
+		for to := range rt.List {
+			if from == to {
 				continue
 			}
 			hops, _ := rt.Route(from, to)
