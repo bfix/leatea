@@ -29,6 +29,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"runtime/pprof"
 	"strings"
 	"syscall"
 	"time"
@@ -51,8 +52,9 @@ func main() {
 
 	//------------------------------------------------------------------
 	// parse arguments
-	var cfgFile string
+	var cfgFile, profile string
 	flag.StringVar(&cfgFile, "c", "config.json", "JSON-encoded configuration file")
+	flag.StringVar(&profile, "p", "", "write CPU profile")
 	flag.Parse()
 
 	// read configuration
@@ -70,6 +72,18 @@ func main() {
 		defer csv.Close()
 		// write header
 		_, _ = csv.WriteString("Epoch;Loops;Broken;Success;Total;MeanHops\n")
+	}
+
+	// turn on profiling
+	if len(profile) > 0 {
+		f, err := os.Create(profile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err = pprof.StartCPUProfile(f); err != nil {
+			log.Fatal(err)
+		}
+		defer pprof.StopCPUProfile()
 	}
 
 	// Build simulation of "physical" environment
@@ -189,28 +203,35 @@ func handleEvent(ev *core.Event) {
 		log.Printf("[%d < %d] %s < %s > %s",
 			netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref),
 			printEntry(fw[0]), printEntry(fw[1]), printEntry(fw[2]))
-	case core.EvShorterPath:
+	case core.EvShorterRoute:
 		log.Printf("[%d] shorter path to %d learned",
 			netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
-	case core.EvForwardRemoved:
+	case core.EvRelayRemoved:
 		log.Printf("[%d] forward to %d removed",
 			netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
 	case core.EvLearning:
 		log.Printf("[%d] learning from %d",
 			netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
 	case core.EvTeaching:
-		msg := core.GetVal[*core.TEAchMsg](ev)
-		announced := make([]string, 0)
-		for _, ann := range msg.Announce {
-			e := &core.Entry{
-				Forward: *ann,
-				NextHop: msg.Sender(),
-				Origin:  core.TimeFromAge(ann.Age),
+		val := core.GetVal[[]any](ev)
+		msg, _ := val[0].(*core.TEAchMsg)
+		counts, _ := val[1].([4]int)
+		numAnnounce := len(msg.Announce)
+		log.Printf("[%d] teaching: %d removed, %d unfiltered, %d pending, %d skipped",
+			netw.GetShortID(ev.Peer), counts[0], counts[1], counts[2], counts[3]-numAnnounce)
+		if numAnnounce < 4 {
+			announced := make([]string, 0)
+			for _, ann := range msg.Announce {
+				e := &core.Entry{
+					Forward: *ann,
+					NextHop: msg.Sender(),
+					Origin:  core.TimeFromAge(ann.Age),
+				}
+				announced = append(announced, printEntry(e))
 			}
-			announced = append(announced, printEntry(e))
+			log.Printf("[%d] TEAch [%s]",
+				netw.GetShortID(ev.Peer), strings.Join(announced, ","))
 		}
-		log.Printf("[%d] teaching [%s]",
-			netw.GetShortID(ev.Peer), strings.Join(announced, ","))
 	case core.EvWantToLearn:
 		log.Printf("[%d] broadcasting LEArn", netw.GetShortID(ev.Peer))
 	}
@@ -236,8 +257,9 @@ func run(env sim.Environment) {
 	epoch := 0
 	repeat := 1
 	lastFailed := -1
+	active := true
 loop:
-	for {
+	for active {
 		select {
 		case <-tick.C:
 			ticks++
@@ -248,34 +270,39 @@ loop:
 			if ticks%sim.Cfg.Core.LearnIntv == 0 {
 				// start new epoch (every 10 seconds)
 				epoch++
-				log.Printf("[Epoch %d]", epoch)
-				for _, ev := range env.Epoch(epoch) {
-					handleEvent(ev)
-				}
-				// check if simulation ends
-				if sim.Cfg.Options.StopAt > 0 && epoch > sim.Cfg.Options.StopAt {
-					log.Printf("Stopped on request")
-					break loop
-				}
-
-				// show status
-				rt, hops = netw.RoutingTable()
-				loops, broken, _ := status(epoch, rt, hops)
-				if loops > 0 && sim.Cfg.Options.StopOnLoop {
-					log.Printf("Stopped on detected loop(s)")
-					break loop
-				}
-				if failed := loops + broken; failed == 0 {
-					if lastFailed == failed {
-						repeat++
-						if repeat == sim.Cfg.Options.MaxRepeat {
-							log.Printf("Stopped on repeat limit")
-							break loop
-						}
+				log.Printf("[Epoch %d] %d nodes running", epoch, netw.NumRunning())
+				go func(epoch int) {
+					for _, ev := range env.Epoch(epoch) {
+						handleEvent(ev)
 					}
-					repeat = 1
-					lastFailed = -1
-				}
+					// check if simulation ends
+					if sim.Cfg.Options.StopAt > 0 && epoch > sim.Cfg.Options.StopAt {
+						log.Printf("Stopped on request")
+						active = false
+						return
+					}
+
+					// show status
+					rt, hops = netw.RoutingTable()
+					loops, broken, _ := status(epoch, rt, hops)
+					if loops > 0 && sim.Cfg.Options.StopOnLoop {
+						log.Printf("Stopped on detected loop(s)")
+						active = false
+						return
+					}
+					if failed := loops + broken; failed == 0 {
+						if lastFailed == failed {
+							repeat++
+							if repeat == sim.Cfg.Options.MaxRepeat {
+								log.Printf("Stopped on repeat limit")
+								active = false
+								return
+							}
+						}
+						repeat = 1
+						lastFailed = -1
+					}
+				}(epoch)
 			}
 		case sig := <-sigCh:
 			// signal received
