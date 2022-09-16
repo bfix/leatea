@@ -36,7 +36,9 @@ type PeerID struct {
 	Data []byte `size:"(Size)"` // binary representation
 
 	// transient
-	pub *ed25519.PublicKey // corresponding Ed25519 pubkey
+	pub   *ed25519.PublicKey // corresponding Ed25519 pubkey
+	str32 string             // corresponding string representation (base32)
+	str64 string             // corresponding string representation (base64)
 }
 
 // Size of a peerid (used for serialization).
@@ -46,7 +48,10 @@ func (p *PeerID) Size() uint {
 
 // Key returns a string used for map operations
 func (p *PeerID) Key() string {
-	return base64.StdEncoding.EncodeToString(p.Data)
+	if len(p.str64) == 0 {
+		p.str64 = base64.StdEncoding.EncodeToString(p.Data)
+	}
+	return p.str64
 }
 
 // String returns a human-readable short peer identifier
@@ -54,8 +59,10 @@ func (p *PeerID) String() string {
 	if p == nil {
 		return "(none)"
 	}
-	s := base32.StdEncoding.EncodeToString(p.Data)
-	return s[:8]
+	if len(p.str32) == 0 {
+		p.str32 = base32.StdEncoding.EncodeToString(p.Data)[:8]
+	}
+	return p.str32
 }
 
 // Equal returns true if two peerids are equal
