@@ -204,7 +204,7 @@ func (tbl *ForwardTable) AddNeighbor(node *PeerID) {
 		entry.Hops = 0
 		entry.Origin = now
 		entry.Changed = now
-		entry.Pending = true
+
 		// notify listener
 		if tbl.listener != nil {
 			tbl.listener(&Event{
@@ -275,8 +275,8 @@ func (tbl *ForwardTable) Cleanup() {
 		entry.Hops = -2
 		entry.NextHop = nil
 		entry.Origin = now
-		entry.Pending = true
 		entry.Changed = now
+		entry.Pending = true
 
 		// remove dependent relays
 		for _, fw := range tbl.recs {
@@ -316,8 +316,8 @@ func (tbl *ForwardTable) Filter() *data.SaltedBloomFilter {
 
 	// add all table entries that are not tagged for deletion
 	for _, entry := range tbl.recs {
-		// skip removed entry
-		if entry.Hops < 0 {
+		// skip removed relay
+		if entry.Hops == -1 {
 			continue
 		}
 		// add entry to filter
@@ -453,27 +453,34 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 		if !ok {
 			//----------------------------------------------------------
 			// no entry found:
-			// add new entry if is is not a "delete" announcement
-			if announce.Hops >= 0 {
-				// add entry to forward table
-				e := &Entry{
-					Peer:    announce.Peer,
-					Hops:    announce.Hops + 1,
-					NextHop: sender,
-					Origin:  origin,
-					Changed: now,
-					Pending: true,
-				}
-				tbl.recs[key] = e
 
-				// notify listener
-				tbl.listener(&Event{
-					Type: EvForwardLearned,
-					Peer: tbl.self,
-					Ref:  sender,
-					Val:  e,
-				})
+			// skip removed relay announcements
+			if announce.Hops == -1 {
+				continue
 			}
+			// create new entry
+			e := &Entry{
+				Peer:    announce.Peer,
+				Hops:    announce.Hops + 1,
+				NextHop: sender,
+				Origin:  origin,
+				Changed: now,
+				Pending: true,
+			}
+			// correct hops count for removed neighbors
+			if announce.Hops == -2 {
+				e.Hops = -2
+			}
+			// add entry to forward table
+			tbl.recs[key] = e
+
+			// notify listener
+			tbl.listener(&Event{
+				Type: EvForwardLearned,
+				Peer: tbl.self,
+				Ref:  sender,
+				Val:  e,
+			})
 			return
 		}
 		//--------------------------------------------------------------
@@ -612,6 +619,10 @@ func (tbl *ForwardTable) Neighbors() (list []*PeerID) {
 func (tbl *ForwardTable) sanityCheck(label string, args ...any) {
 	// sanity check: make sure all relays have a valid neighbor as next hop
 	for _, entry := range tbl.recs {
+		if entry.Peer == nil {
+			log.Printf("[%s] peer %s forward to nil", label, tbl.self)
+			panic(label)
+		}
 		if entry.Peer.Equal(tbl.self) {
 			log.Printf("[%s] peer %s forward to self", label, tbl.self)
 			panic(label)
