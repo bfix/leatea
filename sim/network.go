@@ -171,14 +171,8 @@ func (n *Network) StopNodeByID(p *core.PeerID) int {
 // StopNode request
 func (n *Network) StopNode(node *SimNode) int {
 	if node.IsRunning() {
-		// remove from network
-		key := node.PeerID().Key()
-		idx := n.index[key]
-		n.lock.Lock()
-		delete(n.index, key)
-		delete(n.nodes, idx)
+		// stop running node
 		n.running--
-		n.lock.Unlock()
 		node.Stop()
 
 		// notify listener
@@ -259,8 +253,15 @@ func (n *Network) RoutingTable() (*RoutingTable, float64) {
 	// build routing table and graph
 	allHops := 0
 	numRoute := 0
+
 	for i1, node1 := range n.nodes {
+		if !node1.IsRunning() {
+			continue
+		}
 		for i2, node2 := range n.nodes {
+			if !node2.IsRunning() {
+				continue
+			}
 			if i1 == i2 {
 				continue
 			}
