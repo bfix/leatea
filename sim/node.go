@@ -70,7 +70,7 @@ func (n *SimNode) ListTable(cv func(*core.PeerID) string) string {
 	}
 	entries := make([]string, 0)
 	for _, e := range n.Forwards() {
-		s := fmt.Sprintf("{%s,%s,%d,%s}", cv(e.Peer), cv(e.NextHop), e.Hops, e.Origin.Age())
+		s := fmt.Sprintf("{%s,%s,%d,%.3f}", cv(e.Peer), cv(e.NextHop), e.Hops, e.Origin.Age().Seconds())
 		entries = append(entries, s)
 	}
 	sort.Slice(entries, func(i, j int) bool {
