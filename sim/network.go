@@ -149,6 +149,13 @@ func (n *Network) Run(cb core.Listener) {
 	}
 }
 
+func (n *Network) IsActive() bool {
+	if n == nil {
+		return false
+	}
+	return n.active
+}
+
 func (n *Network) NumRunning() int {
 	return n.running
 }
