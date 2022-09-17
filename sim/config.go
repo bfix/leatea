@@ -86,7 +86,8 @@ type Option struct {
 	MaxRepeat  int    `json:"maxRepeat"`
 	StopOnLoop bool   `json:"stopOnLoop"`
 	StopAt     int    `json:"stopAt"`
-	ShowEvents []int  `json:"showEvents"`
+	Events     []int  `json:"events"`
+	ShowEvents bool   `json:"showEvents"`
 	Statistics string `json:"statistics"`
 }
 
@@ -123,7 +124,7 @@ var Cfg = &Config{
 	Options: &Option{
 		MaxRepeat:  0,
 		StopOnLoop: false,
-		ShowEvents: nil,
+		Events:     nil,
 	},
 	Render: &RenderCfg{
 		Mode: "none",
