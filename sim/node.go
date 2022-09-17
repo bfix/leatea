@@ -23,6 +23,8 @@ package sim
 import (
 	"fmt"
 	"leatea/core"
+	"sort"
+	"strings"
 )
 
 //----------------------------------------------------------------------
@@ -60,6 +62,23 @@ func (n *SimNode) Stop() {
 	n.Node.Stop()
 }
 
+// ListTable returns a stringiied forward table. PeerIDs for display can be
+// converted by 'cv' first.
+func (n *SimNode) ListTable(cv func(*core.PeerID) string) string {
+	if cv == nil {
+		cv = func(p *core.PeerID) string { return p.String() }
+	}
+	entries := make([]string, 0)
+	for _, e := range n.Forwards() {
+		s := fmt.Sprintf("{%s,%s,%d,%s}", cv(e.Peer), cv(e.NextHop), e.Hops, e.Origin.Age())
+		entries = append(entries, s)
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i] < entries[j]
+	})
+	return "[" + strings.Join(entries, ",") + "]"
+}
+
 // CanReach returns true if the node can reach another node by broadcast
 func (n *SimNode) CanReach(peer *SimNode) bool {
 	dist2 := n.Pos.Distance2(peer.Pos)
@@ -73,6 +92,9 @@ func (n *SimNode) Receive(msg core.Message) {
 
 // String returns a human-readable representation.
 func (n *SimNode) String() string {
+	if n == nil {
+		return "SimNode{nil}"
+	}
 	return fmt.Sprintf("SimNode{%s @ %s}", n.Node.String(), n.Pos)
 }
 
