@@ -72,25 +72,25 @@ func analyzeLoops(rt *sim.RoutingTable) {
 	// check for distinct cycles
 	log.Println("  * find distinct loops:")
 	routes = make([][]int, 0)
-	for i, l := range loops {
+	for _, l := range loops {
 		cl := len(l.cycle)
 		found := false
 	search:
 		for _, e := range routes {
-			if cl != len(e) {
-				continue
-			}
-			hop := l.cycle[0]
-			for k, hop2 := range e {
-				if hop2 == hop {
-					// check if rest is the same...
-					for q := 0; q < cl; q++ {
-						if loops[i].cycle[q] != e[(q+k)%cl] {
-							break search
+			if cl == len(e) {
+				hop := l.cycle[0]
+				for k, hop2 := range e {
+					if hop2 == hop {
+						// check if rest is the same...
+						for q := 1; q < cl; q++ {
+							r := (q + k) % cl
+							if l.cycle[q] != e[r] {
+								continue search
+							}
 						}
+						found = true
+						break search
 					}
-					found = true
-					break search
 				}
 			}
 		}
