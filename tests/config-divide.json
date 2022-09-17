@@ -31,15 +31,12 @@
     "render": {
         "mode": "svg",
         "file": "rt/out.svg",
-        "width": 800,
-        "height": 800,
-        "dynamic": true
+        "dynamic": false
     },
     "options": {
-        "maxRepeat": 0,
-        "stopAt": 100,
         "events": [1,2,10],
         "showEvents": false,
+        "stopOnLoop": false,
         "statistics": "rt/stat.csv"
     }
 }
