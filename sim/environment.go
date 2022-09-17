@@ -311,7 +311,7 @@ func (m *LinkModel) Epoch(epoch int) (events []*core.Event) {
 		if ln.n == nil || !ln.n.IsRunning() {
 			continue
 		}
-		tbl := ln.n.TableList(show)
+		tbl := ln.n.ListTable(show)
 		list = append(list, fmt.Sprintf("[%d] Tbl = %s", ln.n.id, tbl))
 	}
 	// sort list by ascending peer
