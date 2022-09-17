@@ -76,7 +76,7 @@ func (f *Forward) String() string {
 	if f == nil {
 		return "{nil forward}"
 	}
-	return fmt.Sprintf("{%s,%d,%04X,%s}", f.Peer, f.Hops, f.NextHop, f.Age.String())
+	return fmt.Sprintf("{%s,%d,%04X,%.3f}", f.Peer, f.Hops, f.NextHop, f.Age.Seconds())
 }
 
 //----------------------------------------------------------------------
@@ -151,8 +151,8 @@ func (e *Entry) String() string {
 	if e == nil {
 		return "{nil entry}"
 	}
-	a := e.Origin.Age()
-	return fmt.Sprintf("{%s,%s,%d,%s}", e.Peer, e.NextHop, e.Hops, a)
+	return fmt.Sprintf("{%s,%s,%d,%.3f}",
+		e.Peer, e.NextHop, e.Hops, e.Origin.Age().Seconds())
 }
 
 //----------------------------------------------------------------------
