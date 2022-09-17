@@ -22,9 +22,9 @@ package core
 
 // Config for LEArn/TEAch core processes
 type Config struct {
-	MaxTeachs  int `json:"maxTeach"`   // max. number of entries in TEACH message
+	MaxTeachs  int `json:"maxTeachs"`  // max. number of entries in TEACH message
 	LearnIntv  int `json:"learnIntv"`  // LEARN interval
-	Outdated   int `json:"outdated"`   // time after a learned entry s considered outdated
+	Outdated   int `json:"outdated"`   // time after a learned entry is considered outdated
 	BeaconIntv int `json:"beaconIntv"` // BEACON interval
 	TTLBeacon  int `json:"ttlEntry"`   // time to live for a neighbor without beacons
 }
