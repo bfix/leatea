@@ -53,6 +53,39 @@ type Forward struct {
 	// Target node
 	Peer *PeerID
 
+	// Expected number of hops to target
+	Hops int16 `size:"big"`
+
+	// Short identifier for next hop
+	NextHop uint16 `size:"big"`
+
+	// Age of entry since creation of the originating entry
+	Age Age
+}
+
+// Size returns the size of the binary representation (used to calculate
+// size of TEAch message based on number of Forward entries)
+func (f *Forward) Size() uint {
+	var id *PeerID
+	var age Age
+	return id.Size() + age.Size() + 4
+}
+
+// String returns a human-readable representation
+func (f *Forward) String() string {
+	if f == nil {
+		return "{nil forward}"
+	}
+	return fmt.Sprintf("{%s,%d,%04X,%s}", f.Peer, f.Hops, f.NextHop, f.Age.String())
+}
+
+//----------------------------------------------------------------------
+
+// Entry in forward table
+type Entry struct {
+	// Target node
+	Peer *PeerID
+
 	// Expected number of hops to target:
 	// The hop count is also used to indicate the status
 	// of an entry:
@@ -62,30 +95,6 @@ type Forward struct {
 	//    = -2: removed neighbor
 	//    = -3: zombie neighbor
 	Hops int16 `size:"big"`
-
-	// Age of entry since creation of the originating entry
-	// (set when sending message; derived from Origin timestamp)
-	Age Age
-}
-
-// Size returns the size of the binary representation (used to calculate
-// size of TEAch message based on number of Forward entries)
-func (f *Forward) Size() uint {
-	var id *PeerID
-	var age Age
-	return id.Size() + age.Size() + 2
-}
-
-// String returns a human-readable representation
-func (f *Forward) String() string {
-	return fmt.Sprintf("{%s,%d,%s}", f.Peer, f.Hops, f.Age.String())
-}
-
-//......................................................................
-
-// Entry in forward table
-type Entry struct {
-	Forward
 
 	// Next hop (nil for neighbors)
 	NextHop *PeerID
@@ -104,20 +113,46 @@ type Entry struct {
 	Pending bool
 }
 
+// EntryFromForward creates a new Entry from a forward send by sender.
+func EntryFromForward(f *Forward, sender *PeerID) *Entry {
+	return &Entry{
+		Peer:    f.Peer,
+		NextHop: sender,
+		Hops:    f.Hops + 1,
+		Origin:  TimeFromAge(f.Age),
+	}
+}
+
 // Target returns the Forward for a table entry.
 // The age of the entry is calculated from Origin relative to TimeNow()
 func (e *Entry) Target() *Forward {
 	return &Forward{
-		Peer: e.Peer,
-		Hops: e.Hops,
-		Age:  e.Origin.Age(),
+		Peer:    e.Peer,
+		Hops:    e.Hops,
+		NextHop: e.NextHop.Tag(),
+		Age:     e.Origin.Age(),
+	}
+}
+
+// Clone an entry
+func (e *Entry) Clone() *Entry {
+	return &Entry{
+		Peer:    e.Peer,
+		Hops:    e.Hops,
+		NextHop: e.NextHop,
+		Origin:  e.Origin,
+		Changed: e.Changed,
+		Pending: e.Pending,
 	}
 }
 
 // String returns a human-readable representation
 func (e *Entry) String() string {
-	e.Age = e.Origin.Age()
-	return fmt.Sprintf("{%s,%s}", e.Forward.String(), e.NextHop)
+	if e == nil {
+		return "{nil entry}"
+	}
+	a := e.Origin.Age()
+	return fmt.Sprintf("{%s,%s,%d,%s}", e.Peer, e.NextHop, e.Hops, a)
 }
 
 //----------------------------------------------------------------------
@@ -182,10 +217,8 @@ func (tbl *ForwardTable) AddNeighbor(node *PeerID) {
 	}
 	// new neighbor: insert new entry into table
 	tbl.recs[node.Key()] = &Entry{
-		Forward: Forward{
-			Peer: node,
-			Hops: 0,
-		},
+		Peer:    node,
+		Hops:    0,
 		NextHop: nil,
 		Origin:  now,
 		Changed: now,
@@ -294,6 +327,8 @@ func (tbl *ForwardTable) Filter() *data.SaltedBloomFilter {
 	pf.Add(tbl.self.Bytes())
 	return pf
 }
+
+//----------------------------------------------------------------------
 
 // Candidate entry for inclusion in a TEAch message
 type _Candidate struct {
@@ -416,15 +451,14 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 		key := announce.Peer.Key()
 		entry, ok := tbl.recs[key]
 		if !ok {
-			// no entry found: add new entry if is is not
-			// a "delete" announcement
+			//----------------------------------------------------------
+			// no entry found:
+			// add new entry if is is not a "delete" announcement
 			if announce.Hops >= 0 {
 				// add entry to forward table
 				e := &Entry{
-					Forward: Forward{
-						Peer: announce.Peer,
-						Hops: announce.Hops + 1,
-					},
+					Peer:    announce.Peer,
+					Hops:    announce.Hops + 1,
 					NextHop: sender,
 					Origin:  origin,
 					Changed: now,
@@ -442,19 +476,27 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 			}
 			return
 		}
-
+		//--------------------------------------------------------------
 		// entry exists in the forward table:
+
 		// out-dated announcement?
 		if origin.Before(entry.Origin) {
 			// yes: ignore old information
 			continue
 		}
-		// remember old entry
-		oldEntry := &Entry{
-			Forward: *entry.Target(),
-			NextHop: entry.NextHop,
-			Origin:  entry.Origin,
+		// possible loop construction?
+		neighborTarget := false
+		if e, ok := tbl.recs[entry.Peer.Key()]; ok {
+			neighborTarget = (e.NextHop == nil)
 		}
+		if entry.NextHop.Equal(sender) && (announce.NextHop == tbl.self.Tag() || neighborTarget) {
+			ann := EntryFromForward(announce, sender)
+			log.Printf("LOOP? local %s = %s, remote %s = %s, neighbor target? %v",
+				entry.Peer, entry.String(), ann.Peer, ann.String(), neighborTarget)
+			continue
+		}
+		// remember old entry
+		oldEntry := entry.Clone()
 		changed := false
 
 		// "removal" announced?
@@ -465,6 +507,7 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 			}
 			// remove dependent relay
 			if entry.NextHop.Equal(sender) {
+				// remove relay
 				entry.Hops = -1
 				entry.Origin = origin
 				entry.Changed = now
@@ -500,13 +543,8 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 		}
 		// notify listener if table entry has changed
 		if changed && tbl.listener != nil {
-			// construct helper entry for annuncement
-			annEntry := &Entry{
-				Forward: *announce,
-				NextHop: sender,
-				Origin:  origin,
-			}
 			// send event
+			annEntry := EntryFromForward(announce, sender)
 			tbl.listener(&Event{
 				Type: EvForwardChanged,
 				Peer: tbl.self,
@@ -544,6 +582,16 @@ func (tbl *ForwardTable) NumForwards() (count int) {
 		if entry.Hops >= 0 {
 			count++
 		}
+	}
+	return
+}
+
+// Forwards returns the forward table as list of forward entries.
+func (tbl *ForwardTable) Forwards() (list []*Entry) {
+	tbl.RLock()
+	defer tbl.RUnlock()
+	for _, entry := range tbl.recs {
+		list = append(list, entry.Clone())
 	}
 	return
 }
