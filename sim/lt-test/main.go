@@ -21,7 +21,6 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"leatea/core"
@@ -71,7 +70,7 @@ func main() {
 		}
 		defer csv.Close()
 		// write header
-		_, _ = csv.WriteString("Epoch;Loops;Broken;Success;Total;MeanHops\n")
+		_, _ = csv.WriteString("Epoch;Loops;Broken;Success;NumPeers;MeanHops\n")
 	}
 
 	// turn on profiling
@@ -95,6 +94,16 @@ func main() {
 	c := sim.GetCanvas(sim.Cfg.Render)
 	defer c.Close()
 
+	//------------------------------------------------------------------
+	// Build test network
+	log.Println("Building network...")
+	netw = sim.NewNetwork(e)
+
+	//------------------------------------------------------------------
+	// Run test network
+	log.Println("Running network...")
+	go netw.Run(handleEvent)
+
 	// run simulation depending on canvas mode (dynamic/static)
 	if c.IsDynamic() {
 		//--------------------------------------------------------------
@@ -111,7 +120,7 @@ func main() {
 
 		// run render loop
 		c.Render(func(c sim.Canvas, forced bool) {
-			if (forced || redraw) && netw != nil {
+			if (forced || redraw) && netw.IsActive() {
 				c.Start()
 				// render network
 				netw.Render(c)
@@ -147,33 +156,40 @@ func main() {
 			e.Draw(c)
 		})
 	}
+	//------------------------------------------------------------------
+	// stop network
+	discarded := netw.Stop()
+	log.Printf("Routing complete, %d messages discarded", discarded)
 	log.Println("Done.")
 }
 
 func printEntry(f *core.Entry) string {
-	return fmt.Sprintf("{%d,%d,%d,%.2f}",
+	return fmt.Sprintf("{%d,%d,%d,%.3f}",
 		netw.GetShortID(f.Peer), f.Hops,
 		netw.GetShortID(f.NextHop), f.Origin.Age().Seconds())
 }
 
+//nolint:gocyclo // life is complex sometimes...
 func handleEvent(ev *core.Event) {
 	// check if event is to be displayed.
 	show := false
-	for _, t := range sim.Cfg.Options.ShowEvents {
-		if t == ev.Type {
+	for _, t := range sim.Cfg.Options.Events {
+		if (t < 0 && -t != ev.Type) || (t == ev.Type) {
 			show = true
 			break
 		}
 	}
-	if !show {
-		return
+	if !sim.Cfg.Options.ShowEvents {
+		show = !show
 	}
 	// log network events
 	switch ev.Type {
 	case sim.EvNodeAdded:
-		val := core.GetVal[[]int](ev)
-		log.Printf("[%s] started as #%d (%d running)",
-			ev.Peer, val[0], val[1])
+		if show {
+			val := core.GetVal[[]int](ev)
+			log.Printf("[%s] started as #%d (%d running)",
+				ev.Peer, val[0], val[1])
+		}
 		redraw = true
 	case sim.EvNodeRemoved:
 		val := core.GetVal[[]int](ev)
@@ -181,73 +197,86 @@ func handleEvent(ev *core.Event) {
 		if remain < 0 {
 			remain = netw.StopNodeByID(ev.Peer)
 		}
-		log.Printf("[%s] #%d stopped (%d running)",
-			ev.Peer, val[0], remain)
+		if show {
+			log.Printf("[%s] #%d stopped (%d running)",
+				ev.Peer, val[0], remain)
+		}
 		redraw = true
 	case core.EvNeighborAdded:
-		log.Printf("[%d] neighbor #%d added",
-			netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
+		if show {
+			log.Printf("[%d] neighbor #%d added",
+				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
+		}
 	case core.EvNeighborUpdated:
-		log.Printf("[%d] neighbor #%d updated",
-			netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
+		if show {
+			log.Printf("[%d] neighbor #%d updated",
+				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
+		}
 	case core.EvNeighborExpired:
-		log.Printf("[%d] neighbor %s expired",
-			netw.GetShortID(ev.Peer), ev.Ref)
+		if show {
+			log.Printf("[%d] neighbor %s expired",
+				netw.GetShortID(ev.Peer), ev.Ref)
+		}
 		redraw = true
 	case core.EvForwardLearned:
-		e := core.GetVal[*core.Entry](ev)
-		log.Printf("[%d < %d] learned %s",
-			netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref), printEntry(e))
+		if show {
+			e := core.GetVal[*core.Entry](ev)
+			log.Printf("[%d < %d] learned %s",
+				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref), printEntry(e))
+		}
 	case core.EvForwardChanged:
-		fw := core.GetVal[[3]*core.Entry](ev)
-		log.Printf("[%d < %d] %s < %s > %s",
-			netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref),
-			printEntry(fw[0]), printEntry(fw[1]), printEntry(fw[2]))
+		if show {
+			fw := core.GetVal[[3]*core.Entry](ev)
+			log.Printf("[%d < %d] %s < %s > %s",
+				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref),
+				printEntry(fw[0]), printEntry(fw[1]), printEntry(fw[2]))
+		}
 	case core.EvShorterRoute:
-		log.Printf("[%d] shorter path to %d learned",
-			netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
+		if show {
+			log.Printf("[%d] shorter path to %d learned",
+				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
+		}
 	case core.EvRelayRemoved:
-		log.Printf("[%d] forward to %d removed",
-			netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
+		if show {
+			log.Printf("[%d] forward to %d removed",
+				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
+		}
 	case core.EvLearning:
-		log.Printf("[%d] learning from %d",
-			netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
+		if show {
+			log.Printf("[%d] learning from %d",
+				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
+		}
 	case core.EvTeaching:
-		val := core.GetVal[[]any](ev)
-		msg, _ := val[0].(*core.TEAchMsg)
-		counts, _ := val[1].([4]int)
-		numAnnounce := len(msg.Announce)
-		log.Printf("[%d] teaching: %d removed, %d unfiltered, %d pending, %d skipped",
-			netw.GetShortID(ev.Peer), counts[0], counts[1], counts[2], counts[3]-numAnnounce)
-		if numAnnounce < 4 {
-			announced := make([]string, 0)
-			for _, ann := range msg.Announce {
-				e := &core.Entry{
-					Forward: *ann,
-					NextHop: msg.Sender(),
-					Origin:  core.TimeFromAge(ann.Age),
+		if show {
+			val := core.GetVal[[]any](ev)
+			msg, _ := val[0].(*core.TEAchMsg)
+			counts, _ := val[1].([4]int)
+			numAnnounce := len(msg.Announce)
+			log.Printf("[%d] teaching: %d removed, %d unfiltered, %d pending, %d skipped",
+				netw.GetShortID(ev.Peer), counts[0], counts[1], counts[2], counts[3]-numAnnounce)
+			if numAnnounce < 4 {
+				announced := make([]string, 0)
+				for _, ann := range msg.Announce {
+					e := &core.Entry{
+						Peer:    ann.Peer,
+						Hops:    ann.Hops,
+						NextHop: msg.Sender(),
+						Origin:  core.TimeFromAge(ann.Age),
+					}
+					announced = append(announced, printEntry(e))
 				}
-				announced = append(announced, printEntry(e))
+				log.Printf("[%d] TEAch [%s]",
+					netw.GetShortID(ev.Peer), strings.Join(announced, ","))
 			}
-			log.Printf("[%d] TEAch [%s]",
-				netw.GetShortID(ev.Peer), strings.Join(announced, ","))
 		}
 	case core.EvWantToLearn:
-		log.Printf("[%d] broadcasting LEArn", netw.GetShortID(ev.Peer))
+		if show {
+			log.Printf("[%d] broadcasting LEArn", netw.GetShortID(ev.Peer))
+		}
 	}
 }
 
 func run(env sim.Environment) {
-	//------------------------------------------------------------------
-	// Build test network
-	log.Println("Building network...")
-	netw = sim.NewNetwork(env)
-
-	//------------------------------------------------------------------
-	// Run test network
-	log.Println("Running network...")
-	go netw.Run(handleEvent)
-
 	//------------------------------------------------------------------
 	// prepare monitoring
 	sigCh := make(chan os.Signal, 5)
@@ -326,10 +355,6 @@ loop:
 	if loops > 0 {
 		analyzeLoops(rt)
 	}
-	//------------------------------------------------------------------
-	// stop network
-	discarded := netw.Stop()
-	log.Printf("Routing complete, %d messages discarded", discarded)
 }
 
 // ----------------------------------------------------------------------
@@ -356,101 +381,11 @@ func status(epoch int, rt *sim.RoutingTable, allHops1 float64) (loops, broken, s
 		// log statistics to file if requested
 		if csv != nil {
 			line := fmt.Sprintf("%d,%d,%d,%d,%d,%.2f\n",
-				epoch, loops, broken, success, total, mean)
+				epoch, loops, broken, success, num, mean)
 			_, _ = csv.WriteString(line)
 		}
 	} else {
 		log.Println("  * No routes yet (routing table)")
 	}
 	return
-}
-
-// ----------------------------------------------------------------------
-// Analyze loops
-// ----------------------------------------------------------------------
-
-type loop struct {
-	from, to int
-	head     []int
-	cycle    []int
-}
-
-func analyzeLoops(rt *sim.RoutingTable) {
-	log.Println("Analyzing loops:")
-	// collect all loops
-	log.Println("  * collect loops:")
-	var loops []*loop
-	for from, entry := range rt.List {
-		for _, to := range entry.Forwards {
-			if from == to {
-				continue
-			}
-			if hops, route := rt.Route(from, to); hops == -1 {
-				// analyze loop
-				num := len(route)
-				l := &loop{
-					from: route[0],
-					to:   route[num-1],
-				}
-			loop:
-				for i, hop := range route {
-					for j := i + 1; j < num; j++ {
-						if hop == route[j] {
-							l.head = route[:i]
-							l.cycle = route[i:j]
-							loops = append(loops, l)
-							break loop
-						}
-					}
-				}
-			}
-		}
-	}
-	log.Printf("      -> %d loops found.", len(loops))
-
-	// check for distinct cycles
-	log.Println("  * find distinct loops:")
-	routes = make([][]int, 0)
-	for i, l := range loops {
-		cl := len(l.cycle)
-		found := false
-	search:
-		for _, e := range routes {
-			if cl != len(e) {
-				continue
-			}
-			hop := l.cycle[0]
-			for k, hop2 := range e {
-				if hop2 == hop {
-					// check if rest is the same...
-					for q := 0; q < cl; q++ {
-						if loops[i].cycle[q] != e[(q+k)%cl] {
-							break search
-						}
-					}
-					found = true
-					break search
-				}
-			}
-		}
-		if !found {
-			routes = append(routes, l.cycle)
-		}
-	}
-	redraw = true
-	log.Printf("      -> %d distinct loops found:", len(routes))
-
-	// show distinct cycles
-	for i, c := range routes {
-		buf := new(bytes.Buffer)
-		buf.WriteString(fmt.Sprintf("         #%03d: ", i+1))
-		for j, id := range c {
-			if j > 0 {
-				buf.WriteString("-")
-			}
-			buf.WriteString(rt.List[id].Node.PeerID().String())
-		}
-		log.Println(buf.String())
-	}
-	log.Printf("Loop analysis complete.")
 }
