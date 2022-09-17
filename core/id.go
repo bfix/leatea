@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"encoding/base32"
 	"encoding/base64"
+	"encoding/binary"
 
 	"github.com/bfix/gospel/crypto/ed25519"
 )
@@ -36,14 +37,27 @@ type PeerID struct {
 	Data []byte `size:"(Size)"` // binary representation
 
 	// transient
-	pub   *ed25519.PublicKey // corresponding Ed25519 pubkey
-	str32 string             // corresponding string representation (base32)
-	str64 string             // corresponding string representation (base64)
+	pub   *ed25519.PublicKey // Ed25519 pubkey
+	tag   uint16             // short identifier
+	str32 string             // string representation (base32)
+	str64 string             // string representation (base64)
 }
 
 // Size of a peerid (used for serialization).
 func (p *PeerID) Size() uint {
 	return 32
+}
+
+// Tag (short identifier) of the peer id
+func (p *PeerID) Tag() uint16 {
+	if p == nil {
+		return 0
+	}
+	if p.tag == 0 {
+		v, _ := binary.Uvarint(p.Data)
+		p.tag = uint16(v)
+	}
+	return p.tag
 }
 
 // Key returns a string used for map operations
