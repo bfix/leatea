@@ -232,6 +232,7 @@ func (tbl *ForwardTable) AddNeighbor(node *PeerID) {
 			Ref:  node,
 		})
 	}
+	// no dependent relays can exist.
 }
 
 // Cleanup forward table and flag expired neighbors (and their dependencies)
@@ -273,7 +274,6 @@ func (tbl *ForwardTable) Cleanup() {
 
 		// remove neighbor
 		entry.Hops = -2
-		entry.NextHop = nil
 		entry.Origin = now
 		entry.Changed = now
 		entry.Pending = true
@@ -492,14 +492,10 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 			continue
 		}
 		// possible loop construction?
-		neighborTarget := false
-		if e, ok := tbl.recs[entry.Peer.Key()]; ok {
-			neighborTarget = (e.NextHop == nil)
-		}
-		if entry.NextHop.Equal(sender) && (announce.NextHop == tbl.self.Tag() || neighborTarget) {
+		if entry.NextHop.Equal(sender) && announce.NextHop == tbl.self.Tag() {
 			ann := EntryFromForward(announce, sender)
-			log.Printf("LOOP? local %s = %s, remote %s = %s, neighbor target? %v",
-				entry.Peer, entry.String(), ann.Peer, ann.String(), neighborTarget)
+			log.Printf("LOOP? local %s = %s, remote %s = %s",
+				tbl.self, entry.String(), sender, ann.String())
 			continue
 		}
 		// remember old entry
@@ -530,8 +526,8 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 					})
 				}
 			}
-		} else if entry.NextHop != nil && entry.Hops > announce.Hops+1 {
-			// update relay with newer relay if we have a shorter path
+		} else if entry.NextHop != nil && announce.Hops+1 < entry.Hops {
+			// update relay with newer relay
 			entry.Hops = announce.Hops + 1
 			entry.NextHop = sender
 			entry.Origin = origin
