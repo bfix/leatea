@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"leatea/core"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -74,7 +75,9 @@ func (n *SimNode) ListTable(cv func(*core.PeerID) string) string {
 		entries = append(entries, s)
 	}
 	sort.Slice(entries, func(i, j int) bool {
-		return entries[i] < entries[j]
+		s1, _ := strconv.Atoi(entries[i][1:strings.Index(entries[i], ",")])
+		s2, _ := strconv.Atoi(entries[j][1:strings.Index(entries[j], ",")])
+		return s1 < s2
 	})
 	return "[" + strings.Join(entries, ",") + "]"
 }
