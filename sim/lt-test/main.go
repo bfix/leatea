@@ -42,6 +42,7 @@ var (
 	hops   float64           // avg. number of hops in routing table
 	routes [][]int           // list of routes
 	csv    *os.File          // statistics output
+	tbl    bool              // routing table changed?
 )
 
 // run application
@@ -61,6 +62,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	core.SetConfiguration(sim.Cfg.Core)
 
 	// if we write statistics, create output file
 	if len(sim.Cfg.Options.Statistics) > 0 {
@@ -165,8 +167,8 @@ func main() {
 
 func printEntry(f *core.Entry) string {
 	return fmt.Sprintf("{%d,%d,%d,%.3f}",
-		netw.GetShortID(f.Peer), f.Hops,
-		netw.GetShortID(f.NextHop), f.Origin.Age().Seconds())
+		netw.GetShortID(f.Peer), netw.GetShortID(f.NextHop),
+		f.Hops, f.Origin.Age().Seconds())
 }
 
 //nolint:gocyclo // life is complex sometimes...
@@ -187,8 +189,8 @@ func handleEvent(ev *core.Event) {
 	case sim.EvNodeAdded:
 		if show {
 			val := core.GetVal[[]int](ev)
-			log.Printf("[%s] started as #%d (%d running)",
-				ev.Peer, val[0], val[1])
+			log.Printf("[%s] %04X started as #%d (%d running)",
+				ev.Peer, ev.Peer.Tag(), val[0], val[1])
 		}
 		redraw = true
 	case sim.EvNodeRemoved:
@@ -202,28 +204,33 @@ func handleEvent(ev *core.Event) {
 				ev.Peer, val[0], remain)
 		}
 		redraw = true
+		tbl = true
 	case core.EvNeighborAdded:
 		if show {
 			log.Printf("[%d] neighbor #%d added",
 				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
 		}
+		tbl = true
 	case core.EvNeighborUpdated:
 		if show {
 			log.Printf("[%d] neighbor #%d updated",
 				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
 		}
+		tbl = true
 	case core.EvNeighborExpired:
 		if show {
-			log.Printf("[%d] neighbor %s expired",
-				netw.GetShortID(ev.Peer), ev.Ref)
+			log.Printf("[%d] neighbor %d expired",
+				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
 		}
 		redraw = true
+		tbl = true
 	case core.EvForwardLearned:
 		if show {
 			e := core.GetVal[*core.Entry](ev)
 			log.Printf("[%d < %d] learned %s",
 				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref), printEntry(e))
 		}
+		tbl = true
 	case core.EvForwardChanged:
 		if show {
 			fw := core.GetVal[[3]*core.Entry](ev)
@@ -231,16 +238,20 @@ func handleEvent(ev *core.Event) {
 				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref),
 				printEntry(fw[0]), printEntry(fw[1]), printEntry(fw[2]))
 		}
+		tbl = true
 	case core.EvShorterRoute:
 		if show {
 			log.Printf("[%d] shorter path to %d learned",
 				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
 		}
+		tbl = true
 	case core.EvRelayRemoved:
 		if show {
 			log.Printf("[%d] forward to %d removed",
 				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
+			tbl = true
 		}
+		tbl = true
 	case core.EvLearning:
 		if show {
 			log.Printf("[%d] learning from %d",
@@ -287,6 +298,8 @@ func run(env sim.Environment) {
 	repeat := 1
 	lastFailed := -1
 	active := true
+	tbl = true
+	tblRep := 0
 loop:
 	for active {
 		select {
@@ -300,6 +313,21 @@ loop:
 				// start new epoch (every 10 seconds)
 				epoch++
 				log.Printf("[Epoch %d] %d nodes running", epoch, netw.NumRunning())
+
+				// check routing table changes in the last 10 epochs
+				if !tbl {
+					tblRep++
+				} else {
+					tbl = false
+					tblRep = 1
+				}
+				// if no activity, quit simulation.
+				if tblRep == 10 {
+					log.Printf("Stopped on network inactivity")
+					active = false
+					return
+				}
+				// kick off epoch handling go routine.
 				go func(epoch int) {
 					for _, ev := range env.Epoch(epoch) {
 						handleEvent(ev)
@@ -364,7 +392,7 @@ func status(epoch int, rt *sim.RoutingTable, allHops1 float64) (loops, broken, s
 	var totalHops int
 	loops, broken, success, totalHops = rt.Status()
 	num := netw.NumRunning()
-	total := num * (num - 1)
+	total := loops + broken + success // num * (num - 1)
 	if total > 0 {
 		// log statistics to console
 		perc := func(n int) float64 {
