@@ -1,6 +1,6 @@
 {
     "core": {
-        "maxTeachs": 10,
+        "maxTeachs": 30,
         "learnIntv": 10,
         "outdated": 60,
         "beaconIntv": 1,
@@ -29,15 +29,17 @@
         "deathRate": 0.2
     },
     "render": {
-        "mode": "sdl",
+        "mode": "svg",
+        "file": "rt/out.svg",
         "width": 800,
         "height": 800,
         "dynamic": true
     },
     "options": {
         "maxRepeat": 0,
-        "stopAt": 250,
-        "showEvents": [4, 101],
+        "stopAt": 100,
+        "events": [1,2,10],
+        "showEvents": false,
         "statistics": "rt/stat.csv"
     }
 }

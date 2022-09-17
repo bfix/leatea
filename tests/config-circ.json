@@ -1,8 +1,10 @@
 {
     "core": {
-        "maxTeachs": 10,
-        "ttlEntry":  60,
-        "learnIntv": 10
+        "maxTeachs": 30,
+        "learnIntv": 10,
+        "outdated": 60,
+        "beaconIntv": 1,
+        "ttlBeacon":  5
     },
     "environment": {
         "class": "circ",
@@ -13,13 +15,11 @@
     },
     "node":{
 		"reach2": 500,
-		"bootup": 60,
-		"peerTTL": 600
+		"bootup": 60
     },
     "render": {
         "mode": "svg",
-        "file": "rt/out.svg",
-        "source": "rtab"
+        "file": "rt/out.svg"
     },
     "options": {
         "maxRepeat": 3

@@ -1,8 +1,10 @@
 {
     "core": {
         "maxTeachs": 30,
-        "ttlEntry": 40,
-        "learnIntv": 10
+        "learnIntv": 10,
+        "outdated": 60,
+        "beaconIntv": 1,
+        "ttlBeacon":  5
     },
     "environment": {
         "class": "link",
@@ -11,8 +13,7 @@
         "nodesRef": "tests/test-nodes.json"
     },
     "node": {
-        "bootup": 20,
-        "deathRate": 0
+        "bootup": 20
     },
     "render": {
         "mode": "sdl",
@@ -22,6 +23,8 @@
     },
     "options": {
         "maxRepeat": 0,
-        "stopOnLoop": false
+        "stopOnLoop": false,
+        "showEvents": [-1],
+        "stopAt": 20
     }
 }
