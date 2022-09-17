@@ -491,13 +491,6 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 			// yes: ignore old information
 			continue
 		}
-		// possible loop construction?
-		if entry.NextHop.Equal(sender) && announce.NextHop == tbl.self.Tag() {
-			ann := EntryFromForward(announce, sender)
-			log.Printf("LOOP? local %s = %s, remote %s = %s",
-				tbl.self, entry.String(), sender, ann.String())
-			continue
-		}
 		// remember old entry
 		oldEntry := entry.Clone()
 		changed := false
@@ -527,6 +520,12 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 				}
 			}
 		} else if entry.NextHop != nil && announce.Hops+1 < entry.Hops {
+			// possible loop construction?
+			if entry.NextHop.Equal(sender) && announce.NextHop == tbl.self.Tag() {
+				log.Printf("LOOP? local %s = %s, remote %s = %s",
+					tbl.self, entry.String(), sender, announce.String())
+				continue
+			}
 			// update relay with newer relay
 			entry.Hops = announce.Hops + 1
 			entry.NextHop = sender
