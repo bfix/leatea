@@ -163,18 +163,31 @@ func (e *Entry) String() string {
 // ForwardTable is a map of entries with key "target"
 type ForwardTable struct {
 	sync.RWMutex
-	self     *PeerID           // reference to ourself
-	recs     map[string]*Entry // forward table as records of entries
-	listener Listener          // listener for events
 
+	// reference to ourself
+	self *PeerID
+
+	// forward table as records of entries
+	recs map[string]*Entry
+
+	// listener for events
+	listener Listener
+
+	// sanity checker (optional)
+	check func(string, ...any)
 }
 
 // NewForwardTable creates an empty table
-func NewForwardTable(self *PeerID) *ForwardTable {
-	return &ForwardTable{
-		self: self,
-		recs: make(map[string]*Entry),
+func NewForwardTable(self *PeerID, debug bool) *ForwardTable {
+	tbl := &ForwardTable{
+		self:  self,
+		recs:  make(map[string]*Entry),
+		check: nil,
 	}
+	if debug {
+		tbl.check = tbl.sanityCheck
+	}
+	return tbl
 }
 
 // Reset routing table
@@ -190,7 +203,7 @@ func (tbl *ForwardTable) Reset() {
 func (tbl *ForwardTable) AddNeighbor(node *PeerID) {
 	tbl.Lock()
 	defer func() {
-		tbl.sanityCheck("add neighbor")
+		tbl.check("add neighbor")
 		tbl.Unlock()
 	}()
 
@@ -241,7 +254,7 @@ func (tbl *ForwardTable) AddNeighbor(node *PeerID) {
 func (tbl *ForwardTable) Cleanup() {
 	tbl.RLock()
 	defer func() {
-		tbl.sanityCheck("clean-up")
+		tbl.check("clean-up")
 		tbl.RUnlock()
 	}()
 
@@ -343,9 +356,10 @@ type _Candidate struct {
 func (tbl *ForwardTable) Candidates(m *LEArnMsg) (list []*Forward, counts [4]int) {
 	tbl.Lock()
 	defer func() {
-		tbl.sanityCheck("candidates")
+		tbl.check("candidates")
 		tbl.Unlock()
 	}()
+
 	// collect forwards for response
 	collect := make([]*_Candidate, 0)
 	for _, entry := range tbl.recs {
@@ -431,14 +445,14 @@ func (tbl *ForwardTable) Candidates(m *LEArnMsg) (list []*Forward, counts [4]int
 // Learn from announcements in a TEAch message
 func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 	tbl.Lock()
-	sender := msg.Sender()
-	now := TimeNow()
 	defer func() {
-		tbl.sanityCheck("learn", sender, msg.Announce)
+		tbl.check("learn", msg.Sender(), msg.Announce)
 		tbl.Unlock()
 	}()
 
 	// process all announcements
+	sender := msg.Sender()
+	now := TimeNow()
 	for _, announce := range msg.Announce {
 		// ignore announcements about ourself
 		if announce.Peer.Equal(tbl.self) {
@@ -611,18 +625,34 @@ func (tbl *ForwardTable) Neighbors() (list []*PeerID) {
 	return
 }
 
+//----------------------------------------------------------------------
+
+// sanity check of forward table in debug mode
 func (tbl *ForwardTable) sanityCheck(label string, args ...any) {
-	// sanity check: make sure all relays have a valid neighbor as next hop
+	// check all forward entries in table
 	for _, entry := range tbl.recs {
+
+		// check for valid target
 		if entry.Peer == nil {
 			log.Printf("[%s] peer %s forward to nil", label, tbl.self)
 			panic(label)
 		}
+		// check for self target
 		if entry.Peer.Equal(tbl.self) {
 			log.Printf("[%s] peer %s forward to self", label, tbl.self)
 			panic(label)
 		}
+		// check relay and neighbor
 		if entry.NextHop != nil {
+			// relay:
+
+			// check for valid hop count
+			if !(entry.Hops == -1 || entry.Hops > 0) {
+				log.Printf("[%s] peer %s has relay with invalid hop count", label, tbl.self)
+				panic(label)
+			}
+
+			// check for valid neighor as next hop
 			nb, ok := tbl.recs[entry.NextHop.Key()]
 			if !ok {
 				log.Printf("[%s] peer %s has forward with unknown next hop", label, tbl.self)
@@ -638,6 +668,14 @@ func (tbl *ForwardTable) sanityCheck(label string, args ...any) {
 					log.Printf("Arg #%d: %v", i+1, arg)
 				}
 				log.Printf("Bad entry: %s / %s", entry, nb)
+				panic(label)
+			}
+		} else {
+			// neighbor
+
+			// check for valid hop count
+			if !(entry.Hops == 0 || entry.Hops < -1) {
+				log.Printf("[%s] peer %s has neighbor with invalid hop count", label, tbl.self)
 				panic(label)
 			}
 		}

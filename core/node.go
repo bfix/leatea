@@ -39,10 +39,10 @@ type Node struct {
 
 // NewNode creates a new node with a given private signing key and an input /
 // output channel pair to send and receive messages.
-func NewNode(prv *PeerPrivate, in, out chan Message) *Node {
+func NewNode(prv *PeerPrivate, in, out chan Message, debug bool) *Node {
 	pub := prv.Public()
 	return &Node{
-		ForwardTable: *NewForwardTable(pub),
+		ForwardTable: *NewForwardTable(pub, debug),
 		prv:          prv,
 		inCh:         in,
 		outCh:        out,
