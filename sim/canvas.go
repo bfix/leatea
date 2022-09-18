@@ -114,10 +114,8 @@ func (c *SVGCanvas) Open() error {
 	return nil
 }
 
-// Start camvas (clear buffer)
-func (c *SVGCanvas) Start() {
-	c.buf.Reset()
-}
+// Start camvas
+func (c *SVGCanvas) Start() {}
 
 // IsDynamic returns true if the canvas can draw a
 // sequence of renderings (like UI or video canvases)
