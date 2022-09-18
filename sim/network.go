@@ -44,12 +44,14 @@ type Network struct {
 	nodes map[int]*SimNode // list of nodes
 	lock  sync.RWMutex     // manage access to nodes
 
-	running int               // number of running nodes
-	queue   chan core.Message // "ether" for message transport
-	trafOut uint64            // total "send" traffic
-	trafIn  uint64            // total "receive" traffic
-	active  bool              // simulation running?
-	cb      core.Listener     // listener for network events
+	running  int               // number of running nodes
+	started  int               // number of started nodes
+	removals int               // number of pending removals
+	queue    chan core.Message // "ether" for message transport
+	trafOut  uint64            // total "send" traffic
+	trafIn   uint64            // total "receive" traffic
+	active   bool              // simulation running?
+	cb       core.Listener     // listener for network events
 }
 
 // NewNetwork creates a new network of 'numNodes' randomly distributed nodes
@@ -62,6 +64,8 @@ func NewNetwork(env Environment) *Network {
 	n.nodes = make(map[int]*SimNode)
 	n.index = make(map[string]int)
 	n.running = 0
+	n.started = 0
+	n.removals = 0
 	return n
 }
 
@@ -92,6 +96,7 @@ func (n *Network) Run(cb core.Listener) {
 		// run node (delayed)
 		go func(i int) {
 			time.Sleep(delay)
+			n.started++
 			if n.active {
 				// register node with environment and get an integer identifier.
 				idx := n.env.Register(i, node)
@@ -118,12 +123,14 @@ func (n *Network) Run(cb core.Listener) {
 		go func() {
 			// only some peers stop working
 			if Random.Float64() < Cfg.Node.DeathRate {
+				n.removals++
 				ttl := Vary(Cfg.Node.PeerTTL) + delay + 2*time.Minute
 				time.Sleep(ttl)
 				if n.active {
 					// stop node
 					n.StopNode(node)
 				}
+				n.removals--
 			}
 		}()
 	}
@@ -154,6 +161,13 @@ func (n *Network) IsActive() bool {
 		return false
 	}
 	return n.active
+}
+
+func (n *Network) Settled() bool {
+	if n == nil {
+		return false
+	}
+	return n.started == Cfg.Env.NumNodes && n.removals == 0
 }
 
 func (n *Network) NumRunning() int {
