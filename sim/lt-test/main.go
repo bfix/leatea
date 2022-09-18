@@ -35,13 +35,13 @@ import (
 
 // shared variable
 var (
-	netw    *sim.Network      // Network instance
-	redraw  bool              // graph modified?
-	rt      *sim.RoutingTable // compiled routing table
-	hops    float64           // avg. number of hops in routing table
-	routes  [][]int           // list of routes
-	csv     *os.File          // statistics output
-	changed bool              // routing table changed?
+	netw   *sim.Network      // Network instance
+	redraw bool              // graph modified?
+	rt     *sim.RoutingTable // compiled routing table
+	hops   float64           // avg. number of hops in routing table
+	routes [][]int           // list of routes
+	csv    *os.File          // statistics output
+	evHdlr *EventHandler     // event handler
 )
 
 // run application
@@ -101,9 +101,13 @@ func main() {
 	netw = sim.NewNetwork(e)
 
 	//------------------------------------------------------------------
+	// Create event handler
+	evHdlr = NewEventHandler(netw.GetShortID)
+
+	//------------------------------------------------------------------
 	// Run test network
 	log.Println("Running network...")
-	go netw.Run(handleEvent)
+	go netw.Run(evHdlr.HandleEvent)
 
 	// run simulation depending on canvas mode (dynamic/static)
 	if c.IsDynamic() {
@@ -175,7 +179,6 @@ func run(env sim.Environment) {
 	repeat := 1
 	lastFailed := -1
 	active := true
-	changed = true
 	unchangedCount := 1
 loop:
 	for active {
@@ -191,15 +194,14 @@ loop:
 				epoch++
 				log.Printf("[Epoch %d] %d nodes running", epoch, netw.NumRunning())
 
-				// check routing table changes in the last 10 epochs
-				if !changed {
+				// check routing table changes in the last epoch
+				if !evHdlr.Changed() {
 					unchangedCount++
 				} else {
-					changed = false
 					unchangedCount = 1
 				}
 				// if no activity, quit simulation.
-				if unchangedCount == 10 {
+				if netw.Settled() && unchangedCount == 50 {
 					log.Printf("Stopped on network inactivity")
 					active = false
 					return
@@ -207,7 +209,7 @@ loop:
 				// kick off epoch handling go routine.
 				go func(epoch int) {
 					for _, ev := range env.Epoch(epoch) {
-						handleEvent(ev)
+						evHdlr.HandleEvent(ev)
 					}
 					// check if simulation ends
 					if sim.Cfg.Options.StopAt > 0 && epoch > sim.Cfg.Options.StopAt {
