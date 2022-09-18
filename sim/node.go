@@ -45,7 +45,7 @@ type SimNode struct {
 func NewSimNode(prv *core.PeerPrivate, out chan core.Message, pos *Position, r2 float64) *SimNode {
 	recv := make(chan core.Message)
 	return &SimNode{
-		Node: *core.NewNode(prv, recv, out),
+		Node: *core.NewNode(prv, recv, out, true),
 		r2:   r2,
 		Pos:  pos,
 		recv: recv,
