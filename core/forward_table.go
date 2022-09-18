@@ -89,11 +89,15 @@ type Entry struct {
 	// Expected number of hops to target:
 	// The hop count is also used to indicate the status
 	// of an entry:
-	//    >  0: active relay
-	//    =  0: active neighbor
-	//    = -1: removed relay
-	//    = -2: removed neighbor
-	//    = -3: zombie neighbor
+	//   active entries:
+	//     >  0: active relay
+	//     =  0: active neighbor
+	//   removed entries:
+	//     = -1: removed relay
+	//     = -2: removed neighbor
+	//   dormant entries:
+	//     = -3: dormant relay
+	//     = -4: dormant neighbor
 	Hops int16 `size:"big"`
 
 	// Next hop (nil for neighbors)
@@ -156,13 +160,21 @@ func (e *Entry) String() string {
 }
 
 //----------------------------------------------------------------------
-// FowardTable holds a list of entries (full forwards) to all targets
-// learned from the leatea protocol.
+// FowardTable holds a list of entries to all targets learned from the
+// leatea protocol:
+// Entries, once added to the table, are never removed from the table
+// again. If a forward is "removed", it is flagged by hop count (-1 for
+// removed relay and -2 for removed neighbor). A removed entry can be
+// included in a TEAch message; it is set to "dormant" once it was
+// broadcasted (not included in LEArn filters or TEAches).
+// Dormant entries can be resurrected by announces; neighbors get
+// resurrected when a message from them is received and relays get
+// resurrected when a newer relay is learned.
 //----------------------------------------------------------------------
 
 // ForwardTable is a map of entries with key "target"
 type ForwardTable struct {
-	sync.RWMutex
+	sync.Mutex
 
 	// reference to ourself
 	self *PeerID
@@ -252,10 +264,10 @@ func (tbl *ForwardTable) AddNeighbor(node *PeerID) {
 // for removal. The actual deletion of the entry in the table happens after
 // the removed entry was broadcasted in a TEAch message.
 func (tbl *ForwardTable) Cleanup() {
-	tbl.RLock()
+	tbl.Lock()
 	defer func() {
 		tbl.check("clean-up")
-		tbl.RUnlock()
+		tbl.Unlock()
 	}()
 
 	// remove expired neighbors (and their dependent relays)
@@ -265,7 +277,7 @@ func (tbl *ForwardTable) Cleanup() {
 			// no:
 			continue
 		}
-		// is entry pending for deletion?
+		// is entry removed or dormant?
 		if entry.Hops < 0 {
 			// yes: already flagged
 			continue
@@ -327,10 +339,10 @@ func (tbl *ForwardTable) Filter() *data.SaltedBloomFilter {
 	fpr := 1. / float64(n)
 	pf := data.NewSaltedBloomFilter(salt, n, fpr)
 
-	// add all table entries that are not tagged for deletion
+	// process all table entries
 	for _, entry := range tbl.recs {
-		// skip removed relay
-		if entry.Hops == -1 {
+		// skip dormant entries
+		if entry.Hops < -2 {
 			continue
 		}
 		// add entry to filter
@@ -372,7 +384,7 @@ func (tbl *ForwardTable) Candidates(m *LEArnMsg) (list []*Forward, counts [4]int
 			add = true
 			cnd.kind = 0 // unfiltered entry
 		}
-		// handle removed entries
+		// handle removed or dormant entries
 		if entry.Hops < 0 {
 			switch entry.Hops {
 			case -1:
@@ -384,7 +396,10 @@ func (tbl *ForwardTable) Candidates(m *LEArnMsg) (list []*Forward, counts [4]int
 				add = true
 				cnd.kind = 1
 			case -3:
-				// zombie neighbor
+				// dormant relay
+				add = false
+			case -4:
+				// dormant neighbor
 				add = false
 			}
 		} else if entry.Pending {
@@ -422,12 +437,12 @@ func (tbl *ForwardTable) Candidates(m *LEArnMsg) (list []*Forward, counts [4]int
 		entry := cnd.e
 		forward := entry.Target()
 		if entry.Hops == -1 {
-			// remove relay from table
-			delete(tbl.recs, entry.Peer.Key())
+			// tag relay as dormant
+			entry.Hops = -3
 			counts[0]++
 		} else if entry.Hops == -2 {
-			// tag neighbor as zombie
-			entry.Hops = -3
+			// tag neighbor as dormant
+			entry.Hops = -4
 			counts[0]++
 		} else if entry.Pending {
 			counts[2]++
@@ -500,6 +515,10 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 		//--------------------------------------------------------------
 		// entry exists in the forward table:
 
+		// do not learn a removed entry; wait for it to be dormant
+		if entry.Hops == -1 || entry.Hops == -2 {
+			continue
+		}
 		// out-dated announcement?
 		if origin.Before(entry.Origin) {
 			// yes: ignore old information
@@ -511,7 +530,7 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 
 		// "removal" announced?
 		if announce.Hops < 0 {
-			// yes: continue if entry is already removed
+			// yes: continue if entry is already removed or dormant
 			if entry.Hops < 0 {
 				continue
 			}
@@ -533,7 +552,19 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 					})
 				}
 			}
-		} else if entry.NextHop != nil && announce.Hops+1 < entry.Hops {
+		} else if entry.NextHop != nil {
+			// relay:
+
+			// only update on dormant entry or shorter route
+			var evType int
+			if announce.Hops+1 < entry.Hops {
+				evType = EvShorterRoute
+			} else if entry.Hops < 0 {
+				evType = EvRelayRevived
+			} else {
+				continue
+			}
+
 			// possible loop construction?
 			if entry.NextHop.Equal(sender) && announce.NextHop == tbl.self.Tag() {
 				log.Printf("LOOP? local %s = %s, remote %s = %s",
@@ -551,7 +582,26 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 			// notify listener if a shorter route was found
 			if tbl.listener != nil {
 				tbl.listener(&Event{
-					Type: EvShorterRoute,
+					Type: evType,
+					Peer: tbl.self,
+					Ref:  entry.Peer,
+				})
+			}
+		} else if entry.Hops == -4 {
+			// dormant neighbor:
+
+			// update with newer relay
+			entry.Hops = announce.Hops + 1
+			entry.NextHop = sender
+			entry.Origin = origin
+			entry.Changed = now
+			entry.Pending = true
+			changed = true
+
+			// notify listener if a shorter route was found
+			if tbl.listener != nil {
+				tbl.listener(&Event{
+					Type: EvNeighborRelayed,
 					Peer: tbl.self,
 					Ref:  entry.Peer,
 				})
@@ -574,11 +624,11 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 // Forward returns the peerid of the next hop to target and the number of
 // expected hops along the route.
 func (tbl *ForwardTable) Forward(target *PeerID) (*PeerID, int) {
-	tbl.RLock()
-	defer tbl.RUnlock()
+	tbl.Lock()
+	defer tbl.Unlock()
 	// lookup entry in table
 	if entry, ok := tbl.recs[target.Key()]; ok {
-		// ignore removed entries
+		// ignore removed or dormant entries
 		if entry.Hops < 0 {
 			return nil, 0
 		}
@@ -591,8 +641,8 @@ func (tbl *ForwardTable) Forward(target *PeerID) (*PeerID, int) {
 
 // NumForwards returns the number of (active) targets in the forward table
 func (tbl *ForwardTable) NumForwards() (count int) {
-	tbl.RLock()
-	defer tbl.RUnlock()
+	tbl.Lock()
+	defer tbl.Unlock()
 	// count number of active forwards (including neighbors)
 	for _, entry := range tbl.recs {
 		if entry.Hops >= 0 {
@@ -604,8 +654,8 @@ func (tbl *ForwardTable) NumForwards() (count int) {
 
 // Forwards returns the forward table as list of forward entries.
 func (tbl *ForwardTable) Forwards() (list []*Entry) {
-	tbl.RLock()
-	defer tbl.RUnlock()
+	tbl.Lock()
+	defer tbl.Unlock()
 	for _, entry := range tbl.recs {
 		list = append(list, entry.Clone())
 	}
@@ -614,8 +664,8 @@ func (tbl *ForwardTable) Forwards() (list []*Entry) {
 
 // Return a list of active direct neighbors
 func (tbl *ForwardTable) Neighbors() (list []*PeerID) {
-	tbl.RLock()
-	defer tbl.RUnlock()
+	tbl.Lock()
+	defer tbl.Unlock()
 	// collect neighbors from the table
 	for _, entry := range tbl.recs {
 		if entry.NextHop == nil && entry.Hops == 0 {
@@ -647,7 +697,7 @@ func (tbl *ForwardTable) sanityCheck(label string, args ...any) {
 			// relay:
 
 			// check for valid hop count
-			if !(entry.Hops == -1 || entry.Hops > 0) {
+			if !(entry.Hops == -1 || entry.Hops == -3 || entry.Hops > 0) {
 				log.Printf("[%s] peer %s has relay with invalid hop count", label, tbl.self)
 				panic(label)
 			}
@@ -674,7 +724,7 @@ func (tbl *ForwardTable) sanityCheck(label string, args ...any) {
 			// neighbor
 
 			// check for valid hop count
-			if !(entry.Hops == 0 || entry.Hops < -1) {
+			if !(entry.Hops == 0 || entry.Hops == -2 || entry.Hops == -4) {
 				log.Printf("[%s] peer %s has neighbor with invalid hop count", label, tbl.self)
 				panic(label)
 			}
