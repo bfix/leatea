@@ -110,7 +110,7 @@ func main() {
 	go netw.Run(evHdlr.HandleEvent)
 
 	// run simulation depending on canvas mode (dynamic/static)
-	if c.IsDynamic() {
+	if sim.Cfg.Render.Dynamic && c.IsDynamic() {
 		//--------------------------------------------------------------
 		// Render to display (update on network change while running)
 		//--------------------------------------------------------------
@@ -192,7 +192,6 @@ loop:
 			if ticks%sim.Cfg.Core.LearnIntv == 0 {
 				// start new epoch (every 10 seconds)
 				epoch++
-				log.Printf("[Epoch %d] %d nodes running", epoch, netw.NumRunning())
 
 				// check routing table changes in the last epoch
 				if !evHdlr.Changed() {
@@ -200,12 +199,16 @@ loop:
 				} else {
 					unchangedCount = 1
 				}
-				// if no activity, quit simulation.
-				if netw.Settled() && unchangedCount == 50 {
+				// if no activity on a settled network within 3 epochs, quit simulation.
+				if netw.Settled() && unchangedCount > 3 {
 					log.Printf("Stopped on network inactivity")
 					active = false
 					return
 				}
+				running, started, removals := netw.Stats()
+				log.Printf("[Epoch %d] %d nodes running (%d started, %d removals pending, %d settled)",
+					epoch, running, started, removals, unchangedCount)
+
 				// kick off epoch handling go routine.
 				go func(epoch int) {
 					for _, ev := range env.Epoch(epoch) {
@@ -270,7 +273,7 @@ loop:
 func status(epoch int, rt *sim.RoutingTable, allHops1 float64) (loops, broken, success int) {
 	var totalHops int
 	loops, broken, success, totalHops = rt.Status()
-	num := netw.NumRunning()
+	num, _, _ := netw.Stats()
 	total := loops + broken + success // num * (num - 1)
 	if total > 0 {
 		// log statistics to console
