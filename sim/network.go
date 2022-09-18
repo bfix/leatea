@@ -170,8 +170,8 @@ func (n *Network) Settled() bool {
 	return n.started == Cfg.Env.NumNodes && n.removals == 0
 }
 
-func (n *Network) NumRunning() int {
-	return n.running
+func (n *Network) Stats() (int, int, int) {
+	return n.running, n.started, n.removals
 }
 
 func (n *Network) StopNodeByID(p *core.PeerID) int {
