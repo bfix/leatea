@@ -72,7 +72,7 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 	case sim.EvNodeAdded:
 		if show {
 			val := core.GetVal[[]int](ev)
-			log.Printf("[%s] %04X started as #%d (%d running)",
+			log.Printf("[%s] %04X started as %d (%d running)",
 				ev.Peer, ev.Peer.Tag(), val[0], val[1])
 		}
 		redraw = true
@@ -85,7 +85,7 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 			remain = netw.StopNodeByID(ev.Peer)
 		}
 		if show {
-			log.Printf("[%s] #%d stopped (%d running)",
+			log.Printf("[%s] %d stopped (%d running)",
 				ev.Peer, val[0], remain)
 		}
 		redraw = true
@@ -93,7 +93,7 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 	//------------------------------------------------------------------
 	case core.EvNeighborAdded:
 		if show {
-			log.Printf("[%d] neighbor #%d added",
+			log.Printf("[%d] neighbor %d added",
 				hdlr.getID(ev.Peer), hdlr.getID(ev.Ref))
 		}
 		hdlr.changed = true
@@ -101,7 +101,7 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 	//------------------------------------------------------------------
 	case core.EvNeighborUpdated:
 		if show {
-			log.Printf("[%d] neighbor #%d updated",
+			log.Printf("[%d] neighbor %d updated",
 				hdlr.getID(ev.Peer), hdlr.getID(ev.Ref))
 		}
 		hdlr.changed = true
