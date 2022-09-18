@@ -32,6 +32,8 @@ const (
 	EvForwardLearned  = 8  // new forward learned
 	EvNeighborAdded   = 9  // new neighbor added
 	EvNeighborUpdated = 10 // old neighbor updated
+	EvNeighborRelayed = 11 // dormant neighbor revived as relay
+	EvRelayRevived    = 12 // dormant relay revived (with new forward)
 )
 
 // Event from network if something interesting happens
