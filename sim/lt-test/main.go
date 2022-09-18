@@ -29,20 +29,19 @@ import (
 	"os"
 	"os/signal"
 	"runtime/pprof"
-	"strings"
 	"syscall"
 	"time"
 )
 
 // shared variable
 var (
-	netw   *sim.Network      // Network instance
-	redraw bool              // graph modified?
-	rt     *sim.RoutingTable // compiled routing table
-	hops   float64           // avg. number of hops in routing table
-	routes [][]int           // list of routes
-	csv    *os.File          // statistics output
-	tbl    bool              // routing table changed?
+	netw    *sim.Network      // Network instance
+	redraw  bool              // graph modified?
+	rt      *sim.RoutingTable // compiled routing table
+	hops    float64           // avg. number of hops in routing table
+	routes  [][]int           // list of routes
+	csv     *os.File          // statistics output
+	changed bool              // routing table changed?
 )
 
 // run application
@@ -165,128 +164,6 @@ func main() {
 	log.Println("Done.")
 }
 
-func printEntry(f *core.Entry) string {
-	return fmt.Sprintf("{%d,%d,%d,%.3f}",
-		netw.GetShortID(f.Peer), netw.GetShortID(f.NextHop),
-		f.Hops, f.Origin.Age().Seconds())
-}
-
-//nolint:gocyclo // life is complex sometimes...
-func handleEvent(ev *core.Event) {
-	// check if event is to be displayed.
-	show := false
-	for _, t := range sim.Cfg.Options.Events {
-		if (t < 0 && -t != ev.Type) || (t == ev.Type) {
-			show = true
-			break
-		}
-	}
-	if !sim.Cfg.Options.ShowEvents {
-		show = !show
-	}
-	// log network events
-	switch ev.Type {
-	case sim.EvNodeAdded:
-		if show {
-			val := core.GetVal[[]int](ev)
-			log.Printf("[%s] %04X started as #%d (%d running)",
-				ev.Peer, ev.Peer.Tag(), val[0], val[1])
-		}
-		redraw = true
-	case sim.EvNodeRemoved:
-		val := core.GetVal[[]int](ev)
-		remain := val[1]
-		if remain < 0 {
-			remain = netw.StopNodeByID(ev.Peer)
-		}
-		if show {
-			log.Printf("[%s] #%d stopped (%d running)",
-				ev.Peer, val[0], remain)
-		}
-		redraw = true
-		tbl = true
-	case core.EvNeighborAdded:
-		if show {
-			log.Printf("[%d] neighbor #%d added",
-				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
-		}
-		tbl = true
-	case core.EvNeighborUpdated:
-		if show {
-			log.Printf("[%d] neighbor #%d updated",
-				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
-		}
-		tbl = true
-	case core.EvNeighborExpired:
-		if show {
-			log.Printf("[%d] neighbor %d expired",
-				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
-		}
-		redraw = true
-		tbl = true
-	case core.EvForwardLearned:
-		if show {
-			e := core.GetVal[*core.Entry](ev)
-			log.Printf("[%d < %d] learned %s",
-				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref), printEntry(e))
-		}
-		tbl = true
-	case core.EvForwardChanged:
-		if show {
-			fw := core.GetVal[[3]*core.Entry](ev)
-			log.Printf("[%d < %d] %s < %s > %s",
-				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref),
-				printEntry(fw[0]), printEntry(fw[1]), printEntry(fw[2]))
-		}
-		tbl = true
-	case core.EvShorterRoute:
-		if show {
-			log.Printf("[%d] shorter path to %d learned",
-				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
-		}
-		tbl = true
-	case core.EvRelayRemoved:
-		if show {
-			log.Printf("[%d] forward to %d removed",
-				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
-			tbl = true
-		}
-		tbl = true
-	case core.EvLearning:
-		if show {
-			log.Printf("[%d] learning from %d",
-				netw.GetShortID(ev.Peer), netw.GetShortID(ev.Ref))
-		}
-	case core.EvTeaching:
-		if show {
-			val := core.GetVal[[]any](ev)
-			msg, _ := val[0].(*core.TEAchMsg)
-			counts, _ := val[1].([4]int)
-			numAnnounce := len(msg.Announce)
-			log.Printf("[%d] teaching: %d removed, %d unfiltered, %d pending, %d skipped",
-				netw.GetShortID(ev.Peer), counts[0], counts[1], counts[2], counts[3]-numAnnounce)
-			if numAnnounce < 4 {
-				announced := make([]string, 0)
-				for _, ann := range msg.Announce {
-					e := &core.Entry{
-						Peer:    ann.Peer,
-						Hops:    ann.Hops,
-						NextHop: msg.Sender(),
-						Origin:  core.TimeFromAge(ann.Age),
-					}
-					announced = append(announced, printEntry(e))
-				}
-				log.Printf("[%d] TEAch [%s]",
-					netw.GetShortID(ev.Peer), strings.Join(announced, ","))
-			}
-		}
-	case core.EvWantToLearn:
-		if show {
-			log.Printf("[%d] broadcasting LEArn", netw.GetShortID(ev.Peer))
-		}
-	}
-}
-
 func run(env sim.Environment) {
 	//------------------------------------------------------------------
 	// prepare monitoring
@@ -298,8 +175,8 @@ func run(env sim.Environment) {
 	repeat := 1
 	lastFailed := -1
 	active := true
-	tbl = true
-	tblRep := 0
+	changed = true
+	unchangedCount := 1
 loop:
 	for active {
 		select {
@@ -315,14 +192,14 @@ loop:
 				log.Printf("[Epoch %d] %d nodes running", epoch, netw.NumRunning())
 
 				// check routing table changes in the last 10 epochs
-				if !tbl {
-					tblRep++
+				if !changed {
+					unchangedCount++
 				} else {
-					tbl = false
-					tblRep = 1
+					changed = false
+					unchangedCount = 1
 				}
 				// if no activity, quit simulation.
-				if tblRep == 10 {
+				if unchangedCount == 10 {
 					log.Printf("Stopped on network inactivity")
 					active = false
 					return
