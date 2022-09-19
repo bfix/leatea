@@ -26,7 +26,7 @@ const (
 	EvLearning        = 2  // received TEACH message, learning peers
 	EvTeaching        = 3  // sending out TEACH message
 	EvNeighborExpired = 4  // neighbor expired
-	EvRelayRemoved    = 5  // forward removed from routing table
+	EvRelayRemoved    = 5  // relay removed from routing table
 	EvShorterRoute    = 6  // shorter path for forward entry found
 	EvForwardChanged  = 7  // change in the forward table
 	EvForwardLearned  = 8  // new forward learned
@@ -34,6 +34,7 @@ const (
 	EvNeighborUpdated = 10 // old neighbor updated
 	EvNeighborRelayed = 11 // dormant neighbor revived as relay
 	EvRelayRevived    = 12 // dormant relay revived (with new forward)
+	EvRelayUpdated    = 13 // relay updated
 )
 
 // Event from network if something interesting happens
