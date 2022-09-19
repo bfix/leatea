@@ -174,6 +174,16 @@ func (n *Network) Stats() (int, int, int) {
 	return n.running, n.started, n.removals
 }
 
+func (n *Network) Nodes() (list []*SimNode) {
+	n.lock.RLock()
+	defer n.lock.RUnlock()
+
+	for _, node := range n.nodes {
+		list = append(list, node)
+	}
+	return
+}
+
 func (n *Network) StopNodeByID(p *core.PeerID) int {
 	node, _ := n.getNode(p)
 	if node == nil {
@@ -233,6 +243,9 @@ func (n *Network) getNode(p *core.PeerID) (node *SimNode, idx int) {
 	n.lock.RLock()
 	defer n.lock.RUnlock()
 
+	if p == nil {
+		return
+	}
 	var ok bool
 	if idx, ok = n.index[p.Key()]; !ok {
 		return
