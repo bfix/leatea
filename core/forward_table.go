@@ -504,12 +504,14 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 			tbl.recs[key] = e
 
 			// notify listener
-			tbl.listener(&Event{
-				Type: EvForwardLearned,
-				Peer: tbl.self,
-				Ref:  sender,
-				Val:  e,
-			})
+			if tbl.listener != nil {
+				tbl.listener(&Event{
+					Type: EvForwardLearned,
+					Peer: tbl.self,
+					Ref:  sender,
+					Val:  e,
+				})
+			}
 			continue
 		}
 		//--------------------------------------------------------------
