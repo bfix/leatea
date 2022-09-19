@@ -63,6 +63,10 @@ func (n *SimNode) Stop() {
 	n.Node.Stop()
 }
 
+func (n *SimNode) ID() int {
+	return n.id
+}
+
 // ListTable returns a stringiied forward table. PeerIDs for display can be
 // converted by 'cv' first.
 func (n *SimNode) ListTable(cv func(*core.PeerID) string) string {
