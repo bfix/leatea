@@ -20,6 +20,14 @@
 
 package sim
 
+import (
+	"leatea/core"
+	"log"
+	"os"
+
+	"github.com/bfix/gospel/data"
+)
+
 //----------------------------------------------------------------------
 // Routing table
 //----------------------------------------------------------------------
@@ -119,5 +127,73 @@ func (rt *RoutingTable) Render(canvas Canvas) {
 			nodeTo := rt.List[next].Node
 			canvas.Line(nodeFrom.Pos.X, nodeFrom.Pos.Y, nodeTo.Pos.X, nodeTo.Pos.Y, 0.15, ClrBlue)
 		}
+	}
+}
+
+//----------------------------------------------------------------------
+// Dump routing table
+//----------------------------------------------------------------------
+
+type DumpEntry struct {
+	Peer uint16 `order:"big"`
+	Hops int16  `order:"big"`
+	Next uint16 `order:"big"`
+	Age_ int64  `order:"big"`
+}
+
+func (e *DumpEntry) Age() float64 {
+	return core.Age{Val: e.Age_}.Seconds()
+}
+
+type DumpNode struct {
+	ID      uint16       `order:"big"`
+	Running bool         ``
+	NumTbl  uint16       `order:"big"`
+	Tbl     []*DumpEntry `size:"NumTbl"`
+}
+
+type Dump struct {
+	NumNodes uint16      `order:"big"`
+	Nodes    []*DumpNode `size:"NumNodes"`
+}
+
+func (n *Network) DumpRouting(fname string) {
+	// create dump file
+	f, err := os.Create(fname)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+
+	// build dump instance
+	nodes := n.Nodes()
+	dump := &Dump{
+		NumNodes: uint16(len(nodes)),
+		Nodes:    make([]*DumpNode, 0),
+	}
+	for _, node := range nodes {
+		fw := make([]*DumpEntry, 0)
+		for _, entry := range node.Forwards() {
+			_, peer := n.getNode(entry.Peer)
+			_, next := n.getNode(entry.NextHop)
+			de := &DumpEntry{
+				Peer: uint16(peer),
+				Hops: entry.Hops,
+				Next: uint16(next),
+				Age_: entry.Origin.Age().Val,
+			}
+			fw = append(fw, de)
+		}
+		dn := &DumpNode{
+			ID:      uint16(node.id),
+			Running: node.IsRunning(),
+			NumTbl:  uint16(len(fw)),
+			Tbl:     fw,
+		}
+		dump.Nodes = append(dump.Nodes, dn)
+	}
+	// serialize to file
+	if err = data.MarshalStream(f, dump); err != nil {
+		log.Fatal(err)
 	}
 }
