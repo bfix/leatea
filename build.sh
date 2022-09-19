@@ -1,3 +1,4 @@
 #!/bin/bash
 
-go build leatea/sim/lt-test
+go build leatea/sim/liti
+go build leatea/sim/analyze
