@@ -71,7 +71,7 @@ func main() {
 		}
 		defer csv.Close()
 		// write header
-		_, _ = csv.WriteString("Epoch;Loops;Broken;Success;NumPeers;MeanHops\n")
+		_, _ = csv.WriteString("Epoch;Loops;Broken;Success;NumPeers;Started;StopPending;MeanHops\n")
 	}
 
 	// turn on profiling
@@ -93,7 +93,9 @@ func main() {
 	}
 	// get a canvas for drawing
 	c := sim.GetCanvas(sim.Cfg.Render)
-	defer c.Close()
+	if c != nil {
+		defer c.Close()
+	}
 
 	//------------------------------------------------------------------
 	// Build test network
@@ -110,7 +112,7 @@ func main() {
 	go netw.Run(evHdlr.HandleEvent)
 
 	// run simulation depending on canvas mode (dynamic/static)
-	if sim.Cfg.Render.Dynamic && c.IsDynamic() {
+	if sim.Cfg.Render.Dynamic && c != nil && c.IsDynamic() {
 		//--------------------------------------------------------------
 		// Render to display (update on network change while running)
 		//--------------------------------------------------------------
@@ -149,17 +151,19 @@ func main() {
 		// run simulation
 		run(e)
 
-		// draw final network graph if canvas is not dynamic
-		if err := c.Open(); err != nil {
-			log.Fatal(err)
+		if c != nil {
+			// draw final network graph if canvas is not dynamic
+			if err := c.Open(); err != nil {
+				log.Fatal(err)
+			}
+			c.Render(func(c sim.Canvas, redraw bool) {
+				c.Start()
+				// render routing table
+				rt.Render(c)
+				// draw environment
+				e.Draw(c)
+			})
 		}
-		c.Render(func(c sim.Canvas, redraw bool) {
-			c.Start()
-			// render routing table
-			rt.Render(c)
-			// draw environment
-			e.Draw(c)
-		})
 	}
 	//------------------------------------------------------------------
 	// stop network
@@ -180,7 +184,8 @@ func run(env sim.Environment) {
 	lastFailed := -1
 	active := true
 	unchangedCount := 1
-loop:
+
+	// as long as active...
 	for active {
 		select {
 		case <-tick.C:
@@ -203,7 +208,7 @@ loop:
 				if netw.Settled() && unchangedCount > 3 {
 					log.Printf("Stopped on network inactivity")
 					active = false
-					return
+					continue
 				}
 				running, started, removals := netw.Stats()
 				log.Printf("[Epoch %d] %d nodes running (%d started, %d removals pending, %d settled)",
@@ -247,7 +252,7 @@ loop:
 			// signal received
 			switch sig {
 			case syscall.SIGKILL, syscall.SIGINT, syscall.SIGTERM:
-				break loop
+				active = false
 			default:
 			}
 		}
@@ -261,9 +266,11 @@ loop:
 	log.Printf("Avg. traffic per node: %s in / %s out", sim.Scale(in), sim.Scale(out))
 	log.Println("Network routing table constructed - checking routes:")
 	rt, hops = netw.RoutingTable()
-	loops, _, _ := status(epoch, rt, hops)
-	if loops > 0 {
-		analyzeLoops(rt)
+	status(epoch, rt, hops)
+
+	// dump routing on demand
+	if len(sim.Cfg.Options.TableDump) > 0 {
+		netw.DumpRouting(sim.Cfg.Options.TableDump)
 	}
 }
 
@@ -273,7 +280,7 @@ loop:
 func status(epoch int, rt *sim.RoutingTable, allHops1 float64) (loops, broken, success int) {
 	var totalHops int
 	loops, broken, success, totalHops = rt.Status()
-	num, _, _ := netw.Stats()
+	num, started, stopPending := netw.Stats()
 	total := loops + broken + success // num * (num - 1)
 	if total > 0 {
 		// log statistics to console
@@ -290,8 +297,8 @@ func status(epoch int, rt *sim.RoutingTable, allHops1 float64) (loops, broken, s
 		}
 		// log statistics to file if requested
 		if csv != nil {
-			line := fmt.Sprintf("%d,%d,%d,%d,%d,%.2f\n",
-				epoch, loops, broken, success, num, mean)
+			line := fmt.Sprintf("%d,%d,%d,%d,%d,%d,%d,%.2f\n",
+				epoch, loops, broken, success, num, started, stopPending, mean)
 			_, _ = csv.WriteString(line)
 		}
 	} else {
