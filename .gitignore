@@ -1,6 +1,7 @@
-rt/
-.vscode/
-work/
-doc/
-/lt-test
+/.vscode/
+/rt/
+/work/
+/doc/
+/liti
+/analyze
 /config.json
