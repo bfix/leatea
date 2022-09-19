@@ -510,7 +510,7 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 				Ref:  sender,
 				Val:  e,
 			})
-			return
+			continue
 		}
 		//--------------------------------------------------------------
 		// entry exists in the forward table:
@@ -520,7 +520,8 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 			continue
 		}
 		// out-dated announcement?
-		if origin.Before(entry.Origin) {
+		dt := origin.Diff(entry.Origin)
+		if dt < 1 {
 			// yes: ignore old information
 			continue
 		}
@@ -556,19 +557,21 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 			// relay:
 
 			// only update on dormant entry or shorter route
-			var evType int
-			if announce.Hops+1 < entry.Hops {
+			evType := 0
+			switch {
+			case announce.Hops+1 < entry.Hops:
 				evType = EvShorterRoute
-			} else if entry.Hops < 0 {
+			case announce.Hops+1 == entry.Hops && !sender.Equal(entry.NextHop):
+				evType = EvRelayUpdated
+			case entry.Hops < -2:
 				evType = EvRelayRevived
-			} else {
+			default:
 				continue
 			}
-
 			// possible loop construction?
 			if entry.NextHop.Equal(sender) && announce.NextHop == tbl.self.Tag() {
 				log.Printf("LOOP? local %s = %s, remote %s = %s",
-					tbl.self, entry.String(), sender, announce.String())
+					tbl.self, entry, sender, announce)
 				continue
 			}
 			// update relay with newer relay
