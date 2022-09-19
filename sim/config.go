@@ -28,7 +28,14 @@ import (
 )
 
 // Random generator (deterministic) for reproducible tests
-var Random = rand.New(rand.NewSource(19031962)) //nolint:gosec // deterministic testing
+var (
+	Random = func() *rand.Rand {
+		var seed int64 = 19031962
+		rnd := rand.New(rand.NewSource(seed)) //nolint:gosec // deterministic testing
+		rand.Seed(seed)
+		return rnd
+	}()
+)
 
 // WallDef definition in environment
 type WallDef struct {
@@ -89,6 +96,7 @@ type Option struct {
 	Events     []int  `json:"events"`
 	ShowEvents bool   `json:"showEvents"`
 	Statistics string `json:"statistics"`
+	TableDump  string `json:"tableDump"`
 }
 
 // Config for test configuration data
