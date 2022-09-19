@@ -53,6 +53,11 @@ func (t Time) Before(t2 Time) bool {
 	return t.Val < t2.Val
 }
 
+// Diff returns 't-t2' in seconds
+func (t Time) Diff(t2 Time) float64 {
+	return Age{t.Val - t2.Val}.Seconds()
+}
+
 // String returns a human-readabe timestamps
 func (t Time) String() string {
 	return time.UnixMicro(t.Val).Format(time.RFC1123)
