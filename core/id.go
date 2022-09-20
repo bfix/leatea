@@ -54,7 +54,7 @@ func (p *PeerID) Tag() uint32 {
 		return 0
 	}
 	if p.tag == 0 {
-		p.tag = binary.LittleEndian.Uint32(p.Data[:4])
+		p.tag = binary.BigEndian.Uint32(p.Data[:4])
 	}
 	return p.tag
 }
