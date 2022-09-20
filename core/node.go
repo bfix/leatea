@@ -73,14 +73,11 @@ func (n *Node) Run(notify Listener) {
 	for n.active {
 		select {
 		case <-beacon.C:
+			// send out beacon message
 			msg := NewBeaconMsg(n.self)
 			n.send(msg)
 
 		case <-learn.C:
-			// node already stopped?
-			if !n.active {
-				return
-			}
 			// send out our own learn message
 			msg := NewLearnMsg(n.self, n.Filter())
 			n.send(msg)
