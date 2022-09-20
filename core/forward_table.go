@@ -30,17 +30,38 @@ import (
 	"github.com/bfix/gospel/data"
 )
 
+// Debugging switch
+const Debug = true
+
+// Kind and state of entry / forward
+const (
+	KindUnknown  = 0
+	KindRelay    = 1
+	KindNeighbor = 2
+
+	StateInvalid = 0
+	StateActive  = 1
+	StateRemoved = 2
+	StateDormant = 3
+)
+
 //----------------------------------------------------------------------
 // Forwarding table: each peer has a forwarding table with entries for
-// all other peers it learned about over time. The entry specifies the
-// peer ID of the other peer, the next hop on the route to the target,
-// the number of hops to reach the target and a timestamp when the peer
-// was last seen in the network. A direct neighbor (within broadcast
-// range) has no next hop and a hop count of 0 in the table.
+// all other peers it has ever learned over time. The entry specifies
+// the peer ID of the target, the next hop on the route to the target,
+// the number of hops to reach the target and a timestamp when the
+// originating entry was created.
 //
-// If an entry is removed (because the neighbor expired), the hop
-// count is set to -1 to indicated a deleted entry. Once such entry
-// is forwarded in a teach message, the entry is removed from the table.
+// There are two kinds of entries: relays and neighbors. An active
+// neighbor (within broadcast range) has no next hop and a hop count
+// of 0. An active relay has a next hop and a hop count > 0.
+//
+// Entries can be in different states: active (see above), removed
+// and dormant. A removed entry can be included in a TEAch message
+// (see Candidates method); it is set to dormant once broadcasted.
+// A dormant entry is never taught, but can be revived if a newer
+// announcement is received (see Learn method). Removed or dormant
+// entries are not considered when forwarding messages.
 //----------------------------------------------------------------------
 
 // Forward (target peer, distance/hops and age)
@@ -57,7 +78,7 @@ type Forward struct {
 	Hops int16 `size:"big"`
 
 	// Short identifier for next hop
-	NextHop uint16 `size:"big"`
+	NextHop uint32 `size:"big"`
 
 	// Age of entry since creation of the originating entry
 	Age Age
@@ -71,12 +92,59 @@ func (f *Forward) Size() uint {
 	return id.Size() + age.Size() + 4
 }
 
+// Kind of forward
+func (f *Forward) Kind() (kind int) {
+	switch f.Hops {
+	case 0, -2, -4:
+		if f.NextHop != 0 {
+			kind = KindUnknown
+			panic("")
+		} else {
+			kind = KindNeighbor
+		}
+	default:
+		if f.NextHop == 0 {
+			kind = KindUnknown
+			panic("")
+		} else {
+			kind = KindRelay
+		}
+	}
+	if Debug && kind == KindUnknown {
+		panic(fmt.Sprintf("unknown kind: %s", f))
+	}
+	return
+}
+
+// State of the forward
+func (f *Forward) State() (state int) {
+	switch f.Hops {
+	case -1, -2:
+		state = StateRemoved
+	default:
+		if f.Hops >= 0 {
+			state = StateActive
+		} else {
+			state = StateInvalid
+		}
+	}
+	if Debug && state == StateInvalid {
+		panic(fmt.Sprintf("invalid state: %s", f))
+	}
+	return
+}
+
+// IsA checks if a forward is of given kind and state
+func (f *Forward) IsA(kind, state int) bool {
+	return f.Kind() == kind && f.State() == state
+}
+
 // String returns a human-readable representation
 func (f *Forward) String() string {
 	if f == nil {
 		return "{nil forward}"
 	}
-	return fmt.Sprintf("{%s,%d,%04X,%.3f}", f.Peer, f.Hops, f.NextHop, f.Age.Seconds())
+	return fmt.Sprintf("{%s,%d,%08X,%.3f}", f.Peer, f.Hops, f.NextHop, f.Age.Seconds())
 }
 
 //----------------------------------------------------------------------
@@ -119,10 +187,14 @@ type Entry struct {
 
 // EntryFromForward creates a new Entry from a forward send by sender.
 func EntryFromForward(f *Forward, sender *PeerID) *Entry {
+	hops := f.Hops
+	if f.State() == StateActive {
+		hops++
+	}
 	return &Entry{
 		Peer:    f.Peer,
 		NextHop: sender,
-		Hops:    f.Hops + 1,
+		Hops:    hops,
 		Origin:  TimeFromAge(f.Age),
 	}
 }
@@ -148,6 +220,87 @@ func (e *Entry) Clone() *Entry {
 		Changed: e.Changed,
 		Pending: e.Pending,
 	}
+}
+
+// Kind of forward
+func (e *Entry) Kind() (kind int) {
+	switch e.Hops {
+	case 0, -2, -4:
+		if e.NextHop != nil {
+			kind = KindUnknown
+		} else {
+			kind = KindNeighbor
+		}
+	default:
+		if e.NextHop == nil {
+			kind = KindUnknown
+		} else {
+			kind = KindRelay
+		}
+	}
+	if Debug && kind == KindUnknown {
+		panic(fmt.Sprintf("unknown kind: %s", e))
+	}
+	return
+}
+
+// State of the forward
+func (e *Entry) State() (state int) {
+	switch e.Hops {
+	case -3, -4:
+		state = StateDormant
+	case -1, -2:
+		state = StateRemoved
+	default:
+		if e.Hops >= 0 {
+			state = StateActive
+		} else {
+			state = StateInvalid
+		}
+	}
+	if Debug && state == StateInvalid {
+		panic(fmt.Sprintf("invalid state: %s", e))
+	}
+	return
+}
+
+// Set state of entry
+func (e *Entry) SetState(state int) {
+	now := TimeNow()
+	switch e.Kind() {
+	case KindNeighbor:
+		switch state {
+		case StateActive:
+			e.Hops = 0
+			e.Origin = now
+		case StateRemoved:
+			e.Hops = -2
+			e.Origin = now
+		case StateDormant:
+			e.Hops = -4
+		default:
+			panic("invalid state for neighbor")
+		}
+		e.NextHop = nil
+	case KindRelay:
+		switch state {
+		case StateRemoved:
+			e.Hops = -1
+			e.Origin = now
+		case StateDormant:
+			e.Hops = -3
+		default:
+			panic("invalid state for relay")
+		}
+	default:
+		panic("unknown kind for state change")
+	}
+	e.Changed = now
+}
+
+// IsA checks if a forward is of given kind and state
+func (e *Entry) IsA(kind, state int) bool {
+	return e.Kind() == kind && e.State() == state
 }
 
 // String returns a human-readable representation
@@ -215,7 +368,9 @@ func (tbl *ForwardTable) Reset() {
 func (tbl *ForwardTable) AddNeighbor(node *PeerID) {
 	tbl.Lock()
 	defer func() {
-		tbl.check("add neighbor")
+		if Debug {
+			tbl.check("add neighbor")
+		}
 		tbl.Unlock()
 	}()
 
@@ -257,7 +412,6 @@ func (tbl *ForwardTable) AddNeighbor(node *PeerID) {
 			Ref:  node,
 		})
 	}
-	// no dependent relays can exist.
 }
 
 // Cleanup forward table and flag expired neighbors (and their dependencies)
@@ -266,20 +420,17 @@ func (tbl *ForwardTable) AddNeighbor(node *PeerID) {
 func (tbl *ForwardTable) Cleanup() {
 	tbl.Lock()
 	defer func() {
-		tbl.check("clean-up")
+		if Debug {
+			tbl.check("clean-up")
+		}
 		tbl.Unlock()
 	}()
 
 	// remove expired neighbors (and their dependent relays)
 	for _, entry := range tbl.recs {
-		// is entry a neighbor?
-		if entry.NextHop != nil {
+		// is entry an active neighbor?
+		if !entry.IsA(KindNeighbor, StateActive) {
 			// no:
-			continue
-		}
-		// is entry removed or dormant?
-		if entry.Hops < 0 {
-			// yes: already flagged
 			continue
 		}
 		// has the neighbor expired?
@@ -295,12 +446,8 @@ func (tbl *ForwardTable) Cleanup() {
 				Ref:  entry.Peer,
 			})
 		}
-		now := TimeNow()
-
 		// remove neighbor
-		entry.Hops = -2
-		entry.Origin = now
-		entry.Changed = now
+		entry.SetState(StateRemoved)
 		entry.Pending = true
 
 		// remove dependent relays
@@ -308,9 +455,7 @@ func (tbl *ForwardTable) Cleanup() {
 			// only relays where next hop equals neighbor
 			if fw.NextHop.Equal(entry.Peer) {
 				// remove forward
-				fw.Hops = -1
-				fw.Origin = now
-				fw.Changed = now
+				fw.SetState(StateRemoved)
 				fw.Pending = true
 				// notify listener we removed a forward
 				if tbl.listener != nil {
@@ -342,7 +487,7 @@ func (tbl *ForwardTable) Filter() *data.SaltedBloomFilter {
 	// process all table entries
 	for _, entry := range tbl.recs {
 		// skip dormant entries
-		if entry.Hops < -2 {
+		if entry.State() == StateDormant {
 			continue
 		}
 		// add entry to filter
@@ -368,7 +513,9 @@ type _Candidate struct {
 func (tbl *ForwardTable) Candidates(m *LEArnMsg) (list []*Forward, counts [4]int) {
 	tbl.Lock()
 	defer func() {
-		tbl.check("candidates")
+		if Debug {
+			tbl.check("candidates")
+		}
 		tbl.Unlock()
 	}()
 
@@ -384,23 +531,14 @@ func (tbl *ForwardTable) Candidates(m *LEArnMsg) (list []*Forward, counts [4]int
 			add = true
 			cnd.kind = 0 // unfiltered entry
 		}
-		// handle removed or dormant entries
-		if entry.Hops < 0 {
-			switch entry.Hops {
-			case -1:
-				// removed relay
-				add = true
+		// don't add dormant entries
+		if entry.State() == StateDormant {
+			add = false
+		} else if entry.State() == StateRemoved {
+			add = true
+			cnd.kind = 1
+			if entry.Kind() == KindRelay {
 				cnd.kind = 2
-			case -2:
-				// removed neighbor
-				add = true
-				cnd.kind = 1
-			case -3:
-				// dormant relay
-				add = false
-			case -4:
-				// dormant neighbor
-				add = false
 			}
 		} else if entry.Pending {
 			// pending entry
@@ -413,7 +551,7 @@ func (tbl *ForwardTable) Candidates(m *LEArnMsg) (list []*Forward, counts [4]int
 		}
 	}
 	// honor TEAch limit.
-	counts[3] = len(collect)
+	counts[3] = 0
 	if counts[3] > cfg.MaxTeachs {
 		// sort list by descending kind (primary) and ascending number
 		// of hops (secondary)
@@ -428,6 +566,7 @@ func (tbl *ForwardTable) Candidates(m *LEArnMsg) (list []*Forward, counts [4]int
 			return ci.e.Hops < cj.e.Hops
 		})
 		// trim list to max. length
+		counts[3] = len(collect) - cfg.MaxTeachs
 		collect = collect[:cfg.MaxTeachs]
 	}
 	// if we have removed relays in our response, remove them
@@ -436,13 +575,9 @@ func (tbl *ForwardTable) Candidates(m *LEArnMsg) (list []*Forward, counts [4]int
 	for _, cnd := range collect {
 		entry := cnd.e
 		forward := entry.Target()
-		if entry.Hops == -1 {
-			// tag relay as dormant
-			entry.Hops = -3
-			counts[0]++
-		} else if entry.Hops == -2 {
-			// tag neighbor as dormant
-			entry.Hops = -4
+		if entry.State() == StateRemoved {
+			// tag entry as dormant
+			entry.SetState(StateDormant)
 			counts[0]++
 		} else if entry.Pending {
 			counts[2]++
@@ -461,7 +596,9 @@ func (tbl *ForwardTable) Candidates(m *LEArnMsg) (list []*Forward, counts [4]int
 func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 	tbl.Lock()
 	defer func() {
-		tbl.check("learn", msg.Sender(), msg.Announce)
+		if Debug {
+			tbl.check("learn", msg.Sender(), msg.Announce)
+		}
 		tbl.Unlock()
 	}()
 
@@ -483,22 +620,23 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 			//----------------------------------------------------------
 			// no entry found:
 
-			// skip removed relay announcements
-			if announce.Hops == -1 {
+			// handle removed announcements
+			hops := announce.Hops + 1
+			next := sender
+			if announce.IsA(KindRelay, StateRemoved) {
 				continue
+			} else if announce.IsA(KindNeighbor, StateRemoved) {
+				hops = -2
+				next = nil
 			}
 			// create new entry
 			e := &Entry{
 				Peer:    announce.Peer,
-				Hops:    announce.Hops + 1,
-				NextHop: sender,
+				Hops:    hops,
+				NextHop: next,
 				Origin:  origin,
 				Changed: now,
 				Pending: true,
-			}
-			// correct hops count for removed neighbors
-			if announce.Hops == -2 {
-				e.Hops = -2
 			}
 			// add entry to forward table
 			tbl.recs[key] = e
@@ -517,8 +655,8 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 		//--------------------------------------------------------------
 		// entry exists in the forward table:
 
-		// do not learn a removed entry; wait for it to be dormant
-		if entry.Hops == -1 || entry.Hops == -2 {
+		// do not re-learn a removed entry; wait for it to be dormant
+		if entry.State() == StateRemoved {
 			continue
 		}
 		// out-dated announcement?
@@ -527,22 +665,26 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 			// yes: ignore old information
 			continue
 		}
+
+		// candidate for update: remove pending flag
+		entry.Pending = false
+
 		// remember old entry
 		oldEntry := entry.Clone()
 		changed := false
 
 		// "removal" announced?
-		if announce.Hops < 0 {
+		if announce.State() != StateActive {
 			// yes: continue if entry is already removed or dormant
-			if entry.Hops < 0 {
+			if entry.State() != StateActive {
 				continue
 			}
-			// remove dependent relay
-			if entry.NextHop.Equal(sender) {
+			// remove relay on removed neighbor announcement or if
+			// sender is the next hop in the forward.
+			if (announce.IsA(KindNeighbor, StateRemoved) && entry.Kind() == KindRelay) || entry.NextHop.Equal(sender) {
 				// remove relay
-				entry.Hops = -1
+				entry.SetState(StateRemoved)
 				entry.Origin = origin
-				entry.Changed = now
 				entry.Pending = true
 				changed = true
 
@@ -555,7 +697,7 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 					})
 				}
 			}
-		} else if entry.NextHop != nil {
+		} else if entry.Kind() == KindRelay {
 			// relay:
 
 			// only update on dormant entry or shorter route
@@ -565,7 +707,7 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 				evType = EvShorterRoute
 			case announce.Hops+1 == entry.Hops && !sender.Equal(entry.NextHop):
 				evType = EvRelayUpdated
-			case entry.Hops < -2:
+			case entry.State() == StateDormant:
 				evType = EvRelayRevived
 			default:
 				continue
@@ -592,7 +734,7 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 					Ref:  entry.Peer,
 				})
 			}
-		} else if entry.Hops == -4 {
+		} else if entry.IsA(KindNeighbor, StateDormant) {
 			// dormant neighbor:
 
 			// update with newer relay
@@ -673,7 +815,7 @@ func (tbl *ForwardTable) Neighbors() (list []*PeerID) {
 	defer tbl.Unlock()
 	// collect neighbors from the table
 	for _, entry := range tbl.recs {
-		if entry.NextHop == nil && entry.Hops == 0 {
+		if entry.IsA(KindNeighbor, StateActive) {
 			list = append(list, entry.Peer)
 		}
 	}
@@ -682,7 +824,8 @@ func (tbl *ForwardTable) Neighbors() (list []*PeerID) {
 
 //----------------------------------------------------------------------
 
-// sanity check of forward table in debug mode
+// sanity check of forward table in debug mode.
+// (only call from within a locked table instance!)
 func (tbl *ForwardTable) sanityCheck(label string, args ...any) {
 	// check all forward entries in table
 	for _, entry := range tbl.recs {
@@ -697,40 +840,26 @@ func (tbl *ForwardTable) sanityCheck(label string, args ...any) {
 			log.Printf("[%s] peer %s forward to self", label, tbl.self)
 			panic(label)
 		}
-		// check relay and neighbor
-		if entry.NextHop != nil {
+		// check entry
+		if entry.Kind() == KindRelay {
 			// relay:
-
-			// check for valid hop count
-			if !(entry.Hops == -1 || entry.Hops == -3 || entry.Hops > 0) {
-				log.Printf("[%s] peer %s has relay with invalid hop count", label, tbl.self)
-				panic(label)
-			}
 
 			// check for valid neighor as next hop
 			nb, ok := tbl.recs[entry.NextHop.Key()]
 			if !ok {
-				log.Printf("[%s] peer %s has forward with unknown next hop", label, tbl.self)
+				log.Printf("[%s] peer %s has forward %s with unknown next hop", label, tbl.self, entry.Peer)
 				for i, arg := range args {
 					log.Printf("Arg #%d: %v", i+1, arg)
 				}
 				log.Printf("Bad entry: %s", entry)
 				panic(label)
 			}
-			if nb.NextHop != nil {
-				log.Printf("[%s] peer %s has forward with invalid next hop", label, tbl.self)
+			if nb.Kind() != KindNeighbor {
+				log.Printf("[%s] peer %s has forward %s with invalid next hop", label, tbl.self, entry.Peer)
 				for i, arg := range args {
 					log.Printf("Arg #%d: %v", i+1, arg)
 				}
 				log.Printf("Bad entry: %s / %s", entry, nb)
-				panic(label)
-			}
-		} else {
-			// neighbor
-
-			// check for valid hop count
-			if !(entry.Hops == 0 || entry.Hops == -2 || entry.Hops == -4) {
-				log.Printf("[%s] peer %s has neighbor with invalid hop count", label, tbl.self)
 				panic(label)
 			}
 		}
