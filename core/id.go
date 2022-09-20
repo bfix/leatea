@@ -38,7 +38,7 @@ type PeerID struct {
 
 	// transient
 	pub   *ed25519.PublicKey // Ed25519 pubkey
-	tag   uint16             // short identifier
+	tag   uint32             // short identifier
 	str32 string             // string representation (base32)
 	str64 string             // string representation (base64)
 }
@@ -49,13 +49,12 @@ func (p *PeerID) Size() uint {
 }
 
 // Tag (short identifier) of the peer id
-func (p *PeerID) Tag() uint16 {
+func (p *PeerID) Tag() uint32 {
 	if p == nil {
 		return 0
 	}
 	if p.tag == 0 {
-		v, _ := binary.Uvarint(p.Data)
-		p.tag = uint16(v)
+		p.tag = binary.LittleEndian.Uint32(p.Data[:4])
 	}
 	return p.tag
 }
