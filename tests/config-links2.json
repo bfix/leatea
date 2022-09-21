@@ -1,6 +1,6 @@
 {
     "core": {
-        "maxTeachs": 30,
+        "maxTeachs": 20,
         "learnIntv": 10,
         "outdated": 60,
         "beaconIntv": 1,
@@ -9,22 +9,21 @@
     "environment": {
         "class": "link",
         "cooldown": 5,
-        "stopAt": 900,
         "nodesRef": "tests/test-nodes.json"
     },
     "node": {
         "bootup": 20
     },
     "render": {
-        "mode": "sdl",
-        "width": 800,
-        "height": 800,
-        "dynamic": false
+        "mode": "none"
     },
     "options": {
         "maxRepeat": 0,
         "stopOnLoop": false,
-        "showEvents": [-1],
-        "stopAt": 20
+        "events": [1,2,10],
+        "showEvents": false,
+        "stopAt": 10,
+        "statistics": "rt/stat.csv",
+        "tableDump": "rt/routing_table.bin"
     }
 }

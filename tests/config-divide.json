@@ -1,10 +1,12 @@
 {
     "core": {
-        "maxTeachs": 30,
+        "maxTeachs": 25,
         "learnIntv": 10,
         "outdated": 60,
         "beaconIntv": 1,
-        "ttlBeacon":  5
+        "ttlBeacon":  5,
+        "maxReteachs": 3,
+        "rateReteach": 0.1
     },
     "environment": {
         "class": "wall",
@@ -29,14 +31,14 @@
         "deathRate": 0.2
     },
     "render": {
-        "mode": "svg",
-        "file": "rt/out.svg",
-        "dynamic": false
+        "mode": ""
     },
     "options": {
         "events": [1,2,10],
         "showEvents": false,
-        "stopOnLoop": false,
-        "statistics": "rt/stat.csv"
+        "stopOnLoop": true,
+        "stopAt": 150,
+        "statistics": "rt/stat.csv",
+        "tableDump": "rt/routing_table.bin"
     }
 }
