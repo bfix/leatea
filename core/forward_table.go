@@ -203,7 +203,7 @@ func EntryFromForward(f *Forward, sender *PeerID) *Entry {
 // The age of the entry is calculated from Origin relative to TimeNow()
 func (e *Entry) Target() *Forward {
 	return &Forward{
-		Peer:    e.Peer,
+		Peer:    e.Peer.Clone(),
 		Hops:    e.Hops,
 		NextHop: e.NextHop.Tag(),
 		Age:     e.Origin.Age(),
@@ -355,11 +355,21 @@ func NewForwardTable(self *PeerID, debug bool) *ForwardTable {
 	return tbl
 }
 
-// Reset routing table
-func (tbl *ForwardTable) Reset() {
-	tbl.Lock()
-	defer tbl.Unlock()
-	tbl.recs = make(map[string]*Entry)
+//======================================================================
+// LEArn / TEAch and beacon message handling
+//======================================================================
+
+// Teach about our local forward table
+func (tbl *ForwardTable) Teach(msg *LEArnMsg) (*TEAchMsg, [4]int) {
+	// build a list of candidate entries for teaching:
+	// candidates are not included in the learn filter
+	// and don't have the learner as next hop.
+	candidates, counts := tbl.candidates(msg)
+	if len(candidates) == 0 {
+		return nil, counts
+	}
+	// assemble TEACH message
+	return NewTEAchMsg(tbl.self, candidates), counts
 }
 
 // AddNeighbor to forward table:
@@ -412,184 +422,6 @@ func (tbl *ForwardTable) AddNeighbor(node *PeerID) {
 			Ref:  node,
 		})
 	}
-}
-
-// Cleanup forward table and flag expired neighbors (and their dependencies)
-// for removal. The actual deletion of the entry in the table happens after
-// the removed entry was broadcasted in a TEAch message.
-func (tbl *ForwardTable) Cleanup() {
-	tbl.Lock()
-	defer func() {
-		if Debug {
-			tbl.check("clean-up")
-		}
-		tbl.Unlock()
-	}()
-
-	// remove expired neighbors (and their dependent relays)
-	for _, entry := range tbl.recs {
-		// is entry an active neighbor?
-		if !entry.IsA(KindNeighbor, StateActive) {
-			// no:
-			continue
-		}
-		// has the neighbor expired?
-		if !entry.Origin.Expired(time.Duration(cfg.TTLBeacon) * time.Second) {
-			// no:
-			continue
-		}
-		// notify listener
-		if tbl.listener != nil {
-			tbl.listener(&Event{
-				Type: EvNeighborExpired,
-				Peer: tbl.self,
-				Ref:  entry.Peer,
-			})
-		}
-		// remove neighbor
-		entry.SetState(StateRemoved)
-		entry.Pending = true
-
-		// remove dependent relays
-		for _, fw := range tbl.recs {
-			// only relays where next hop equals neighbor
-			if fw.NextHop.Equal(entry.Peer) {
-				// remove forward
-				fw.SetState(StateRemoved)
-				fw.Pending = true
-				// notify listener we removed a forward
-				if tbl.listener != nil {
-					tbl.listener(&Event{
-						Type: EvRelayRemoved,
-						Peer: tbl.self,
-						Ref:  fw.Peer,
-					})
-				}
-			}
-		}
-	}
-}
-
-// Filter returns a bloomfilter from all table entries (PeerID).
-// Remove expired entries first.
-func (tbl *ForwardTable) Filter() *data.SaltedBloomFilter {
-	// clean-up first
-	tbl.Cleanup()
-
-	// create bloomfilter
-	tbl.Lock()
-	defer tbl.Unlock()
-	salt := RndUInt32()
-	n := len(tbl.recs) + 2
-	fpr := 1. / float64(n)
-	pf := data.NewSaltedBloomFilter(salt, n, fpr)
-
-	// process all table entries
-	for _, entry := range tbl.recs {
-		// skip dormant entries
-		if entry.State() == StateDormant {
-			continue
-		}
-		// add entry to filter
-		pf.Add(entry.Peer.Bytes())
-	}
-	// add ourself to the filter (can't learn about myself from others)
-	pf.Add(tbl.self.Bytes())
-	return pf
-}
-
-//----------------------------------------------------------------------
-
-// Candidate entry for inclusion in a TEAch message
-type _Candidate struct {
-	e    *Entry // reference to entry
-	kind int    // entry classification (lower value = higher priority)
-}
-
-// Candiates returns a list of table entries that are not filtered out by the
-// bloomfilter contained in the LEArn message.
-// Pending entries (updated but not forwarded yet) are collected if there is
-// space for them in the result list.
-func (tbl *ForwardTable) Candidates(m *LEArnMsg) (list []*Forward, counts [4]int) {
-	tbl.Lock()
-	defer func() {
-		if Debug {
-			tbl.check("candidates")
-		}
-		tbl.Unlock()
-	}()
-
-	// collect forwards for response
-	collect := make([]*_Candidate, 0)
-	for _, entry := range tbl.recs {
-		// new candidate and flag for inclusion
-		cnd := &_Candidate{entry, -1}
-		add := false
-
-		// add entry if not filtered
-		if !m.Filter.Contains(entry.Peer.Bytes()) {
-			add = true
-			cnd.kind = 0 // unfiltered entry
-		}
-		// don't add dormant entries
-		if entry.State() == StateDormant {
-			add = false
-		} else if entry.State() == StateRemoved {
-			add = true
-			cnd.kind = 1
-			if entry.Kind() == KindRelay {
-				cnd.kind = 2
-			}
-		} else if entry.Pending {
-			// pending entry
-			add = true
-			cnd.kind = 3
-		}
-		// add forward to response if required
-		if add {
-			collect = append(collect, cnd)
-		}
-	}
-	// honor TEAch limit.
-	counts[3] = 0
-	if counts[3] > cfg.MaxTeachs {
-		// sort list by descending kind (primary) and ascending number
-		// of hops (secondary)
-		sort.Slice(collect, func(i, j int) bool {
-			ci := collect[i]
-			cj := collect[j]
-			if ci.kind < cj.kind {
-				return true
-			} else if ci.kind > cj.kind {
-				return false
-			}
-			return ci.e.Hops < cj.e.Hops
-		})
-		// trim list to max. length
-		counts[3] = len(collect) - cfg.MaxTeachs
-		collect = collect[:cfg.MaxTeachs]
-	}
-	// if we have removed relays in our response, remove them
-	// from the forward table. Reset pending flag on entry and
-	// correct for removed meighbors (they are zombified).
-	for _, cnd := range collect {
-		entry := cnd.e
-		forward := entry.Target()
-		if entry.State() == StateRemoved {
-			// tag entry as dormant
-			entry.SetState(StateDormant)
-			counts[0]++
-		} else if entry.Pending {
-			counts[2]++
-		} else {
-			counts[1]++
-		}
-		// no need to broadcast entry again
-		entry.Pending = false
-		// add forward to candidates list
-		list = append(list, forward)
-	}
-	return
 }
 
 // Learn from announcements in a TEAch message
@@ -673,15 +505,25 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 		oldEntry := entry.Clone()
 		changed := false
 
+		//--------------------------------------------------------------
 		// "removal" announced?
-		if announce.State() != StateActive {
+		//--------------------------------------------------------------
+		if announce.State() == StateRemoved {
 			// yes: continue if entry is already removed or dormant
 			if entry.State() != StateActive {
 				continue
 			}
-			// remove relay on removed neighbor announcement or if
-			// sender is the next hop in the forward.
-			if (announce.IsA(KindNeighbor, StateRemoved) && entry.Kind() == KindRelay) || entry.NextHop.Equal(sender) {
+			// neighbor entry?
+			if entry.Kind() == KindNeighbor {
+				// broadcast entry to counter the removal
+				entry.Pending = true
+				log.Printf("[%s] sender %s: announce = %s,entry = %s", tbl.self, sender, announce, entry)
+				panic("1") // continue
+			}
+			// relay entry:
+
+			// (t,sender,...) <- sender->(t,...)
+			if entry.NextHop.Equal(sender) {
 				// remove relay
 				entry.SetState(StateRemoved)
 				entry.Origin = origin
@@ -697,6 +539,10 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 					})
 				}
 			}
+
+			log.Printf("[%s] sender %s: announce = %s,entry = %s", tbl.self, sender, announce, entry)
+			panic("2")
+
 		} else if entry.Kind() == KindRelay {
 			// relay:
 
@@ -768,6 +614,192 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 	}
 }
 
+//======================================================================
+// Helper methods for message handling
+//======================================================================
+
+// cleanup forward table and flag expired neighbors (and their dependencies)
+// for removal. The actual deletion of the entry in the table happens after
+// the removed entry was broadcasted in a TEAch message.
+func (tbl *ForwardTable) cleanup() {
+	tbl.Lock()
+	defer func() {
+		if Debug {
+			tbl.check("clean-up")
+		}
+		tbl.Unlock()
+	}()
+
+	// remove expired neighbors (and their dependent relays)
+	for _, entry := range tbl.recs {
+		// is entry an active neighbor?
+		if !entry.IsA(KindNeighbor, StateActive) {
+			// no:
+			continue
+		}
+		// has the neighbor expired?
+		if !entry.Origin.Expired(time.Duration(cfg.TTLBeacon) * time.Second) {
+			// no:
+			continue
+		}
+		// notify listener
+		if tbl.listener != nil {
+			tbl.listener(&Event{
+				Type: EvNeighborExpired,
+				Peer: tbl.self,
+				Ref:  entry.Peer,
+			})
+		}
+		// remove neighbor
+		entry.SetState(StateRemoved)
+		entry.Pending = true
+
+		// remove dependent relays
+		for _, fw := range tbl.recs {
+			// only relays where next hop equals neighbor
+			if fw.NextHop.Equal(entry.Peer) {
+				// remove forward
+				fw.SetState(StateRemoved)
+				fw.Pending = true
+				// notify listener we removed a forward
+				if tbl.listener != nil {
+					tbl.listener(&Event{
+						Type: EvRelayRemoved,
+						Peer: tbl.self,
+						Ref:  fw.Peer,
+					})
+				}
+			}
+		}
+	}
+}
+
+// filter returns a bloomfilter from all table entries (PeerID).
+// Remove expired entries first.
+func (tbl *ForwardTable) filter() *data.SaltedBloomFilter {
+	// clean-up first
+	tbl.cleanup()
+
+	// create bloomfilter
+	tbl.Lock()
+	defer tbl.Unlock()
+	salt := RndUInt32()
+	n := len(tbl.recs) + 2
+	fpr := 1. / float64(n)
+	pf := data.NewSaltedBloomFilter(salt, n, fpr)
+
+	// process all table entries
+	for _, entry := range tbl.recs {
+		// skip dormant entries
+		if entry.State() == StateDormant {
+			continue
+		}
+		// add entry to filter
+		pf.Add(entry.Peer.Bytes())
+	}
+	// add ourself to the filter (can't learn about myself from others)
+	pf.Add(tbl.self.Bytes())
+	return pf
+}
+
+//----------------------------------------------------------------------
+
+// Candidate entry for inclusion in a TEAch message
+type candidate struct {
+	e    *Entry // reference to entry
+	kind int    // entry classification (lower value = higher priority)
+}
+
+// Candiates returns a list of table entries that are not filtered out by the
+// bloomfilter contained in the LEArn message.
+// Pending entries (updated but not forwarded yet) are collected if there is
+// space for them in the result list.
+func (tbl *ForwardTable) candidates(m *LEArnMsg) (list []*Forward, counts [4]int) {
+	tbl.Lock()
+	defer func() {
+		if Debug {
+			tbl.check("candidates")
+		}
+		tbl.Unlock()
+	}()
+
+	// collect forwards for response
+	collect := make([]*candidate, 0)
+	for _, entry := range tbl.recs {
+		// new candidate and flag for inclusion
+		cnd := &candidate{entry, -1}
+		add := false
+
+		// add entry if not filtered
+		if !m.Filter.Contains(entry.Peer.Bytes()) {
+			add = true
+			cnd.kind = 0 // unfiltered entry
+		}
+		// don't add dormant entries
+		if entry.State() == StateDormant {
+			add = false
+		} else if entry.State() == StateRemoved {
+			add = true
+			cnd.kind = 1
+			if entry.Kind() == KindRelay {
+				cnd.kind = 2
+			}
+		} else if entry.Pending {
+			// pending entry
+			add = true
+			cnd.kind = 3
+		}
+		// add forward to response if required
+		if add {
+			collect = append(collect, cnd)
+		}
+	}
+	// honor TEAch limit.
+	counts[3] = 0
+	if counts[3] > cfg.MaxTeachs {
+		// sort list by descending kind (primary) and ascending number
+		// of hops (secondary)
+		sort.Slice(collect, func(i, j int) bool {
+			ci := collect[i]
+			cj := collect[j]
+			if ci.kind < cj.kind {
+				return true
+			} else if ci.kind > cj.kind {
+				return false
+			}
+			return ci.e.Hops < cj.e.Hops
+		})
+		// trim list to max. length
+		counts[3] = len(collect) - cfg.MaxTeachs
+		collect = collect[:cfg.MaxTeachs]
+	}
+	// if we have removed relays in our response, remove them
+	// from the forward table. Reset pending flag on entry and
+	// correct for removed meighbors (they are zombified).
+	for _, cnd := range collect {
+		entry := cnd.e
+		forward := entry.Target()
+		if entry.State() == StateRemoved {
+			// tag entry as dormant
+			entry.SetState(StateDormant)
+			counts[0]++
+		} else if entry.Pending {
+			counts[2]++
+		} else {
+			counts[1]++
+		}
+		// no need to broadcast entry again
+		entry.Pending = false
+		// add forward to candidates list
+		list = append(list, forward)
+	}
+	return
+}
+
+//======================================================================
+// Public access methods
+//======================================================================
+
 // Forward returns the peerid of the next hop to target and the number of
 // expected hops along the route.
 func (tbl *ForwardTable) Forward(target *PeerID) (*PeerID, int) {
@@ -780,7 +812,7 @@ func (tbl *ForwardTable) Forward(target *PeerID) (*PeerID, int) {
 			return nil, 0
 		}
 		// return forward information
-		return entry.NextHop, int(entry.Hops) + 1
+		return entry.NextHop.Clone(), int(entry.Hops) + 1
 	}
 	// target not in table
 	return nil, 0
@@ -816,13 +848,15 @@ func (tbl *ForwardTable) Neighbors() (list []*PeerID) {
 	// collect neighbors from the table
 	for _, entry := range tbl.recs {
 		if entry.IsA(KindNeighbor, StateActive) {
-			list = append(list, entry.Peer)
+			list = append(list, entry.Peer.Clone())
 		}
 	}
 	return
 }
 
-//----------------------------------------------------------------------
+//======================================================================
+// Debug helpers
+//======================================================================
 
 // sanity check of forward table in debug mode.
 // (only call from within a locked table instance!)
