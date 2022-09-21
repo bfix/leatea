@@ -269,7 +269,7 @@ func (n *Network) Traffic() (in, out uint64) {
 
 // RoutingTable returns the routing table for the whole
 // network and the average number of hops.
-func (n *Network) RoutingTable() (rt *RoutingTable, numHops, numRoutes int) {
+func (n *Network) RoutingTable() (rt *RoutingTable) {
 	n.lock.RLock()
 	defer n.lock.RUnlock()
 
@@ -284,15 +284,12 @@ func (n *Network) RoutingTable() (rt *RoutingTable, numHops, numRoutes int) {
 	}
 
 	// build routing table
-	numHops, numRoutes = 0, 0
 	for i1, e1 := range rt.List {
 		for i2, e2 := range n.nodes {
 			if i1 == i2 {
 				continue
 			}
 			if next, hops := e1.Node.Forward(e2.Node.PeerID()); hops > 0 {
-				numHops += hops
-				numRoutes++
 				ref := i2
 				if next != nil {
 					ref = rt.Index[next.Key()]
