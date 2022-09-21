@@ -144,7 +144,7 @@ func (f *Forward) String() string {
 	if f == nil {
 		return "{nil forward}"
 	}
-	return fmt.Sprintf("{%s,%d,%08X,%.3f}", f.Peer, f.Hops, f.NextHop, f.Age.Seconds())
+	return fmt.Sprintf("{%s,(%08X),%d,%.3f}", f.Peer, f.NextHop, f.Hops, f.Age.Seconds())
 }
 
 //----------------------------------------------------------------------
@@ -439,6 +439,12 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 		tbl.Unlock()
 	}()
 
+	// skip learnng if no forward table is defined (can happen when a
+	// peer was stopped, but message handling is still running).
+	if tbl.recs == nil {
+		return
+	}
+
 	// process all announcements
 	sender := msg.Sender()
 	now := TimeNow()
@@ -497,11 +503,7 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 			continue
 		}
 		// out-dated announcement?
-		dt := origin.Diff(entry.Origin)
-		if dt < 1 {
-			// yes: ignore old information
-			continue
-		}
+		outdated := (origin.Diff(entry.Origin) < 1)
 
 		// candidate for update: remove pending flag
 		entry.Pending = false
@@ -518,16 +520,20 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 			if entry.State() != StateActive {
 				continue
 			}
+			// drop outdated announcement
+			if outdated {
+				continue
+			}
 			// neighbor entry?
 			if entry.Kind() == KindNeighbor {
 				// broadcast entry to counter the removal
 				entry.Pending = true
-				log.Printf("[%s] sender %s: announce = %s,entry = %s", tbl.self, sender, announce, entry)
-				panic("1") // continue
+				//log.Printf("[%s] D sender %s: announce = %s,entry = %s", tbl.self, sender, announce, entry)
+				continue
 			}
 			// relay entry:
 
-			// (t,sender,...) <- sender->(t,...)
+			// (t,sender,Active,...) <- sender->(t,Removed,...)
 			if entry.NextHop.Equal(sender) {
 				// remove relay
 				entry.SetState(StateRemoved)
@@ -543,24 +549,24 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 						Ref:  entry.Peer,
 					})
 				}
+			} else {
+				//log.Printf("[%s] A sender %s: announce = %s,entry = %s", tbl.self, sender, announce, entry)
+				continue
 			}
-
-			log.Printf("[%s] sender %s: announce = %s,entry = %s", tbl.self, sender, announce, entry)
-			panic("2")
-
 		} else if entry.Kind() == KindRelay {
 			// relay:
 
 			// only update on dormant entry or shorter route
 			evType := 0
 			switch {
-			case announce.Hops+1 < entry.Hops:
+			case announce.Hops+1 < entry.Hops && !outdated:
 				evType = EvShorterRoute
-			case announce.Hops+1 == entry.Hops && !sender.Equal(entry.NextHop):
-				evType = EvRelayUpdated
+			//case announce.Hops+1 == entry.Hops && !sender.Equal(entry.NextHop):
+			//	evType = EvRelayUpdated
 			case entry.State() == StateDormant:
 				evType = EvRelayRevived
 			default:
+				//log.Printf("[%s] C sender %s: announce = %s,entry = %s", tbl.self, sender, announce, entry)
 				continue
 			}
 			// possible loop construction?
@@ -604,6 +610,9 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 					Ref:  entry.Peer,
 				})
 			}
+		} else {
+			// log.Printf("[%s] B sender %s: announce = %s,entry = %s", tbl.self, sender, announce, entry)
+			continue
 		}
 		// notify listener if table entry has changed
 		if changed && tbl.listener != nil {
@@ -805,6 +814,20 @@ func (tbl *ForwardTable) candidates(m *LEArnMsg) (list []*Forward, counts [4]int
 // Public access methods
 //======================================================================
 
+// Start forward table
+func (tbl *ForwardTable) Start() {
+	tbl.Lock()
+	defer tbl.Unlock()
+	tbl.recs = make(map[string]*Entry)
+}
+
+// Stop forward table
+func (tbl *ForwardTable) Stop() {
+	tbl.Lock()
+	defer tbl.Unlock()
+	tbl.recs = nil
+}
+
 // Forward returns the peerid of the next hop to target and the number of
 // expected hops along the route.
 func (tbl *ForwardTable) Forward(target *PeerID) (*PeerID, int) {
@@ -813,7 +836,7 @@ func (tbl *ForwardTable) Forward(target *PeerID) (*PeerID, int) {
 	// lookup entry in table
 	if entry, ok := tbl.recs[target.Key()]; ok {
 		// ignore removed or dormant entries
-		if entry.Hops < 0 {
+		if entry.State() != StateActive {
 			return nil, 0
 		}
 		// return forward information
@@ -829,7 +852,7 @@ func (tbl *ForwardTable) NumForwards() (count int) {
 	defer tbl.Unlock()
 	// count number of active forwards (including neighbors)
 	for _, entry := range tbl.recs {
-		if entry.Hops >= 0 {
+		if entry.State() == StateActive {
 			count++
 		}
 	}
@@ -837,11 +860,14 @@ func (tbl *ForwardTable) NumForwards() (count int) {
 }
 
 // Forwards returns the forward table as list of forward entries.
-func (tbl *ForwardTable) Forwards() (list []*Entry) {
+// Can be filtered to only include active forwards.
+func (tbl *ForwardTable) Forwards(all bool) (list []*Entry) {
 	tbl.Lock()
 	defer tbl.Unlock()
 	for _, entry := range tbl.recs {
-		list = append(list, entry.Clone())
+		if all || entry.State() == StateActive {
+			list = append(list, entry.Clone())
+		}
 	}
 	return
 }
