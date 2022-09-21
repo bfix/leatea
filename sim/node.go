@@ -69,12 +69,12 @@ func (n *SimNode) ID() int {
 
 // ListTable returns a stringiied forward table. PeerIDs for display can be
 // converted by 'cv' first.
-func (n *SimNode) ListTable(cv func(*core.PeerID) string) string {
+func (n *SimNode) ListTable(cv func(*core.PeerID) string, all bool) string {
 	if cv == nil {
 		cv = func(p *core.PeerID) string { return p.String() }
 	}
 	entries := make([]string, 0)
-	for _, e := range n.Forwards() {
+	for _, e := range n.Forwards(all) {
 		s := fmt.Sprintf("{%s,%s,%d,%.3f}", cv(e.Peer), cv(e.NextHop), e.Hops, e.Origin.Age().Seconds())
 		entries = append(entries, s)
 	}
