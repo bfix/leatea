@@ -98,6 +98,9 @@ func (p *PeerID) Bytes() []byte {
 
 // Clone a peer identifier.
 func (p *PeerID) Clone() *PeerID {
+	if p == nil {
+		return nil
+	}
 	data := make([]byte, p.Size())
 	copy(data, p.Data)
 	return &PeerID{
