@@ -79,7 +79,7 @@ func (n *Node) Run(notify Listener) {
 
 		case <-learn.C:
 			// send out our own learn message
-			msg := NewLearnMsg(n.self, n.Filter())
+			msg := n.NewLearn()
 			n.send(msg)
 			// notify listener
 			if notify != nil {
@@ -102,7 +102,9 @@ func (n *Node) Stop() {
 	n.active = false
 
 	// reset routing table
-	n.Reset()
+	n.Lock()
+	defer n.Unlock()
+	n.recs = make(map[string]*Entry)
 }
 
 // IsRunning returns true if the node is active
@@ -129,15 +131,11 @@ func (n *Node) Receive(msg Message) {
 	// LEArn message received
 	//------------------------------------------------------------------
 	case MsgLEArn:
+		// assemble teach message
 		m, _ := msg.(*LEArnMsg)
-		// build a list of candidate entries for teaching:
-		// candidates are not included in the learn filter
-		// and don't have the learner as next hop.
-		candidates, counts := n.Candidates(m)
-		if len(candidates) > 0 {
-			// assemble and send TEACH message
-			outMsg := NewTEAchMsg(n.self, candidates)
-			n.send(outMsg)
+		out, counts := n.Teach(m)
+		if out != nil {
+			n.send(out)
 
 			// notify listener
 			if n.listener != nil {
@@ -145,7 +143,7 @@ func (n *Node) Receive(msg Message) {
 					Type: EvTeaching,
 					Peer: n.self,
 					Ref:  m.Sender(),
-					Val:  []any{outMsg, counts},
+					Val:  []any{out, counts},
 				})
 			}
 		}
