@@ -72,7 +72,7 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 	case sim.EvNodeAdded:
 		if show {
 			val := core.GetVal[[]int](ev)
-			log.Printf("[%s] %04X started as %d (%d running)",
+			log.Printf("[%s] %08X started as %d (%d running)",
 				ev.Peer, ev.Peer.Tag(), val[0], val[1])
 		}
 		redraw = true
@@ -179,9 +179,8 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 			val := core.GetVal[[]any](ev)
 			msg, _ := val[0].(*core.TEAchMsg)
 			counts, _ := val[1].([4]int)
-			numAnnounce := len(msg.Announce)
 			log.Printf("[%d] teaching: %d removed, %d unfiltered, %d pending, %d skipped",
-				hdlr.getID(ev.Peer), counts[0], counts[1], counts[2], counts[3]-numAnnounce)
+				hdlr.getID(ev.Peer), counts[0], counts[1], counts[2], counts[3])
 			announced := make([]string, 0)
 			for _, ann := range msg.Announce {
 				e := &core.Entry{
