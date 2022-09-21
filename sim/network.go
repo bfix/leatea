@@ -51,6 +51,7 @@ type Network struct {
 	trafOut  uint64            // total "send" traffic
 	trafIn   uint64            // total "receive" traffic
 	active   bool              // simulation running?
+	check    bool              // sanity check running?
 	cb       core.Listener     // listener for network events
 }
 
@@ -135,6 +136,7 @@ func (n *Network) Run(cb core.Listener) {
 		}()
 	}
 	// simulate transport layer
+	n.check = false
 	for n.active {
 		// wait for broadcasted message.
 		msg := <-n.queue
@@ -153,6 +155,8 @@ func (n *Network) Run(cb core.Listener) {
 			}
 			n.lock.RUnlock()
 		}
+		// call sanity check (not stacking)
+		go n.sanityCheck()
 	}
 }
 
@@ -265,36 +269,30 @@ func (n *Network) Traffic() (in, out uint64) {
 
 // RoutingTable returns the routing table for the whole
 // network and the average number of hops.
-func (n *Network) RoutingTable() (*RoutingTable, float64) {
+func (n *Network) RoutingTable() (rt *RoutingTable, numHops, numRoutes int) {
 	n.lock.RLock()
 	defer n.lock.RUnlock()
 
-	// create new routing table and graph
-	rt := NewRoutingTable()
+	// create new routing table
+	rt = NewRoutingTable()
 
 	// add nodes to routing table
 	for i, node := range n.nodes {
-		rt.AddNode(i, node)
+		if node.IsRunning() {
+			rt.AddNode(i, node)
+		}
 	}
 
-	// build routing table and graph
-	allHops := 0
-	numRoute := 0
-
-	for i1, node1 := range n.nodes {
-		if !node1.IsRunning() {
-			continue
-		}
-		for i2, node2 := range n.nodes {
-			if !node2.IsRunning() {
-				continue
-			}
+	// build routing table
+	numHops, numRoutes = 0, 0
+	for i1, e1 := range rt.List {
+		for i2, e2 := range n.nodes {
 			if i1 == i2 {
 				continue
 			}
-			if next, hops := node1.Forward(node2.PeerID()); hops > 0 {
-				allHops += hops
-				numRoute++
+			if next, hops := e1.Node.Forward(e2.Node.PeerID()); hops > 0 {
+				numHops += hops
+				numRoutes++
 				ref := i2
 				if next != nil {
 					ref = rt.Index[next.Key()]
@@ -303,8 +301,7 @@ func (n *Network) RoutingTable() (*RoutingTable, float64) {
 			}
 		}
 	}
-	// return results
-	return rt, float64(allHops) / float64(numRoute)
+	return
 }
 
 // Render the network directly.
@@ -344,4 +341,11 @@ func (n *Network) Render(c Canvas) {
 	}
 	// draw environment
 	n.env.Draw(c)
+}
+
+func (n *Network) sanityCheck() {
+	if n.check {
+		return
+	}
+	n.check = false
 }
