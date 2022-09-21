@@ -190,6 +190,8 @@ func analyzeBroken() {
 		bestRoute        []int
 	)
 	log.Println("  * inspect longest broken route:")
+	count := 0
+	probs := make(map[int]int)
 	for _, from := range dump.Nodes {
 		if !from.Running {
 			continue
@@ -201,6 +203,10 @@ func analyzeBroken() {
 			hops, route := route(from, to)
 			//log.Printf("%d -> %d: %v", from.ID, to.ID, route)
 			if hops == 0 {
+				count++
+				idx := route[len(route)-1]
+				v := probs[idx]
+				probs[idx] = v + 1
 				if len(route) > bestHops {
 					bestHops = len(route)
 					bestRoute = route
@@ -210,8 +216,14 @@ func analyzeBroken() {
 			}
 		}
 	}
+	log.Printf("%d routes are broken:", count)
+	for idx, count := range probs {
+		node := index[idx]
+		log.Printf("  %d -- %v (%d): %d entries", idx, node.Running, count, len(node.Tbl))
+	}
+
 	// show route
-	log.Printf("Broken route %d -> %d: %v", bestFrom.ID, bestTo.ID, bestRoute)
+	log.Printf("Broken route %d (%v) -> %d (%v): %v", bestFrom.ID, bestFrom.Running, bestTo.ID, bestTo.Running, bestRoute)
 	last := bestRoute[len(bestRoute)-1]
 	node := index[last]
 	log.Printf("Break at %d: Tbl = %s", last, listForwards(last))
