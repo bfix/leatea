@@ -424,6 +424,11 @@ func (tbl *ForwardTable) AddNeighbor(node *PeerID) {
 	}
 }
 
+// NewLearn creates a new LEArn message from current table
+func (tbl *ForwardTable) NewLearn() *LEArnMsg {
+	return NewLearnMsg(tbl.self, tbl.filter())
+}
+
 // Learn from announcements in a TEAch message
 func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 	tbl.Lock()
