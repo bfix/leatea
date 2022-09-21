@@ -66,6 +66,9 @@ func (n *Node) Run(notify Listener) {
 	// remember listener for events
 	n.listener = notify
 
+	// start forward table
+	n.ForwardTable.Start()
+
 	// broadcast LEARN message periodically
 	learn := time.NewTicker(time.Duration(cfg.LearnIntv) * time.Second)
 	beacon := time.NewTicker(time.Duration(cfg.BeaconIntv) * time.Second)
@@ -102,9 +105,7 @@ func (n *Node) Stop() {
 	n.active = false
 
 	// reset routing table
-	n.Lock()
-	defer n.Unlock()
-	n.recs = make(map[string]*Entry)
+	n.ForwardTable.Stop()
 }
 
 // IsRunning returns true if the node is active
