@@ -173,7 +173,7 @@ func (n *Network) DumpRouting(fname string) {
 	}
 	for _, node := range nodes {
 		fw := make([]*DumpEntry, 0)
-		for _, entry := range node.Forwards() {
+		for _, entry := range node.Forwards(false) {
 			_, peer := n.getNode(entry.Peer)
 			_, next := n.getNode(entry.NextHop)
 			de := &DumpEntry{
