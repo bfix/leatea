@@ -38,7 +38,6 @@ var (
 	netw   *sim.Network      // Network instance
 	redraw bool              // graph modified?
 	rt     *sim.RoutingTable // compiled routing table
-	hops   float64           // avg. number of hops in routing table
 	routes [][]int           // list of routes
 	csv    *os.File          // statistics output
 	evHdlr *EventHandler     // event handler
@@ -227,8 +226,8 @@ func run(env sim.Environment) {
 					}
 
 					// show status
-					rt, hops = netw.RoutingTable()
-					loops, broken, _ := status(epoch, rt, hops)
+					rt = netw.RoutingTable()
+					loops, broken, _ := status(epoch, rt)
 					if loops > 0 && sim.Cfg.Options.StopOnLoop {
 						log.Printf("Stopped on detected loop(s)")
 						active = false
@@ -265,8 +264,8 @@ func run(env sim.Environment) {
 	out := float64(trafOut) / float64(sim.Cfg.Env.NumNodes)
 	log.Printf("Avg. traffic per node: %s in / %s out", sim.Scale(in), sim.Scale(out))
 	log.Println("Network routing table constructed - checking routes:")
-	rt, hops = netw.RoutingTable()
-	status(epoch, rt, hops)
+	rt = netw.RoutingTable()
+	status(epoch, rt)
 
 	// dump routing on demand
 	if len(sim.Cfg.Options.TableDump) > 0 {
@@ -277,11 +276,11 @@ func run(env sim.Environment) {
 // ----------------------------------------------------------------------
 // Print status information on routing table (and optional on graph)
 // Follow all routes; detect cycles and broken routes
-func status(epoch int, rt *sim.RoutingTable, allHops1 float64) (loops, broken, success int) {
+func status(epoch int, rt *sim.RoutingTable) (loops, broken, success int) {
 	var totalHops int
 	loops, broken, success, totalHops = rt.Status()
 	num, started, stopPending := netw.Stats()
-	total := loops + broken + success // num * (num - 1)
+	total := num * (num - 1)
 	if total > 0 {
 		// log statistics to console
 		perc := func(n int) float64 {
