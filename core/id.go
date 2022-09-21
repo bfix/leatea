@@ -96,6 +96,15 @@ func (p *PeerID) Bytes() []byte {
 	return Clone(p.Data)
 }
 
+// Clone a peer identifier.
+func (p *PeerID) Clone() *PeerID {
+	data := make([]byte, p.Size())
+	copy(data, p.Data)
+	return &PeerID{
+		Data: data,
+	}
+}
+
 //----------------------------------------------------------------------
 
 // PeerPrivate is the binary representation of the long-term signing key
