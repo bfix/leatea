@@ -26,9 +26,12 @@ import (
 	"leatea/sim"
 	"log"
 	"strings"
+	"sync"
 )
 
 type EventHandler struct {
+	sync.Mutex
+
 	changed bool
 	getID   func(*core.PeerID) int
 }
@@ -41,6 +44,9 @@ func NewEventHandler(getID func(*core.PeerID) int) *EventHandler {
 }
 
 func (hdlr *EventHandler) Changed() bool {
+	hdlr.Lock()
+	defer hdlr.Unlock()
+
 	rc := hdlr.changed
 	hdlr.changed = false
 	return rc
@@ -54,6 +60,9 @@ func (hdlr *EventHandler) printEntry(f *core.Entry) string {
 
 //nolint:gocyclo // life is complex sometimes...
 func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
+	hdlr.Lock()
+	defer hdlr.Unlock()
+
 	// check if event is to be displayed.
 	show := false
 	for _, t := range sim.Cfg.Options.Events {
