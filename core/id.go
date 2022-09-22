@@ -61,6 +61,9 @@ func (p *PeerID) Tag() uint32 {
 
 // Key returns a string used for map operations
 func (p *PeerID) Key() string {
+	if p == nil {
+		return ""
+	}
 	if len(p.str64) == 0 {
 		p.str64 = base64.StdEncoding.EncodeToString(p.Data)
 	}
