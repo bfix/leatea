@@ -61,8 +61,8 @@ func (n *Node) send(msg Message) {
 	}()
 }
 
-// Run the node (with periodic tasks and message handling)
-func (n *Node) Run(notify Listener) {
+// Start the node (with periodic tasks and message handling)
+func (n *Node) Start(notify Listener) {
 	// remember listener for events
 	n.listener = notify
 
@@ -102,10 +102,12 @@ func (n *Node) Run(notify Listener) {
 
 // Stop a running node
 func (n *Node) Stop() {
-	n.active = false
+	n.Lock()
+	defer n.Unlock()
 
-	// reset routing table
-	n.ForwardTable.Stop()
+	// flag as removed
+	n.active = false
+	n.ForwardTable.Stop(true)
 }
 
 // IsRunning returns true if the node is active
@@ -115,6 +117,10 @@ func (n *Node) IsRunning() bool {
 
 // Receive handles an incoming message
 func (n *Node) Receive(msg Message) {
+	// stop receiving messages on a non-running node
+	if !n.active {
+		return
+	}
 	// add the sender as direct neighbor to the
 	// forward table.
 	sender := msg.Sender()
