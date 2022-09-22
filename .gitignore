@@ -1,7 +1,12 @@
 /.vscode/
 /rt/
 /work/
-/doc/
+/doc/rfc
+/doc/work
+/doc/paper/*.aux
+/doc/paper/*.log
+/doc/paper/*.pdf
+/doc/paper/*.synctex.gz
 /liti
 /analyze
 /config.json

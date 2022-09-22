@@ -1,0 +1,645 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb}
+\usepackage{tipa}
+\usepackage{cancel}
+\usepackage{tikz}
+\usetikzlibrary{arrows}
+
+\title{LEArn/TEAch Routing Algorithm for Ad-hoc Networks}
+\author{Bernd Fix}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This document contains the technical specification for the LEArn/
+TEAch routing algorithm ("LeaTea" for short; pronounced /\textipa{li:ti:}/).
+It is designed for ad-hoc networks, where peers are connected through
+wireless technology with neighbors in their vincinity (defined by the
+reach of the built-in sender/receiver).  Given a required density of
+nodes (depending on the reach), the resulting network can span a
+large area.  The LeaTea network is fully decentralized with no
+coordinating authority in between.  Peers communicate directly with
+other peers (even outside the reach of their device) over a
+self-organizing routing protocol.
+\end{abstract}
+
+\section{Introduction}
+
+\paragraph{}
+Efficient routing in ad-hoc networks is an on-going challenge due to
+their decentralized nature. On the internet the routing problem is
+`solved' through hierarchical, centralized structures both on the
+physical level (cables, backbones and routers) and logical level
+(assigning identifiers like IP addresses, resolving human-memorable
+names to identifiers and managing routes). A participating node
+does not need to know much about the overall topology of the network;
+it is sufficient it knows how to get an identifier from the next-level
+authority and where to forward messages to other nodes (gateways).
+
+\paragraph{}
+The drawback is that a node on the internet is dependent on the good
+will of any actor that is involved in this process. The messages that
+a node can send or receive to any other node may be restricted by
+explicit intervention (censorship) or simple mistake (faulty BGP) by
+actors. It is estimated that around 33\% of the internet is
+literally `invisible' to any node at any time. Since the internet
+is not only locally `controlled' by state actors but also on a global
+scale by commercially-oriented entities with their own objectives,
+it can become difficult for nodes to establish connections to other
+nodes of its own choosing.
+
+\paragraph{}
+Of course a few of these issues are due to the fact that the internet
+is really, really large these days. Ad-hoc networks are currently
+used on a much smaller scale and usually on a temporary basis. But
+routing without authorities in a self-organizing, self-healing way
+is still an issue.
+
+\section{Terminology}
+
+\paragraph{Peer:}
+      A node that is participating in the ad-hoc network. It has a
+      globally-unique identifier (PeerID)\footnote{A simple and easy
+      way to create globally-unique PeerIDs is to generate a
+      long-term EdDSA key pair for the peer on first start-up
+      and to use the public EdDSA key as the PeerID.  Signatures
+      are likely required by applications build on the routing
+      algorithm anway.}. $self$ denotes the identifier of a peer
+      (self-reference) in algorithms.
+      
+\paragraph{Ad-hoc network:}
+      In an ad-hoc network, all peers communicate by
+      sending and receiving messages over wireless interfaces like
+      802.11n or Bluetooth with other peers in their vincinity using
+      broadcasts.  With a routing algorithm for such ad-hoc networks,
+      peers can exchange messages even with remote peers that can not be
+      reached directly.
+
+\paragraph{Routing:}
+      Routing is the process of delivering a message from sender
+      to recipient if they can not reach each other directly.  In ad-hoc
+      networks no centralized authority exists to steer the routing.
+      Since the network is also dynamic (peers can join and leave any
+      time) and resource-limited, no peer in the network can have
+      perfect knowledge of all possible routes to targets at any given
+      point in time.
+
+\paragraph{Neighbor:}
+      A neighbor of a peer can exchange messages directly with
+      the peer.
+
+\paragraph{Forward table}
+      A list of forward entries locally maintained by a
+      peer that is utilized in forwarding messages to a destination.
+      
+\paragraph{Forward entry:}
+      An element of a forward table that holds information
+      about a target peer, the next hop on the route, the expected
+      number of hops to reach the target and the age\footnote{The
+      node stores an absolute timestamp in the entry; if the entry is
+      send to other peers, the age is computed at the time the
+      message was sent. Communicating ages instead of timestamps
+      does not required a synchronized time across the nodes in the network.
+      The delay between sending and receiving the message is ignored.}
+      of the entry.  The information is used by a peer to forward a
+      message to the next hop. For more details see \ref{sec:forward}.
+
+\section{Forward table}
+
+\paragraph{}
+The LeaTea routing algorithm is based on forward tables; each node in
+the network maintains its own table.  A forward table is a list of
+forward entries; each forward entry holds (among other) information
+about a target peer, the next hop on the route, the expected number
+of hops to reach the target and the age\footnotemark[\value{footnote}]
+of the entry.
+
+\paragraph{}
+If a peer wants to send a higher-level message to a target, it looks
+up the matching entry in the forward table and sends the message to
+the next hop which must be is one of its neighbors so the message
+can be send directly.  The neighbor than applies the same forwarding
+process with its own table; the forwarding is repeated until the
+target is reached.
+
+\paragraph{}
+Forward tables are an efficient instrument for peers to route to any
+other peer without having to know about all the other peer
+connections that may exist in the network.  But this has also a
+drawback: if some remote node is disappearing which was essential for
+a route to a target, that information would not be immediatly
+available in the local forward table.  This can lead to broken routes
+(and even routing cycles) on some of the routes a peer may want to
+utilize.
+
+\paragraph{}
+So the challenge for any routing algorithm based on forward tables is
+to update local forward tables fast and reliable.  The LeaTea routing
+algorithm uses two control messages for that purpose: A LEARN message
+and a TEACH message. Control messages are only exchanged with neighbors;
+they do not propagate through the network as such. What is propagated
+from neighbors to neighbor is the knowledge about routes. Each peer
+(based on the state of its ow forward table) decides which information
+to share with its neighbors - or to ask for new knowledge.
+
+\paragraph{}
+In an ad-hoc network information can only travel at limited speed
+through the network.  The limiting factor is the bandwidth available
+to a peer for sending and receiving messages.  Better forward tables
+on all nodes require better bandwidth all over the network.
+
+\paragraph{}
+As the name suggests the routing is based on learning from and
+teaching to other peers that are directly connected (its neighbors).
+he design of the algorithm is described in this document. The main
+purpose of the routing algorithm is to distribute knowledge
+about routes through the network to all participating nodes. The better
+this knowledge distribution works, the better are the routes available
+in a local forward table.
+
+\subsection{Forward entry}
+\label{sec:forward}
+
+\paragraph{}
+A forward entry holds the following information:
+
+\paragraph{Target}
+      A peer identifier of the route destination (PeerID).
+
+\paragraph{Next}
+      A peer indentifier of the next hop on the route from
+      the local node to the destination. If the next hop is
+      empty, the target peer is a direct neighbor of the local
+      node. If the next hop in a forward table is set, it must
+      be one of the neighbors of the local node.
+
+\paragraph{Hops}
+      The number of hops the local forward table expects for a
+      message until it reaches the destination. A neighbor has
+      a hop count of 0, all active forwards have a hop count
+      greater than 0. The value of hop count of an entry can be
+      negative to denote a removal or dormant status (see section
+      \ref{sec:removal} for details)
+
+\paragraph{Origin}
+      The timestamp (local time) when the originating entry was
+      created. The originating entry is created by a remote peer
+      when it detects a change in the status of a neighboring peer
+      (see \ref{sec:origin} for details).
+
+\paragraph{Pending}
+      An entry is marked pending if it has been changed or added
+      to the table but that information was not broadcasted to
+      neighbors yet. The pending flag is used to decide if an entry
+      is included in a TEACH message.
+
+\paragraph{}
+A forward in the table is unique with respect to the target
+peer; only one (or none) forward exists for each possible target.
+Throughout this document the notation
+$(target,next,hop,origin,pending)$ will be used to denote forwards.
+
+\paragraph{}
+There are two $kind$ of forwards:
+\begin{itemize}
+ \item \textbf{Neighbor}: A forward for a direct neighbor of
+ the local peer. It must have an empty next hop and a hop count of
+ 0 to denote an active neighbor. If a neighbor is disappearing,
+ the hop count  is set to -2 to indicate a removed neighbor (see
+ \ref{sec:removal} for more details. Once the removal of a neighbor
+ has been broadcasted  to the network, the hop count of a  removed
+ neighbor is set to -3  to indicate a dormant neighbor.
+ Dormant neighbors are never removed from the forward table, but
+ they will be resurrected once the neighbor reappears.
+ \item \textbf{Relay}: A relay can only be learned from
+ TEACH messages (see \ref{sec:teach} for details). The next hop is
+ the peer the forward was learned from and the hop count represents
+ the expected number of hops to reach the target. It is increased by
+ one each time it is learned by a peer from a teacher.
+\end{itemize}
+
+\paragraph{}
+Forwards can be in three different $state$s:
+\begin{itemize}
+ \item \textbf{Active}: An active forward is used for message routing.
+ Active neighbors have a hop count of 0; active relays have a hop
+ count greater than 0 (representing the expected number of hops to
+ reach the target).
+ \item \textbf{Removed}: A forward can be flagged ``removed'' either
+ because a neighbor disappears or the removal was learned from a
+ TEACH message.
+ \item \textbf{Dormant}; A dormant forward is a removed forward that
+ was broadcasted in a TEACH message. Dormant forwards can be resurrected
+ either by receiving a BEACON message (neighbor) or by learning a
+ forward from a TEACH message (relay).
+\end{itemize}
+
+\subsubsection{Originating entry}
+\label{sec:origin}
+
+\paragraph{}
+The origin of all forward entries are neighbor entries (on a possibly
+remote peer). They are added or updated each time they are detected
+(see \ref{sec:beacon}) and their origin timestamp is the time of
+detection. If a peer announces (see \ref{sec:teach}) its neighbor,
+a receiving peer might create a relay entry for the foreign neigbor.
+If this relay is announced it might lead to derived relays (with
+increased hop count) in other peers. Relays preserve the timestamp
+of the originating (neighbor) entry. The origin timestamp is used
+to evaluate if a learnable forward is better than the existing entry.
+
+\section{Message handling}
+
+\paragraph{}
+Each peer exchanges messages with all neighbors to signal its
+presence (BEACON message), a request to learn about new routes
+(LEARN message) and a message with entries from its forward
+table that may be useful to neighbors (TEACH message). PACKET
+messages between peers (that are routed to their destination).
+All messages share a common header.
+
+\subsubsection{Message header}
+
+\paragraph{Type}
+      = BEACON $|$ LEARN $|$ TEACH $|$ PACKET
+
+\paragraph{Sender}
+      The peer identifier of the sender of the message.
+
+\subsection{BEACON message}
+\label{sec:beacon}
+
+\paragraph{}
+A Beacon message only contains the message header and no additional
+data. It is sent periodically (e.g. every second) to signal its
+presence to its neighbors. No response is expected or needed.
+
+\paragraph{}
+If a neighbor does not send a beacon within a defined period of
+time (e.g. five seconds), the entry is tagged as ``removed''.
+In both cases the entry is marked as pending and will be send
+in one of the next TEACH messages.
+
+\subsubsection{Message handling}
+
+\paragraph{}
+When a peer receives a beacon message from one of its neighbors (the
+sender), it adds the entry $(sender,-,0,now,now,true)$ to the table,
+replacing any existing entry for the sender.
+
+\subsection{LEARN message}
+
+\paragraph{}
+Each peer sends out LEARN messages periodically (e.g. every 10 seconds)
+to its neighbors. With a LEARN message a peer signals ``This is what I
+already know and I want to learn more''. The ``What I already know''
+part is basically the forward table of the peer. Since the size of a
+forward table can get large in a network with many nodes, it is not
+suitable to be send in messages directly.
+
+\paragraph{}
+LeaTea uses salted bloomfilters\footnote{see section \ref{sec:bloom}
+for technical details about bloomfilters} to communicate the
+`what I know'' information to its neighbors. It traverses its forward
+table and decides which entries are considered ``known \& good''. The
+PeerID of such entries is added to the bloomfilter; the PeerID of the
+sending peer is also included.
+
+\paragraph{}
+The bloomfilter is salted with a random number for each LEARN message.
+As bloomfilters can lead to false-positives (a PeerID is filtered out
+even if it is in fact not included in the filter), a salted bloomfilter
+will have different false-positives for each salt; ``mistakes'' are
+``corrected'' the next time a LEARN message is sent.
+
+\subsubsection{Message format}
+
+\paragraph{}
+A LEARN message contains the message header and a bloomfilter
+representing the current state of the forward table (what targets
+are known to the peer).
+
+\subsubsection{Sending a LEARN message}
+
+\paragraph{}
+The bloomfilter for the message is created using the following steps:
+\begin{enumerate}
+  \item Create a new bloomfilter with a random salt. The size of the
+  bloomfilter is based on the total number of entries in the forward
+  table. Implementations may cap the list to fit into a transport
+  message.
+  \item Add the target of entries from the forward table to the
+  bloomfilter if the entry is not in dormant state.
+  \item Add ourself to the filter
+\end{enumerate}
+Algorithm \ref{alg:make_learn} illustrates the process.
+
+\subsubsection{Receiving a LEARN message}
+
+\paragraph{}
+Upon receiving a LEARN message, peers could reply with a TEACH
+message if they have new information about targets to convey to
+a LEARN sender. If no new information is available, no TEACH message
+is sent. Sending TEACH messages is described in section
+\ref{sec:teach}.
+
+\subsection{TEACH message}\label{sec:teach}
+
+\paragraph{}
+A TEACH message can be considered a response to a LEARN message; it
+is send by a peer if its forward table contain entries not filtered-out
+by the LEARN message. It contains a list of forward announcements; a
+forward announcement has the same attributes as a forward entry in the
+forward table with one exception: Instead of the timestamp of its
+origin, the forward announcement uses the $age$ of the forward at the
+time the message is sent. It is important that $age$ is expressed as
+a relative time instead of an absolute time\footnote{As mentioned
+earlier there is no synchronized time across the peers in an ad-hoc
+network. Only relative times can be communicated.}. Forward announcements
+have the same $kind$ and $state$ values as forward entries\footnote{Except for the $dormant$ state that never occurs in announcements}.
+
+\subsubsection{Message format}
+
+\paragraph{}
+A TEACH message contains a list of forward announcements $[a_i]$;
+a forward announcement is denoted as $(t,n,h,a)$ referencing the
+target peer, next hop, hop count and age.
+
+\subsubsection{Sending a TEACH message}
+
+\paragraph{}
+The list of announcements is build by first building a list of
+forward candidates from the forward table. A candidate must
+either be
+
+\begin{itemize}
+  \item an unfiltered forward $\rightarrow k=0$
+  \item a removed neighbor $\rightarrow k=1$
+  \item a removed relay $\rightarrow k=2$
+  \item a pending forward (after recent change) $\rightarrow k=3$
+\end{itemize}
+
+Note that dormant forwards are never included in a TEACH message.
+
+\paragraph{}
+The list of candidates is sorted by $k$ (primary) and hop count
+(secondary). If the list is longer than a defined maximum\footnote{
+The number of forward announcements in a TEACH message is probably
+limited by the transport mechanism, e.g. the maximum transport unit
+(MTU) of a message.} it is trimmed at the end. The candidates are
+than used to build the announcement list; included forwards may
+have their status changed. The algorithm \ref{alg:announce}
+illustrates the process.
+
+\subsubsection{Receiving a TEACH message}
+
+\paragraph{}
+An important fact is that a TEACH message is not only received by
+a LEARN sender but any neighbor of the teaching peer. This way peers
+can learn new routing information even if they have not explicitly
+asked for knowledge by sending a LEARN message.
+
+\paragraph{}
+A peer receiving a TEACH message iterates over the forward
+announcements in the message. An announcement $a_i = (t,n,h,a)$ is
+discarded if the target is the peer itself; otherwise the
+corresponding forward in the local forward table is inspected
+\footnote{In the following descriptions the symbol $\hookleftarrow$
+denotes \textit{continue with next announcement}}:
+
+\paragraph{No forward found:}
+\begin{enumerate}
+  \item If $a_i$ is a removed relay, the announcement is discarded.
+  $\hookleftarrow$
+  \item If the annoncement is removed neighbor, it is directly added
+  to the forward table. The $Origin$ timestamp is recalculated
+  from the the $age$ of the announcement. $\hookleftarrow$
+  \item If the announcement is in \textit{active} state, it is added
+  as a new forward $e = (a_i.t,sender,a_i.h+1,a_i.a,now,true)$ to the
+  forward table. $\hookleftarrow$
+\end{enumerate}
+
+\paragraph{Forward $e_j$ found:}
+If $e_j$ is in \textit{removed state}, the announcement is discarded.
+Otherwise $e_j$ is not considered \textit{pending} (if it was before).
+
+\subparagraph{$a_i$ is in \textit{removed state}:}
+\begin{enumerate}
+  \item \textbf{$e_j$ is not \textit{active}}: $\hookleftarrow$
+  \item \textbf{$a_j$ is older\footnote{To allow for latencies in
+  transmission and processing of messages it is recommended to define
+  \textit{older} as $a_i.a - e_j.a < \varepsilon$ with $\varepsilon$
+  e.g. one second.} than $e_j$}:  $\hookleftarrow$
+  \item \textbf{$e_j$ is a neighbor}: Flag $e_j$ as pending.
+  $\hookleftarrow$
+  \item \textbf{$e_j.n$ = sender}: Flag $e_j$ as \textit{removed}.
+  $\hookleftarrow$
+\end{enumerate}
+
+\subparagraph{Forward $e_j$ is a \textit{relay}:}
+If $e_j$ is dormant or a newer announcemnt proposes a shorter route,
+$e_j$ is a candidate for update. To prevent loops between two peers,
+it must also be checked if $(e_j.n = sender \,\wedge\, a_i.n = self)$
+holds true; if so the announcement is discarded. Otherwise the forward
+in the table is updated as $(t,sender,a_i.h+1,a_i.a,now,true)$.
+$\hookleftarrow$
+
+\subparagraph{Forward $e_j$ is a \textit{dormant neighbor}:}
+The forward in the table is updated as
+$(t,sender,a_i.h+1,a_i.a,now,true)$. $\hookleftarrow$
+
+\section{Removing forward entries}
+
+\paragraph{}
+If a peer has been active on the network for at least some time, it
+was detected by its neighbors and added to their respective forward
+tables.  The information about the peer is propagated through the
+network so that remote peers can learn about it too.
+
+\paragraph{}
+If a peer disappears for some reason, only its former neighbors can
+detect that the peer is no longer available.  LeaTea does not rely on
+a "sign-off" message from the peer to its neighbors but detects a
+lost peer by looking at the age of the corresponding entry in the
+forward table: If the peer was a neighbor and the entry age exceeds a
+defined limit, the peer is considered lost.  The age for the entry is
+reset (re-born) if the peer reappears later.
+
+\paragraph{}
+To understand what happens when a neighboring peer
+disappears, consider a simple route from peer 1 to peer 4 via peers 2
+and 3.  The relevant entries in the forward table are also shown; "T"
+is the destination (target) peer, "N" is the next hop, "H" the number
+of hops and "O" is the timestamp of the entry (defining its age):
+
+\vspace{0.8cm}
+\begin{tikzpicture}
+
+  \tikzstyle{peer} = [
+    rectangle,
+    minimum width=1cm,
+    minimum height=0.6cm,
+    text centered,
+    text width=2.6cm,
+    draw=black
+  ]
+
+  \tikzstyle{arrow} = [thick,->,>=stealth]
+  
+  \node (p1) [peer] {
+    Peer 1 \\
+    .
+    \begin{tabular}{c c c c}
+    \hline
+    T & N & H & O \\
+    \hline
+     2 & 0 & 0 & 1 \\
+     3 & 2 & 1 & 3 \\
+     4 & 2 & 2 & 5
+    \end{tabular}
+  };
+  \node (p2) [peer, right of=p1, xshift=2.6cm] {
+    Peer 2 \\
+    .
+    \begin{tabular}{c c c c}
+    \hline
+    T & N & H & O \\
+    \hline
+    3 & 0 & 0 & 2 \\
+    4 & 3 & 1 & 4
+    \end{tabular}
+  };
+  \node (p3) [peer, text width=1.5cm, right of=p2, xshift=2cm] {Peer 3};
+  \node (p4) [peer, text width=1.5cm, right of=p3, xshift=1.3cm] {Peer 4};
+
+  \draw [arrow] (p1) -- (p2);
+  \draw [arrow] (p2) -- (p3);
+  \draw [arrow] (p3) -- (p4);
+  
+\end{tikzpicture}
+
+\paragraph{}
+If peer 3 disappears at $T=7$, this is detected by its neighboring peer
+2.  Peer 2 updates its forward table based on the removal of peer 3
+according to the following rules:
+\begin{enumerate}
+ \item The neighbor entry for peer 3 is updated: The hop count is set
+ to -2 (indicating a removed neighbor) and the $Origin$ timestamp is set
+ to the current time.
+ \item  Any relay entry that has peer 3 as its next hop is updated: The
+ hop count is set to -1 (indicating a removed relay) and the $Origin$ timestamp is set to the current time.
+\end{enumerate}
+
+\paragraph{}
+After updating the forward table of peer 2 we have:
+
+\vspace{0.8cm}
+\begin{tikzpicture}
+
+  \tikzstyle{peer} = [
+    rectangle,
+    minimum width=1cm,
+    minimum height=0.6cm,
+    text centered,
+    text width=2.6cm,
+    draw=black
+  ]
+
+  \tikzstyle{arrow} = [thick,->,>=stealth]
+  
+  \node (p1) [peer] {
+    Peer 1 \\
+    .
+    \begin{tabular}{c c c c}
+    \hline
+    T & N & H & O \\
+    \hline
+     2 & 0 & 0 & 1 \\
+     3 & 2 & 1 & 3 \\
+     4 & 2 & 2 & 5
+    \end{tabular}
+  };
+  \node (p2) [peer, right of=p1, xshift=2.6cm] {
+    Peer 2 \\
+    .
+    \begin{tabular}{c c c c}
+    \hline
+    T & N & H & O \\
+    \hline
+    3 & 0 & -2 & 7 \\
+    4 & 3 & -1 & 7
+    \end{tabular}
+  };
+  \node (p3) [peer, text width=1.5cm, right of=p2, xshift=2cm] {\xcancel{Peer 3}};
+  \node (p4) [peer, text width=1.5cm, right of=p3, xshift=1.3cm] {Peer 4};
+
+  \draw [arrow] (p1) -- (p2);
+  \draw [arrow] (p2) -- (p3);
+  \draw [arrow] (p3) -- (p4);
+  
+\end{tikzpicture}
+
+\paragraph{}
+When peer 2 sends its next TEACH message at $T=9$, it will include
+removed entries (as indicated by the hop count) even if they are
+filtered out by the LEARN message.  A removed entry included in the
+TEACH message is updated in the forward table as described earlier.
+
+\paragraph{}
+The TEACH message from peer 2 is received by peer 1.  Peer 1 iterates
+over all entries in the message (announcements) and updates forwards
+as described earlier. After updating the forward table of peer 1 we
+have:
+
+\vspace{0.8cm}
+\begin{tikzpicture}
+
+  \tikzstyle{peer} = [
+    rectangle,
+    minimum width=1cm,
+    minimum height=0.6cm,
+    text centered,
+    text width=2.6cm,
+    draw=black
+  ]
+
+  \tikzstyle{arrow} = [thick,->,>=stealth]
+  
+  \node (p1) [peer] {
+    Peer 1 \\
+    .
+    \begin{tabular}{c c c c}
+    \hline
+    T & N & H & O \\
+    \hline
+     2 & 0 & 0 & 1 \\
+     3 & 2 & -1 & 7 \\
+     4 & 2 & -1 & 7
+    \end{tabular}
+  };
+  \node (p2) [peer, right of=p1, xshift=2.6cm] {
+    Peer 2 \\
+    .
+    \begin{tabular}{c c c c}
+    \hline
+    T & N & H & O \\
+    \hline
+    3 & 0 & -2 & 7 \\
+    4 & 3 & -1 & 7
+    \end{tabular}
+  };
+  \node (p3) [peer, text width=1.5cm, right of=p2, xshift=2cm] {\xcancel{Peer 3}};
+  \node (p4) [peer, text width=1.5cm, right of=p3, xshift=1.3cm] {Peer 4};
+
+  \draw [arrow] (p1) -- (p2);
+  \draw [arrow] (p2) -- (p3);
+  \draw [arrow] (p3) -- (p4);
+  
+\end{tikzpicture}
+
+
+
+\end{document}
