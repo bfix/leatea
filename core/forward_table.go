@@ -439,12 +439,6 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 		tbl.Unlock()
 	}()
 
-	// skip learnng if no forward table is defined (can happen when a
-	// peer was stopped, but message handling is still running).
-	if tbl.recs == nil {
-		return
-	}
-
 	// process all announcements
 	sender := msg.Sender()
 	now := TimeNow()
@@ -770,7 +764,7 @@ func (tbl *ForwardTable) candidates(m *LEArnMsg) (list []*Forward, counts [4]int
 	}
 	// honor TEAch limit.
 	counts[3] = 0
-	if counts[3] > cfg.MaxTeachs {
+	if len(collect) > cfg.MaxTeachs {
 		// sort list by descending kind (primary) and ascending number
 		// of hops (secondary)
 		sort.Slice(collect, func(i, j int) bool {
@@ -821,10 +815,15 @@ func (tbl *ForwardTable) Start() {
 	tbl.recs = make(map[string]*Entry)
 }
 
-// Stop forward table
-func (tbl *ForwardTable) Stop() {
-	tbl.Lock()
-	defer tbl.Unlock()
+// Stop forward table:
+// 'isLocked' indicates that the call is executed in a locked state;
+// the caller is responsible for setting the flag correctly to avoid
+// dead-locks.
+func (tbl *ForwardTable) Stop(isLocked bool) {
+	if !isLocked {
+		tbl.TryLock()
+		defer tbl.Unlock()
+	}
 	tbl.recs = nil
 }
 
