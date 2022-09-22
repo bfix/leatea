@@ -52,10 +52,10 @@ func NewSimNode(prv *core.PeerPrivate, out chan core.Message, pos *Position, r2 
 	}
 }
 
-// Run the node
-func (n *SimNode) Run(cb core.Listener) {
+// Start the node
+func (n *SimNode) Start(cb core.Listener) {
 	// run base node
-	n.Node.Run(cb)
+	n.Node.Start(cb)
 }
 
 // Stop the node
@@ -94,7 +94,9 @@ func (n *SimNode) CanReach(peer *SimNode) bool {
 
 // Receive a message and process it
 func (n *SimNode) Receive(msg core.Message) {
-	n.recv <- msg
+	if n.IsRunning() {
+		n.recv <- msg
+	}
 }
 
 // String returns a human-readable representation.
