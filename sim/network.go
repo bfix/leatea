@@ -72,14 +72,19 @@ func NewNetwork(env Environment) *Network {
 
 // GetShortID returns a short identifier for a node.
 func (n *Network) GetShortID(p *core.PeerID) int {
+	n.lock.RLock()
+	defer n.lock.RUnlock()
+
+	// handle nil receiver
 	if p == nil {
 		return 0
 	}
-	i, ok := n.index[p.Key()]
+	// lookup id in index
+	id, ok := n.index[p.Key()]
 	if !ok {
 		return -1
 	}
-	return i
+	return id
 }
 
 // Run the network simulation
@@ -117,7 +122,7 @@ func (n *Network) Run(cb core.Listener) {
 					})
 				}
 				// run node
-				node.Run(cb)
+				node.Start(cb)
 			}
 		}(i)
 		// shutdown node (delayed)
