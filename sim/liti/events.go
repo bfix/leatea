@@ -88,14 +88,10 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 
 	//------------------------------------------------------------------
 	case sim.EvNodeRemoved:
-		val := core.GetVal[[]int](ev)
-		remain := val[1]
-		if remain < 0 {
-			remain = netw.StopNodeByID(ev.Peer)
-		}
 		if show {
+			val := core.GetVal[[]int](ev)
 			log.Printf("[%s] %d stopped (%d running)",
-				ev.Peer, val[0], remain)
+				ev.Peer, val[0], val[1])
 		}
 		redraw = true
 
