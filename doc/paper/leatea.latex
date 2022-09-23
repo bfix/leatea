@@ -4,6 +4,8 @@
 \usepackage{tipa}
 \usepackage{cancel}
 \usepackage{tikz}
+\usepackage{array,multirow}
+\usepackage[ruled, lined, linesnumbered, commentsnumbered, longend]{algorithm2e}
 \usetikzlibrary{arrows}
 
 \title{LEArn/TEAch Routing Algorithm for Ad-hoc Networks}
@@ -56,7 +58,7 @@ Of course a few of these issues are due to the fact that the internet
 is really, really large these days. Ad-hoc networks are currently
 used on a much smaller scale and usually on a temporary basis. But
 routing without authorities in a self-organizing, self-healing way
-is still an issue.
+is still a challange.
 
 \section{Terminology}
 
@@ -67,8 +69,8 @@ is still an issue.
       long-term EdDSA key pair for the peer on first start-up
       and to use the public EdDSA key as the PeerID.  Signatures
       are likely required by applications build on the routing
-      algorithm anway.}. $self$ denotes the identifier of a peer
-      (self-reference) in algorithms.
+      algorithm anyway.}. \textit{self} denotes the identifier of a
+      peer (self-reference) in algorithms.
       
 \paragraph{Ad-hoc network:}
       In an ad-hoc network, all peers communicate by
@@ -102,7 +104,7 @@ is still an issue.
       node stores an absolute timestamp in the entry; if the entry is
       send to other peers, the age is computed at the time the
       message was sent. Communicating ages instead of timestamps
-      does not required a synchronized time across the nodes in the network.
+      does not require a synchronized time across the nodes in the network.
       The delay between sending and receiving the message is ignored.}
       of the entry.  The information is used by a peer to forward a
       message to the next hop. For more details see \ref{sec:forward}.
@@ -138,12 +140,12 @@ utilize.
 \paragraph{}
 So the challenge for any routing algorithm based on forward tables is
 to update local forward tables fast and reliable.  The LeaTea routing
-algorithm uses two control messages for that purpose: A LEARN message
-and a TEACH message. Control messages are only exchanged with neighbors;
-they do not propagate through the network as such. What is propagated
-from neighbors to neighbor is the knowledge about routes. Each peer
-(based on the state of its ow forward table) decides which information
-to share with its neighbors - or to ask for new knowledge.
+algorithm uses three control messages for that purpose: A BEACON message,
+a LEARN message and a TEACH message. Control messages are only exchanged
+with neighbors; they do not propagate through the network as such. What
+is propagated from neighbors to neighbor is the knowledge about routes.
+each peer (based on the state of its own forward table) decides which
+information to share with its neighbors - or to ask for new knowledge.
 
 \paragraph{}
 In an ad-hoc network information can only travel at limited speed
@@ -181,20 +183,20 @@ A forward entry holds the following information:
       message until it reaches the destination. A neighbor has
       a hop count of 0, all active forwards have a hop count
       greater than 0. The value of hop count of an entry can be
-      negative to denote a removal or dormant status (see section
-      \ref{sec:removal} for details)
+      negative to denote a removal or dormant status (see table
+      \ref{tbl:kindState} for details)
 
 \paragraph{Origin}
       The timestamp (local time) when the originating entry was
       created. The originating entry is created by a remote peer
-      when it detects a change in the status of a neighboring peer
-      (see \ref{sec:origin} for details).
+      when it detects a change in the status in on of its
+      neighboring peer (see \ref{sec:origin} for details).
 
 \paragraph{Pending}
       An entry is marked pending if it has been changed or added
       to the table but that information was not broadcasted to
-      neighbors yet. The pending flag is used to decide if an entry
-      is included in a TEACH message.
+      neighbors yet. The pending flag is used to decide if an
+      (additional) entry is included in a TEACH message.
 
 \paragraph{}
 A forward in the table is unique with respect to the target
@@ -203,7 +205,7 @@ Throughout this document the notation
 $(target,next,hop,origin,pending)$ will be used to denote forwards.
 
 \paragraph{}
-There are two $kind$ of forwards:
+There are two \textit{kind} of forwards:
 \begin{itemize}
  \item \textbf{Neighbor}: A forward for a direct neighbor of
  the local peer. It must have an empty next hop and a hop count of
@@ -222,7 +224,7 @@ There are two $kind$ of forwards:
 \end{itemize}
 
 \paragraph{}
-Forwards can be in three different $state$s:
+Forwards can be in three different \textit{state}s:
 \begin{itemize}
  \item \textbf{Active}: An active forward is used for message routing.
  Active neighbors have a hop count of 0; active relays have a hop
@@ -236,6 +238,38 @@ Forwards can be in three different $state$s:
  either by receiving a BEACON message (neighbor) or by learning a
  forward from a TEACH message (relay).
 \end{itemize}
+
+\paragraph{}
+\textit{Kind} and \textit{state} are encoded into the \textit{Hops}
+attribute. The table \ref{tbl:kindState} shows the mapping between
+\textit{kind}, \textit{state} and \textit{Hops}.
+
+\paragraph{}
+\begin{table}[ht]
+  \centering
+  \setlength{\tabcolsep}{10pt}
+  \renewcommand{\arraystretch}{1.5}
+  \begin{tabular}{||c|c|c||}
+    \hline
+    \textbf{Hops} & \textbf{Kind} & \textbf{State} \\
+    \hline
+    $>$ 0 & Relay & \multirow{2}{*}{Active} \\
+    \cline{1-2}
+    = 0 & Neighbor & \\
+    \hline
+    = -1 & Relay & \multirow{2}{*}{Removed} \\
+    \cline{1-2}
+    = -2 & Neighbor & \\
+    \hline
+    = -3 & Relay & \multirow{2}{*}{Dormant} \\
+    \cline{1-2}
+    = -4 & Neighbor & \\
+    \hline
+  \end{tabular}
+  \caption{Mapping between hop count and kind/state of forward}
+  \label{tbl:kindState}
+\end{table}
+
 
 \subsubsection{Originating entry}
 \label{sec:origin}
@@ -335,7 +369,6 @@ The bloomfilter for the message is created using the following steps:
   bloomfilter if the entry is not in dormant state.
   \item Add ourself to the filter
 \end{enumerate}
-Algorithm \ref{alg:make_learn} illustrates the process.
 
 \subsubsection{Receiving a LEARN message}
 
@@ -372,86 +405,149 @@ target peer, next hop, hop count and age.
 
 \paragraph{}
 The list of announcements is build by first building a list of
-forward candidates from the forward table. A candidate must
-either be
+forward candidates from the forward table. Each candidate gets a
+\textit{priority} assigned based on the evaluation of the forward
+(sorted by higher priority):
 
 \begin{itemize}
-  \item an unfiltered forward $\rightarrow k=0$
-  \item a removed neighbor $\rightarrow k=1$
-  \item a removed relay $\rightarrow k=2$
-  \item a pending forward (after recent change) $\rightarrow k=3$
+  \item unfiltered forward
+  \item removed neighbor
+  \item removed relay
+  \item pending forward
 \end{itemize}
 
-Note that dormant forwards are never included in a TEACH message.
+Note that dormant forwards are never included in a TEACH message,
+removed forwards are always selecred as candidates and active forwards
+are only included if they have changed recently or are not filtered
+out by the LEARN message.
 
 \paragraph{}
-The list of candidates is sorted by $k$ (primary) and hop count
-(secondary). If the list is longer than a defined maximum\footnote{
-The number of forward announcements in a TEACH message is probably
-limited by the transport mechanism, e.g. the maximum transport unit
-(MTU) of a message.} it is trimmed at the end. The candidates are
-than used to build the announcement list; included forwards may
-have their status changed. The algorithm \ref{alg:announce}
-illustrates the process.
+The list of candidates is sorted by descending priority (primary) and
+descending hop count (secondary). If the list is longer than a defined
+maximum\footnote{The number of forward announcements in a TEACH message
+is probably limited by the transport mechanism, e.g. the maximum
+transport unit (MTU) of a message.} it is trimmed at the end. The
+candidates are than used to build the announcement list; included
+forwards have their \textit{pending} flag reset.
 
 \subsubsection{Receiving a TEACH message}
 
 \paragraph{}
-An important fact is that a TEACH message is not only received by
-a LEARN sender but any neighbor of the teaching peer. This way peers
-can learn new routing information even if they have not explicitly
-asked for knowledge by sending a LEARN message.
+An important factor in the LeaTea algorithm is that a TEACH message is
+not only received by a LEARN sender but any neighbor of the teaching
+peer. This way peers can learn new routing information even if they
+have not explicitly asked for knowledge by sending a LEARN message.
 
 \paragraph{}
 A peer receiving a TEACH message iterates over the forward
-announcements in the message. An announcement $a_i = (t,n,h,a)$ is
-discarded if the target is the peer itself; otherwise the
+announcements in the message. An announcement $a_i = (target,next,hop,age)$
+is discarded if the target is the peer itself; otherwise the
 corresponding forward in the local forward table is inspected
-\footnote{In the following descriptions the symbol $\hookleftarrow$
-denotes \textit{continue with next announcement}}:
+\footnote{After each bullet point the algorithm continues with the
+next announcement.}:
 
 \paragraph{No forward found:}
 \begin{enumerate}
-  \item If $a_i$ is a removed relay, the announcement is discarded.
-  $\hookleftarrow$
-  \item If the annoncement is removed neighbor, it is directly added
-  to the forward table. The $Origin$ timestamp is recalculated
-  from the the $age$ of the announcement. $\hookleftarrow$
+  \item If the annoncement is a removed neighbor, it is directly added
+  to the forward table. The \textit{Origin} timestamp is recalculated
+  from the the $age$ of the announcement.
   \item If the announcement is in \textit{active} state, it is added
-  as a new forward $e = (a_i.t,sender,a_i.h+1,a_i.a,now,true)$ to the
-  forward table. $\hookleftarrow$
+  as a new forward $e = (a_i.target,sender,a_i.hops+1,a_i.age,now,true)$
+  to the forward table.
 \end{enumerate}
 
 \paragraph{Forward $e_j$ found:}
-If $e_j$ is in \textit{removed state}, the announcement is discarded.
-Otherwise $e_j$ is not considered \textit{pending} (if it was before).
+If $e_j$ is in \textit{removed} state, the announcement is discarded to
+not interrupt the pending \textit{state} transition
+$removed \rightarrow dormant$ of the forward.
+If $e_j$ is not \textit{removed}, the \textit{pending} flag is reset.
 
 \subparagraph{$a_i$ is in \textit{removed state}:}
+A \textit{removal} announcement wants to teach the removal of a route
+or destination. Removals are acceptable (or not) under the following
+conditions:
+
 \begin{enumerate}
-  \item \textbf{$e_j$ is not \textit{active}}: $\hookleftarrow$
+  \item \textbf{$e_j$ is not \textit{active}}: Only active forwards
+  can be removed; the announcement is discarded.
   \item \textbf{$a_j$ is older\footnote{To allow for latencies in
   transmission and processing of messages it is recommended to define
-  \textit{older} as $a_i.a - e_j.a < \varepsilon$ with $\varepsilon$
-  e.g. one second.} than $e_j$}:  $\hookleftarrow$
-  \item \textbf{$e_j$ is a neighbor}: Flag $e_j$ as pending.
-  $\hookleftarrow$
-  \item \textbf{$e_j.n$ = sender}: Flag $e_j$ as \textit{removed}.
-  $\hookleftarrow$
+  \textit{older} as $a_i.age - e_j.age < \varepsilon$ with $\varepsilon$
+  e.g. one second.} than $e_j$}: Old announcements could not remove
+  newer forwards. The announcement is discarded.
+  \item \textbf{$e_j$ is a neighbor}: Flag $e_j$ as pending and
+  discard the annoncement.
+  \item \textbf{$e_j.next$ = sender}: An active forward to \textit{sender}
+  is removed (flag $e_j$ as \textit{removed}).
+  
 \end{enumerate}
 
 \subparagraph{Forward $e_j$ is a \textit{relay}:}
 If $e_j$ is dormant or a newer announcemnt proposes a shorter route,
 $e_j$ is a candidate for update. To prevent loops between two peers,
-it must also be checked if $(e_j.n = sender \,\wedge\, a_i.n = self)$
+it must also be checked if $(e_j.next = sender \,\wedge\, a_i.next = self)$
 holds true; if so the announcement is discarded. Otherwise the forward
-in the table is updated as $(t,sender,a_i.h+1,a_i.a,now,true)$.
-$\hookleftarrow$
+in the table is updated as $(e_j.target,sender,a_i.hops+1,a_i.age,now,true)$.
 
 \subparagraph{Forward $e_j$ is a \textit{dormant neighbor}:}
 The forward in the table is updated as
-$(t,sender,a_i.h+1,a_i.a,now,true)$. $\hookleftarrow$
+$(e_j.target,sender,a_i.hops+1,a_i.age,now,true)$.
 
-\section{Removing forward entries}
+\paragraph{}
+The pseudocode \ref{alg:learn} illustrates the LEARN process.
+
+\begin{algorithm}[ht]
+  \caption{Learning a TEACH message from sender}
+  \label{alg:learn}
+  \SetKw{Continue}{continue}
+  \SetKw{And}{and}
+  \SetKw{uEndIf}{end if}
+  \SetKw{Or}{or}
+  \SetKwInOut{KwIn}{Input}
+  \KwIn{announcements $a$, sender, forward table $e$ }
+
+  \For{each announcement $a_i$}{
+    \If{$a_i.target = self$}{
+      \Continue
+    }
+    
+    $e_j \leftarrow$ table entry matching $a_i$ with $e_j.target = a_i.target$
+    
+    \eIf{$e_j$ not found}{
+      \uIf{$a_i$ is removed neighbor}{
+        $e_j \leftarrow a_i$
+      }
+      \uElseIf{$e_j$ is an active forward}{
+        $e_j \leftarrow (a_i.target,sender,a_i.hops+1,a_i.age,now,true)$
+      }
+      \uEndIf
+    }{
+      \uIf{$a_i$ is removed}{
+        \If{$e_j$ is active \And $e_j$ is older than $a_i$}{
+          \uIf{$e_j$ is a neighbor}{
+            flag $e_j$ as \textit{pending}
+          }
+          \uElseIf{$e_j.next = sender$}{
+            flag $e_j$ as \textit{removed}
+          }
+        }
+      }
+      \uElseIf{$e_j$ is a relay}{
+        \If{$e_j$ is dormant \Or $a_i$ is a shorter route}{
+          \If{$e_j.next \neq sender$ \Or $a_i.next \neq self$}{
+            $e_j \leftarrow (a_i.target,sender,a_i.hops+1,a_i.age,now,true)$
+          }
+        }
+      }
+      \uElseIf{$e_j$ is a dormant neighbor}{
+        $e_j \leftarrow (a_i.target,sender,a_i.hops+1,a_i.age,now,true)$
+      }
+      \uEndIf
+    }
+  }
+\end{algorithm}
+
+\section{Removing forward entries: Self-healing tables}
 
 \paragraph{}
 If a peer has been active on the network for at least some time, it
@@ -469,177 +565,151 @@ defined limit, the peer is considered lost.  The age for the entry is
 reset (re-born) if the peer reappears later.
 
 \paragraph{}
-To understand what happens when a neighboring peer
-disappears, consider a simple route from peer 1 to peer 4 via peers 2
-and 3.  The relevant entries in the forward table are also shown; "T"
-is the destination (target) peer, "N" is the next hop, "H" the number
-of hops and "O" is the timestamp of the entry (defining its age):
+To understand what happens when a neighboring peer disappears, consider
+a simple network of eight peers\footnote{The network layout may seem
+strange, but consider it a 2D projection of 3D-placed nodes} as shown in
+figure \ref{gr:net1}; assume that the forward tables are settled in all
+eight peers (each peer knows routes to all other peers) and that peer 6
+is going to disappear.
 
-\vspace{0.8cm}
-\begin{tikzpicture}
-
-  \tikzstyle{peer} = [
-    rectangle,
-    minimum width=1cm,
-    minimum height=0.6cm,
-    text centered,
-    text width=2.6cm,
-    draw=black
-  ]
-
-  \tikzstyle{arrow} = [thick,->,>=stealth]
-  
-  \node (p1) [peer] {
-    Peer 1 \\
-    .
-    \begin{tabular}{c c c c}
-    \hline
-    T & N & H & O \\
-    \hline
-     2 & 0 & 0 & 1 \\
-     3 & 2 & 1 & 3 \\
-     4 & 2 & 2 & 5
-    \end{tabular}
-  };
-  \node (p2) [peer, right of=p1, xshift=2.6cm] {
-    Peer 2 \\
-    .
-    \begin{tabular}{c c c c}
-    \hline
-    T & N & H & O \\
-    \hline
-    3 & 0 & 0 & 2 \\
-    4 & 3 & 1 & 4
-    \end{tabular}
-  };
-  \node (p3) [peer, text width=1.5cm, right of=p2, xshift=2cm] {Peer 3};
-  \node (p4) [peer, text width=1.5cm, right of=p3, xshift=1.3cm] {Peer 4};
-
-  \draw [arrow] (p1) -- (p2);
-  \draw [arrow] (p2) -- (p3);
-  \draw [arrow] (p3) -- (p4);
-  
-\end{tikzpicture}
+\begin{figure}[ht]
+  \begin{tikzpicture}[scale=2,auto=center,every node/.style={circle,fill=blue!20}] 
+    \node (1) at (1,3) {1};
+    \node (2) at (3,3) {2};
+    \node (3) at (5,3) {3};
+    \node (4) at (2,1) {4};
+    \node (5) at (4,1) {5};
+    \node (6) at (3,2) {6};
+    \node (7) at (6,2) {7};
+    \node (8) at (7,1) {8};
+    \draw (1) -- (2);
+    \draw (1) -- (4);
+    \draw (2) -- (3);
+    \draw (2) -- (6);
+    \draw (3) -- (5);
+    \draw (3) -- (7);
+    \draw (4) -- (5);
+    \draw (4) -- (6);
+    \draw (6) -- (7);
+    \draw (7) -- (8);
+  \end{tikzpicture}
+  \caption{Simple ad-hoc network}
+  \label{gr:net1}
+\end{figure}
 
 \paragraph{}
-If peer 3 disappears at $T=7$, this is detected by its neighboring peer
-2.  Peer 2 updates its forward table based on the removal of peer 3
-according to the following rules:
-\begin{enumerate}
- \item The neighbor entry for peer 3 is updated: The hop count is set
- to -2 (indicating a removed neighbor) and the $Origin$ timestamp is set
- to the current time.
- \item  Any relay entry that has peer 3 as its next hop is updated: The
- hop count is set to -1 (indicating a removed relay) and the $Origin$ timestamp is set to the current time.
-\end{enumerate}
+The forward table\footnote{Please note that the \textit{origin} of an
+entry in this table is represented as an \textit{age}} of peer 4
+before the removal of peer 6 is shown in table \ref{tbl:p4before}.
+Peer 4 for example knows a route to peer 7 via peer 6 (the shortest
+route possible); this route will be invalidated once peer 6 disappears.
 
 \paragraph{}
-After updating the forward table of peer 2 we have:
-
-\vspace{0.8cm}
-\begin{tikzpicture}
-
-  \tikzstyle{peer} = [
-    rectangle,
-    minimum width=1cm,
-    minimum height=0.6cm,
-    text centered,
-    text width=2.6cm,
-    draw=black
-  ]
-
-  \tikzstyle{arrow} = [thick,->,>=stealth]
-  
-  \node (p1) [peer] {
-    Peer 1 \\
-    .
-    \begin{tabular}{c c c c}
+\begin{table}[ht]
+  \centering
+  \setlength{\tabcolsep}{10pt}
+  \renewcommand{\arraystretch}{1.5}
+  \begin{tabular}{||c|c|c|c||}
     \hline
-    T & N & H & O \\
+    \textbf{Target} & \textbf{Next} & \textbf{Hops} & \textbf{Age} \\
     \hline
-     2 & 0 & 0 & 1 \\
-     3 & 2 & 1 & 3 \\
-     4 & 2 & 2 & 5
-    \end{tabular}
-  };
-  \node (p2) [peer, right of=p1, xshift=2.6cm] {
-    Peer 2 \\
-    .
-    \begin{tabular}{c c c c}
+    1 & 0 & 0 & 0.147 \\
     \hline
-    T & N & H & O \\
+    2 & 6 & 1 & 40.020 \\
     \hline
-    3 & 0 & -2 & 7 \\
-    4 & 3 & -1 & 7
-    \end{tabular}
-  };
-  \node (p3) [peer, text width=1.5cm, right of=p2, xshift=2cm] {\xcancel{Peer 3}};
-  \node (p4) [peer, text width=1.5cm, right of=p3, xshift=1.3cm] {Peer 4};
-
-  \draw [arrow] (p1) -- (p2);
-  \draw [arrow] (p2) -- (p3);
-  \draw [arrow] (p3) -- (p4);
-  
-\end{tikzpicture}
+    3 & 5 & 1 & 46.914 \\
+    \hline
+    5 & 0 & 0 & 0.640 \\
+    \hline
+    6 & 0 & 0 & 0.850 \\
+    \hline
+    7 & 6 & 1 & 25.179 \\
+    \hline
+    8 & 6 & 2 & 23.277 \\
+    \hline
+  \end{tabular}
+  \caption{Forward table of peer 4 before removal of peer 6}
+  \label{tbl:p4before}
+\end{table}
 
 \paragraph{}
-When peer 2 sends its next TEACH message at $T=9$, it will include
-removed entries (as indicated by the hop count) even if they are
-filtered out by the LEARN message.  A removed entry included in the
-TEACH message is updated in the forward table as described earlier.
+Focussing on peer 4, we will see the following sequence of events after
+the removal of peer 6:
+
+\paragraph{Peer 4 detects that neighbor 6 expired:} All forwards
+with peer 6 as next hop (the routes to peer 2, peer 7 and peer 8)
+are removed\footnote{Only changed entries are shown}:
+
+\parbox{11cm}{
+  \centering
+  \setlength{\tabcolsep}{10pt}
+  \renewcommand{\arraystretch}{1.5}
+  \begin{tabular}{||c|c|c|c||}
+    \hline
+    \textbf{Target} & \textbf{Next} & \textbf{Hops} & \textbf{Age} \\
+    \hline
+    2 & 6 & -3 & 9.322 \\
+    \hline
+    6 & 0 & -4 & 9.322 \\
+    \hline
+    7 & 6 & -3 & 9.322 \\
+    \hline
+    8 & 6 & -3 & 9.322 \\
+    \hline
+  \end{tabular}
+}
+
+\paragraph{Peer 4 is teaching} its neighbors about the four removed forwards
+(one neighbor, three relays).
+
+\paragraph{Peer 4 learns}
+\begin{itemize}
+  \item \textbf{a new forward to peer 2 from peer 1}:\\
+  $a_i: (2,1,1,0.698), e_j: (2,6,-3,10.000) \rightarrow (2,1,1,0.698)$
+
+  \item \textbf{a new forward to peer 7 from peer 5}:\\
+  $a_i: (7,5,2,65.858), e_j: (7,6,-3,10.000) \rightarrow (7,5,2,65.858)$
+
+  \item \textbf{a new forward to peer 8 from peer 5}:\\
+  $a_i: (8,5,3,66.364), e_j: (8,6,-3,12.408) \rightarrow (8,5,3,66.364)$
+\end{itemize}
 
 \paragraph{}
-The TEACH message from peer 2 is received by peer 1.  Peer 1 iterates
-over all entries in the message (announcements) and updates forwards
-as described earlier. After updating the forward table of peer 1 we
-have:
+After these steps the forward table of peer 4 is ``repaired''; valid
+routes to all other peers exist:
 
-\vspace{0.8cm}
-\begin{tikzpicture}
-
-  \tikzstyle{peer} = [
-    rectangle,
-    minimum width=1cm,
-    minimum height=0.6cm,
-    text centered,
-    text width=2.6cm,
-    draw=black
-  ]
-
-  \tikzstyle{arrow} = [thick,->,>=stealth]
-  
-  \node (p1) [peer] {
-    Peer 1 \\
-    .
-    \begin{tabular}{c c c c}
+\begin{table}[ht]
+  \centering
+  \setlength{\tabcolsep}{10pt}
+  \renewcommand{\arraystretch}{1.5}
+  \begin{tabular}{||c|c|c|c||}
     \hline
-    T & N & H & O \\
+    \textbf{Target} & \textbf{Next} & \textbf{Hops} & \textbf{Age} \\
     \hline
-     2 & 0 & 0 & 1 \\
-     3 & 2 & -1 & 7 \\
-     4 & 2 & -1 & 7
-    \end{tabular}
-  };
-  \node (p2) [peer, right of=p1, xshift=2.6cm] {
-    Peer 2 \\
-    .
-    \begin{tabular}{c c c c}
+    1 & 0 & 0 & 0.147 \\
     \hline
-    T & N & H & O \\
+    2 & 1 & 1 & 10.020 \\
     \hline
-    3 & 0 & -2 & 7 \\
-    4 & 3 & -1 & 7
-    \end{tabular}
-  };
-  \node (p3) [peer, text width=1.5cm, right of=p2, xshift=2cm] {\xcancel{Peer 3}};
-  \node (p4) [peer, text width=1.5cm, right of=p3, xshift=1.3cm] {Peer 4};
+    3 & 5 & 1 & 96.914 \\
+    \hline
+    5 & 0 & 0 & 0.641 \\
+    \hline
+    6 & 0 & -4 & 19.322 \\
+    \hline
+    7 & 5 & 2 & 75.180 \\
+    \hline
+    8 & 5 & 3 & 73.277 \\
+    \hline
+  \end{tabular}
+  \caption{Forward table of peer 4 after removal of peer 6}
+  \label{tbl:p4after}
+\end{table}
 
-  \draw [arrow] (p1) -- (p2);
-  \draw [arrow] (p2) -- (p3);
-  \draw [arrow] (p3) -- (p4);
-  
-\end{tikzpicture}
-
-
+\paragraph{}
+As mentioned earlier it is important to understand that peers can
+learn new routes even without explicitly asking for new knowledge by
+listening to TEACH messages sent by neighbors (as a repsonse to a LEARN
+message sent by another peer that is not necessarily a neighboring peer
+for the learner.
 
 \end{document}
