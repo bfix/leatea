@@ -821,7 +821,7 @@ func (tbl *ForwardTable) Start() {
 // dead-locks.
 func (tbl *ForwardTable) Stop(isLocked bool) {
 	if !isLocked {
-		tbl.TryLock()
+		tbl.Lock()
 		defer tbl.Unlock()
 	}
 	tbl.recs = nil
