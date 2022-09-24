@@ -3,10 +3,14 @@
 \usepackage{amsmath,amssymb}
 \usepackage{tipa}
 \usepackage{cancel}
+\usepackage{svg}
 \usepackage{tikz}
+  \usetikzlibrary{arrows}
 \usepackage{array,multirow}
 \usepackage[ruled, lined, linesnumbered, commentsnumbered, longend]{algorithm2e}
-\usetikzlibrary{arrows}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+  \pgfplotsset{ compat=1.18 }
 
 \title{LEArn/TEAch Routing Algorithm for Ad-hoc Networks}
 \author{Bernd Fix}
@@ -18,7 +22,9 @@
 \begin{abstract}
 This document contains the technical specification for the LEArn/
 TEAch routing algorithm ("LeaTea" for short; pronounced /\textipa{li:ti:}/).
-It is designed for ad-hoc networks, where peers are connected through
+It is designed for smaller\footnote{see section \ref{sec:limits} for a
+description of the limiting factors.} ad-hoc networks, where peers are
+connected through
 wireless technology with neighbors in their vincinity (defined by the
 reach of the built-in sender/receiver).  Given a required density of
 nodes (depending on the reach), the resulting network can span a
@@ -33,7 +39,7 @@ self-organizing routing protocol.
 \paragraph{}
 Efficient routing in ad-hoc networks is an on-going challenge due to
 their decentralized nature. On the internet the routing problem is
-`solved' through hierarchical, centralized structures both on the
+`solved' through hierarchical, centralized infrastructures both on the
 physical level (cables, backbones and routers) and logical level
 (assigning identifiers like IP addresses, resolving human-memorable
 names to identifiers and managing routes). A participating node
@@ -60,7 +66,189 @@ used on a much smaller scale and usually on a temporary basis. But
 routing without authorities in a self-organizing, self-healing way
 is still a challange.
 
+\paragraph{}
+The LEArn/TEAch routing presented in this paper provides a simple yet
+effective (routing) and efficient (resource-consumption) algorithm
+for smaller ad-hoc networks. It is a \textit{proactive} algorithm
+under the usual definition; it uses forward tables and control messages
+to spread knowledge about routes through the network.
+
+\section{Overview and design principles}
+
+\paragraph{}
+The discussion of the design principles will reference details that
+are only described in later sections; a first-time reader is advised
+to go directly to section \ref{sec:terms} and read the rest of the
+paper first. Then coming back here to get more details about the
+\textit{why} after learning about the \textit{how}.
+
+\subsection{Locality}
+
+\paragraph{}
+The basic concept of LeaTea is that of
+\textit{Locality} meaning that a peer can only have direct knowledge
+about its neighbors. Only these one-hop routes to neighbors are
+``verified'', all other routes must be learned from neighbors. It is
+easy to see that the \textit{confidence} in a route decreases with
+hop count; the further another peer is (in terms of hops to reach it),
+the ``fuzzier'' the route becomes. The target (or one of the
+intermediate hops) might have disappeared since learning the route -
+a peer just can't know for sure. All it knows is that shorter routes
+are more likely to work than longer routes.
+
+\paragraph{}
+Instead of trying to fight the circumstances with control messages that
+directly traverse the network (like PINGs) to check if a route is still
+``good'', LeaTea embraces the restriction as a feature.
+Information about the \textit{origin} routes (the one-hop routes to
+neighbors) is spread by peers to neighbors periodically; neighbors use
+them to \textit{derive} routes to tell its neighors how to reach the
+originating peer.; these derived routes are also broadcasted to neighbors
+in TEAch messages. Knowledge about routes is propagating through the
+network  like ripples in a pond when a stone is thrown into it.
+
+\paragraph{}
+Like ripples this route information superimposes in peers; the LEArn
+part of LeaTea (see section \ref{sec:learnTeach}) is designed to decide
+what ``ripple'' to consider as a better route (e.g. if the two ripples
+carry contradicting information).
+
+\subsection{LEArn / TEAch cycle}
+
+\paragraph{}
+Each peer periodically sends out a LEArn message; the message tells
+its neighbors \textit{``This is what I already know, and I want to
+learn more''}. Using our previous analogy the LEArn message is the
+stone thrown into the lake. The time span between two LEArn messages
+of a peer is called an \textit{epoch}.
+During an epoch a peer receives TEAch messages from neighbors.
+These TEAch messages can be a direct response to a LEArn message
+sent by the peer at the beginning of the epoch, or responses to
+LEArn messages from other peers\footnote{Even peers that are not
+neighbors of the receiving peer; the neighbors of my neighbor are
+not necessarly my neighbors too.}
+
+\paragraph{}
+TEAch messages are only sent by peers as a response to a LEArn message;
+it only includes knowledge the requester does not know yet (and knowledge
+about other routes it deems interesting for others if the free space in
+the message permits). A peer also receives TEAch messages it did not
+ask for; this is ``extra information'' that comes in for free and
+increases efficiency of the information transport, as more than one peer
+can learn something new from a single TEAch message.
+
+\subsection{Limits of the algorithm}
+\label{sec:limits}
+
+\paragraph{}
+The current design of LeaTea limits the number of peers in a network
+with full connectivity (each peer knows the routes to all other peers);
+this restriction will of course also limit the possible use-cases for
+the algorithm. But as we will see, a lot of interesting use-cases for
+LeaTea still exist. Given the potential in optimization and design
+improvements this number of total nodes will likely get to a higher
+level. The upper limit of number of peers is impacted by two factors:
+
+\subsubsection{Transport layer}
+
+\paragraph{}
+If we assume that peers can only send (routing-control) messages up
+to a given size (defined by the  MTU\footnote{Maximum Transport Unit
+as defined by the transport  mechanism (802.11,BT).}), the size of
+LEArn and TEAch messages will be limited. If for example WiFi is used,
+the size of a 802.11 MTU is 2304 bytes.
+
+\subsubsection{Implementation of a LEArn message}
+
+\paragraph{}
+To communicate its complete knowledge to neighbors to receive new
+information is obviously not feasible in a network of reasonable
+size. LeaTea uses salted Bloomfilters that include all the route
+targets that a peer knows about in its forward table. So it does not
+transport knowledge directly but gives the receiving peer a tool to
+check if it knows something that the sender does not. The receiver
+can not enumerate this filter to find out if the sender knows
+something the receiver doesn't - but that knowledge is not required
+in the LeaTea algorithm.
+
+\paragraph{}
+Bloomfilter grow in size with number of filtered entries and the
+acceptable false-positive rate; let $n$ be the number of filtered
+entries and $\frac{1}{n}$ the false-positive rate (meaning we accept
+one false-positive in the whole set). The size of the Bloomfilter
+(in bytes) in relation to $n$ is shown in table \ref{tbl:bloom}.
+
+\begin{table}[ht]
+  \centering
+  \setlength{\tabcolsep}{10pt}
+  \renewcommand{\arraystretch}{1.3}
+  \begin{tabular}{||c|c||}
+    \hline
+    \textbf{Number} & \textbf{Size} \\
+    \textbf{of peers} & \textbf{(bytes)} \\
+    \hline
+    10 & 8 \\
+20 & 18 \\
+50 & 54 \\
+100 & 127 \\
+200 & 289 \\
+500 & 812 \\
+1000 & 1804 \\
+2000 & 3968 \\
+    \hline
+  \end{tabular}
+  \caption{Bloomfilter sizes for different number of nodes}
+  \label{tbl:bloom}
+\end{table}
+
+\paragraph{Example:} If we assume that 802.11 is used by the peers
+to communicate with each other, our LEArn message can be around 2kB
+in size. This implies that $\approx$1000 peers can be in the ad-hoc
+network.
+
+\paragraph{}
+For implementations of the algorithm on real-world devices there are
+also other limiting factors; most prominently the amount of RAM required
+to store the forward table of the peer, the CPU speed of the device and
+the available bandwith in wireless communication. While these points are
+not an issue with modern consumer devices (Smartphone, Laptops,...),
+it can be a problem for very small embedded devices.
+
+\paragraph{RAM requirement}
+Given the current reference implementation of the algorithm
+\footnote{see https://github.com/bfix/leatea}, the size a forward entry
+is 55 bytes. Assuming that 1000 peers are managed (the upper limit found
+before), only 55kB of RAM would be required, which seems doable on the
+smallest of embedded devices.
+
+\paragraph{CPU speed}
+Implementations need to consider CPU speed (performance) for tiny devices.
+As can be seen later the algorithm is far from being complex itself or
+requiring complex subcomponents. It can be easily implemented in assembler
+in a straight-forward and efficient way to run even on ``slow'' devices.
+
+\paragraph{Network bandwidth}
+The available bandwidth between peers for control messages (LEArn and TEAch
+messages) is impacting the efficiency (and self-healing aspect) of
+the algorithm. TEAch messages not being sent
+because of network digestion will slow down the information transport -
+the network will need ``more time'' to heal itself if peers are
+disconnecting. Given the available bandwith with common wireless
+technologies this is likely not to be a serious issue.
+
+\paragraph{}
+Section \ref{sec:measure} shows some performance data points for the
+reference implementation.
+
+
+\section{Use-cases}
+\label{sec:usecase}
+
+\paragraph{}
+(Nice examples where LeaTea can be used)
+
 \section{Terminology}
+\label{sec:terms}
 
 \paragraph{Peer:}
       A node that is participating in the ad-hoc network. It has a
@@ -431,6 +619,7 @@ candidates are than used to build the announcement list; included
 forwards have their \textit{pending} flag reset.
 
 \subsubsection{Receiving a TEACH message}
+\label{sec:learnTeach}
 
 \paragraph{}
 An important factor in the LeaTea algorithm is that a TEACH message is
@@ -547,7 +736,7 @@ The pseudocode \ref{alg:learn} illustrates the LEARN process.
   }
 \end{algorithm}
 
-\section{Removing forward entries: Self-healing tables}
+\section{Removing forwards: Self-healing tables}
 
 \paragraph{}
 If a peer has been active on the network for at least some time, it
@@ -711,5 +900,86 @@ learn new routes even without explicitly asking for new knowledge by
 listening to TEACH messages sent by neighbors (as a repsonse to a LEARN
 message sent by another peer that is not necessarily a neighboring peer
 for the learner.
+
+\section{Performance}
+
+\paragraph{}
+The reference implementation was used to simulate ad-hoc networks of
+different size and environmental impacts (like walls blocking direct
+communication between ``near'' peers). The results for some simulations
+is presented here:
+
+\subsection{Network 1}
+
+\paragraph{}
+The network is build from 75 peers that appear randomly over a period
+of time. 20\% of the peers have a limited lifetime; they disappear from
+the network during the simulation. Figure \ref{fig:network1} shows
+the number of broken and successful routes over time. The $x$-coordinate
+is the simulation epoch (10 seconds), so the simulation runs for 150
+epochs (25 minutes); on average each peer sends out 85kB and receives
+650kB of data. The network diagram at the end of the simulation is shown
+in figure \ref{fig:network1graph}.
+
+\begin{figure}[ht]
+  \centering    
+  \pgfplotstableread[col sep=comma]{network1.csv}{\chartdata}
+  \begin{tikzpicture}
+    \begin{axis}[
+        title={},
+        xlabel={Epoch},
+        ylabel={},
+        xmin=0, xmax=150,
+        ymin=0, ymax=6000,
+        xtick={0,20,40,60,80,100,120,140},
+        ytick={},
+        xmajorgrids=true,
+        ymajorgrids=false,
+        grid style=dashed,
+        legend pos=outer north east,
+    ]
+    % broken routes
+    \addplot+[
+      mark=none,
+      color=red,
+    ] table [
+      x expr=\thisrowno{0},
+      y expr=\thisrowno{2}*3,
+    ]{\chartdata};
+    \addlegendentry{Broken [$\times 3$]}
+
+    % expected success routes
+    \addplot+[
+      mark=none,
+      color=green,
+    ] table [
+      x expr=\thisrowno{0},
+      y expr=\thisrowno{4}*(\thisrowno{4}-1),
+    ]{\chartdata};
+    \addlegendentry{Expected}
+  
+    % success routes
+    \addplot+[
+      mark=none,
+      color=blue,
+    ] table [
+      x expr=\thisrowno{0},
+      y expr=\thisrowno{3},
+    ]{\chartdata};
+    \addlegendentry{Success}
+
+    \end{axis}
+  \end{tikzpicture}
+  \caption{75 peers with walls, 20\% death rate}
+  \label{fig:network1}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includesvg[inkscapelatex=false,width=\textwidth]{network1}
+    \caption{Final graph for network 1}
+    \label{fig:network1graph}
+\end{figure}
+
 
 \end{document}

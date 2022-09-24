@@ -7,6 +7,7 @@
 /doc/paper/*.log
 /doc/paper/*.pdf
 /doc/paper/*.synctex.gz
+/doc/paper/svg-inkscape/
 /liti
 /analyze
 /config.json
