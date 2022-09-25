@@ -11,6 +11,7 @@
 \usepackage{pgfplots}
 \usepackage{pgfplotstable}
   \pgfplotsset{ compat=1.18 }
+\usepackage{textcomp}
 
 \title{LEArn/TEAch Routing Algorithm for Ad-hoc Networks}
 \author{Bernd Fix}
@@ -38,7 +39,50 @@ self-organizing routing protocol.
 
 \paragraph{}
 Efficient routing in ad-hoc networks is an on-going challenge due to
-their decentralized nature. On the internet the routing problem is
+their decentralized nature. Since the emergence of wireless technologies
+like 802.11 or Bluetooth in consumer devices (which more less coincides
+with the public availability of the internet in the late 1990's) more
+than 100 different routing algorithms for ad-hoc networks have been
+proposed and implemented. While ad-hoc networks in the beginning were
+focussed on personal mobile devices, the evolution of the ``Internet
+of Things'' (IoT) has opened new fields of applications for ad-hoc
+networks -- and ad-hoc routing algorithms.
+
+\paragraph{}
+Ad-hoc routing algorithms are usually classified into four categories:
+\textit{proactive} routing (table-driven), \textit{reactive} routing
+(on-demand), \textit{hybrid} (both reactive and proactive) and
+\textit{hierarchical} routing. Table \ref{tbl:routing} shows the
+classification of some routing algorithms that have been standardized
+in RFCs or are major representatives of their class; for more details
+on ad-hoc routing algorithms and their classificarion see \ref{bib:routealgos}.
+
+\begin{table}[ht]
+  \centering
+  \setlength{\tabcolsep}{10pt}
+  \renewcommand{\arraystretch}{1.3}
+  \begin{tabular}{|r|c|}
+    \hline
+    \textbf{Algorithm} & \textbf{Classification} \\
+    \hline
+    OLSR\footnote{Optimized Link State Routing Protocol} [RFC 3626, RFC 7181] & \multirow{2}{*}{Proactive} \\
+    Babel [RFC 6126] &  \\
+    \hline
+    AODV\footnote{Ad-hoc On-demand Distance Vector} [RFC 3561] & \multirow{2}{*}{Reactive} \\
+    DSR\footnote{Dynamic Source Routing} [RFC 4728] & \\
+    \hline
+    Zone Routing Protocol (ZRP) & Hybrid \\
+    \hline
+    CBRP (Cluster Based Routing Protocol) & \multirow{2}{*}{Hierarchical} \\
+    FSR (Fisheye State Routing) & \\
+    \hline
+  \end{tabular}
+  \caption{standardized ad.hoc routing algorithms}
+  \label{tbl:routing}
+\end{table}
+
+\paragraph{}
+On the internet the routing problem is
 `solved' through hierarchical, centralized infrastructures both on the
 physical level (cables, backbones and routers) and logical level
 (assigning identifiers like IP addresses, resolving human-memorable
@@ -61,7 +105,8 @@ nodes of its own choosing.
 
 \paragraph{}
 Of course a few of these issues are due to the fact that the internet
-is really, really large these days. Ad-hoc networks are currently
+is really, really large these days. Ad-hoc networks -- as their name
+``solution for a specific purpose'' suggests -- are currently
 used on a much smaller scale and usually on a temporary basis. But
 routing without authorities in a self-organizing, self-healing way
 is still a challange.
@@ -70,8 +115,11 @@ is still a challange.
 The LEArn/TEAch routing presented in this paper provides a simple yet
 effective (routing) and efficient (resource-consumption) algorithm
 for smaller ad-hoc networks. It is a \textit{proactive} algorithm
-under the usual definition; it uses forward tables and control messages
-to spread knowledge about routes through the network.
+in the usual sense; it uses forward tables and control messages
+to spread knowledge about routes through the network. But it uses
+concepts found in hierarchical routing algorithm like FSR, especially
+the concept of locality and the decrease in confidence in routes to
+more remote peers.
 
 \section{Overview and design principles}
 
@@ -173,38 +221,43 @@ in the LeaTea algorithm.
 
 \paragraph{}
 Bloomfilter grow in size with number of filtered entries and the
-acceptable false-positive rate; let $n$ be the number of filtered
-entries and $\frac{1}{n}$ the false-positive rate (meaning we accept
-one false-positive in the whole set). The size of the Bloomfilter
-(in bytes) in relation to $n$ is shown in table \ref{tbl:bloom}.
+acceptable false-positive rate. The size of the Bloomfilter (in
+bytes) in relation to the number of peers $n$ is shown for different
+accepted false-positive rates\footnote{If the false-positive rate is
+larger than $\frac{1}{n}$, the bloomfilter size is set in italics.}
+in table \ref{tbl:bloom}.
 
 \begin{table}[ht]
   \centering
   \setlength{\tabcolsep}{10pt}
   \renewcommand{\arraystretch}{1.3}
-  \begin{tabular}{||c|c||}
+  \begin{tabular}{|c|c|c|c|c|}
     \hline
-    \textbf{Number} & \textbf{Size} \\
-    \textbf{of peers} & \textbf{(bytes)} \\
+    \textbf{Number} & \multicolumn{4}{c|}{\textbf{Size (in bytes) per fp rate}} \\
+    \cline{2-5}
+    \textbf{of peers} & \textbf{1‰}  & \textbf{2‰} & \textbf{5‰} & \textbf{1\%} \\
     \hline
-    10 & 8 \\
-20 & 18 \\
-50 & 54 \\
-100 & 127 \\
-200 & 289 \\
-500 & 812 \\
-1000 & 1804 \\
-2000 & 3968 \\
+    10 & 18 & 13 & 11 & 9 \\
+    20 & 36 & 26 & 22 & 18 \\
+    50 & 91 & 63 & 54 & \textit{45} \\
+    100 & 181 & 127 & \textit{109} & \textit{91} \\
+    200 & 361 & \textit{253} & \textit{217} & \textit{181} \\
+    500 & 902 & \textit{632} & \textit{541} & \textit{451} \\
+    1000 & 1804 & \textit{1263} & \textit{1082} & \textit{902} \\
+    2000 & \textit{3607} & \textit{2525} & \textit{2164} & \textit{1804} \\
+    5000 & \textit{9017} & \textit{6312} & \textit{5410} & \textit{4509} \\
     \hline
   \end{tabular}
-  \caption{Bloomfilter sizes for different number of nodes}
+  \caption{Bloomfilter sizes for different number of nodes and false-positive rates}
   \label{tbl:bloom}
 \end{table}
 
 \paragraph{Example:} If we assume that 802.11 is used by the peers
 to communicate with each other, our LEArn message can be around 2kB
 in size. This implies that $\approx$1000 peers can be in the ad-hoc
-network.
+network with a low false-positive rate of 1‰ -- or $\approx$2000 peers
+with a rate of 5‰. The impact of the false-positive rate on the efficiency
+of the routing is analyzed in more detail in section \ref{sec:measure}.
 
 \paragraph{}
 For implementations of the algorithm on real-world devices there are
@@ -595,7 +648,7 @@ target peer, next hop, hop count and age.
 The list of announcements is build by first building a list of
 forward candidates from the forward table. Each candidate gets a
 \textit{priority} assigned based on the evaluation of the forward
-(sorted by higher priority):
+(the following list is sorted with higher priority first):
 
 \begin{itemize}
   \item unfiltered forward
@@ -902,6 +955,7 @@ message sent by another peer that is not necessarily a neighboring peer
 for the learner.
 
 \section{Performance}
+\label{sec:measure}
 
 \paragraph{}
 The reference implementation was used to simulate ad-hoc networks of
