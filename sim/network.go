@@ -23,6 +23,7 @@ package sim
 import (
 	"context"
 	"leatea/core"
+	"math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -139,7 +140,7 @@ func (n *Network) Run(ctx context.Context, cb core.Listener) {
 		// shutdown node (delayed)
 		go func() {
 			// only some peers stop working
-			if Random.Float64() < Cfg.Node.DeathRate {
+			if rand.Float64() < Cfg.Node.DeathRate { //nolint:gosec // deterministic testing
 				n.statLock.Lock()
 				n.removals++
 				n.statLock.Unlock()

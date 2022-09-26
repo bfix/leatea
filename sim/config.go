@@ -28,14 +28,9 @@ import (
 )
 
 // Random generator (deterministic) for reproducible tests
-var (
-	Random = func() *rand.Rand {
-		var seed int64 = 19031962
-		rnd := rand.New(rand.NewSource(seed)) //nolint:gosec // deterministic testing
-		rand.Seed(seed)
-		return rnd
-	}()
-)
+func init() {
+	rand.Seed(19031962)
+}
 
 // WallDef definition in environment
 type WallDef struct {

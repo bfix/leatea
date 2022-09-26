@@ -22,6 +22,7 @@ package sim
 
 import (
 	"fmt"
+	"math/rand"
 	"time"
 )
 
@@ -62,6 +63,6 @@ func Scale(v float64) string {
 
 // Vary a time span 't'
 func Vary(t float64) time.Duration {
-	v := Random.ExpFloat64() * t
+	v := rand.ExpFloat64() * t
 	return time.Duration(v*1000) * time.Millisecond
 }
