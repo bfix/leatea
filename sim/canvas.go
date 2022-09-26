@@ -29,8 +29,6 @@ import (
 	"os"
 
 	svg "github.com/ajstarks/svgo"
-	"github.com/tfriedel6/canvas"
-	"github.com/tfriedel6/canvas/sdlcanvas"
 )
 
 // Color definitions for drawing
@@ -78,7 +76,7 @@ func GetCanvas(cfg *RenderCfg) (c Canvas) {
 	case "svg":
 		c = NewSVGCanvas(Cfg.Render.File, Cfg.Env.Width, Cfg.Env.Height, math.Sqrt(Cfg.Node.Reach2))
 	case "sdl":
-		c = NewSDLCanvas(Cfg.Env.Width, Cfg.Env.Height, math.Sqrt(Cfg.Node.Reach2))
+		//c = NewSDLCanvas(Cfg.Env.Width, Cfg.Env.Height, math.Sqrt(Cfg.Node.Reach2))
 	}
 	return
 }
@@ -180,6 +178,7 @@ func (c *SVGCanvas) Close() (err error) {
 	return
 }
 
+/*
 //----------------------------------------------------------------------
 // SDL canvas
 //----------------------------------------------------------------------
@@ -349,3 +348,4 @@ func (c *SDLCanvas) xlate(x, y float64) (float64, float64) {
 func (c *SDLCanvas) Close() error {
 	return nil
 }
+*/
