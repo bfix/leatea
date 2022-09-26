@@ -21,6 +21,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"leatea/core"
@@ -35,12 +36,15 @@ import (
 
 // shared variable
 var (
-	netw   *sim.Network      // Network instance
-	redraw bool              // graph modified?
-	rt     *sim.RoutingTable // compiled routing table
-	routes [][]int           // list of routes
-	csv    *os.File          // statistics output
-	evHdlr *EventHandler     // event handler
+	ctx     context.Context    // execution context
+	cancel  context.CancelFunc // kill switch
+	netw    *sim.Network       // Network instance
+	changed bool               // routing modified?
+	redraw  bool               // graph modified?
+	rt      *sim.RoutingTable  // compiled routing table
+	routes  [][]int            // list of routes
+	csv     *os.File           // statistics output
+	evHdlr  *EventHandler      // event handler
 )
 
 // run application
@@ -70,7 +74,7 @@ func main() {
 		}
 		defer csv.Close()
 		// write header
-		_, _ = csv.WriteString("Epoch;Loops;Broken;Success;NumPeers;Started;StopPending;MeanHops\n")
+		_, _ = csv.WriteString("Epoch,Loops,Broken,Success,NumPeers,Started,StopPending,MeanHops\n")
 	}
 
 	// turn on profiling
@@ -99,16 +103,20 @@ func main() {
 	//------------------------------------------------------------------
 	// Build test network
 	log.Println("Building network...")
-	netw = sim.NewNetwork(e)
+	netw = sim.NewNetwork(e, sim.Cfg.Env.NumNodes)
 
 	//------------------------------------------------------------------
 	// Create event handler
 	evHdlr = NewEventHandler(netw.GetShortID)
 
 	//------------------------------------------------------------------
+	// create base context
+	ctx, cancel = context.WithCancel(context.Background())
+
+	//------------------------------------------------------------------
 	// Run test network
 	log.Println("Running network...")
-	go netw.Run(evHdlr.HandleEvent)
+	go netw.Run(ctx, evHdlr.HandleEvent)
 
 	// run simulation depending on canvas mode (dynamic/static)
 	if sim.Cfg.Render.Dynamic && c != nil && c.IsDynamic() {
@@ -181,12 +189,15 @@ func run(env sim.Environment) {
 	epoch := 0
 	repeat := 1
 	lastFailed := -1
-	active := true
 	unchangedCount := 1
 
 	// as long as active...
-	for active {
+loop:
+	for {
 		select {
+		case <-ctx.Done():
+			cancel()
+			break loop
 		case <-tick.C:
 			ticks++
 			// force redraw
@@ -198,7 +209,7 @@ func run(env sim.Environment) {
 				epoch++
 
 				// check routing table changes in the last epoch
-				if !evHdlr.Changed() {
+				if changed, redraw = evHdlr.State(); !changed {
 					unchangedCount++
 				} else {
 					unchangedCount = 1
@@ -206,7 +217,7 @@ func run(env sim.Environment) {
 				// if no activity on a settled network within 3 epochs, quit simulation.
 				if netw.Settled() && unchangedCount > 3 {
 					log.Printf("Stopped on network inactivity")
-					active = false
+					cancel()
 					continue
 				}
 				running, started, removals := netw.Stats()
@@ -224,32 +235,35 @@ func run(env sim.Environment) {
 				}
 				// kick off epoch handling go routine.
 				go func(epoch int) {
+					log.Printf("Handling epoch tasks...")
+
 					// check if simulation ends
 					if sim.Cfg.Options.StopAt > 0 && epoch > sim.Cfg.Options.StopAt {
 						log.Printf("Stopped on request")
-						active = false
+						cancel()
 						return
 					}
-
 					// show status
-					rt = netw.RoutingTable()
-					loops, broken, _ := status(epoch, rt)
-					if loops > 0 && sim.Cfg.Options.StopOnLoop {
-						log.Printf("Stopped on detected loop(s)")
-						active = false
-						return
-					}
-					if failed := loops + broken; failed == 0 {
-						if lastFailed == failed {
-							repeat++
-							if repeat == sim.Cfg.Options.MaxRepeat {
-								log.Printf("Stopped on repeat limit")
-								active = false
-								return
-							}
+					if sim.Cfg.Options.EpochStatus {
+						rt = netw.RoutingTable()
+						loops, broken, _ := status(epoch, rt)
+						if loops > 0 && sim.Cfg.Options.StopOnLoop {
+							log.Printf("Stopped on detected loop(s)")
+							cancel()
+							return
 						}
-						repeat = 1
-						lastFailed = -1
+						if failed := loops + broken; failed == 0 {
+							if lastFailed == failed {
+								repeat++
+								if repeat == sim.Cfg.Options.MaxRepeat {
+									log.Printf("Stopped on repeat limit")
+									cancel()
+									return
+								}
+							}
+							repeat = 1
+							lastFailed = -1
+						}
 					}
 				}(epoch)
 			}
@@ -257,7 +271,7 @@ func run(env sim.Environment) {
 			// signal received
 			switch sig {
 			case syscall.SIGKILL, syscall.SIGINT, syscall.SIGTERM:
-				active = false
+				cancel()
 			default:
 			}
 		}
@@ -265,10 +279,6 @@ func run(env sim.Environment) {
 
 	//------------------------------------------------------------------
 	// print final statistics
-	trafIn, trafOut := netw.Traffic()
-	in := float64(trafIn) / float64(sim.Cfg.Env.NumNodes)
-	out := float64(trafOut) / float64(sim.Cfg.Env.NumNodes)
-	log.Printf("Avg. traffic per node: %s in / %s out", sim.Scale(in), sim.Scale(out))
 	log.Println("Network routing table constructed - checking routes:")
 	rt = netw.RoutingTable()
 	status(epoch, rt)

@@ -26,6 +26,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync/atomic"
 )
 
 //----------------------------------------------------------------------
@@ -33,23 +34,27 @@ import (
 // SimNode represents a node in the test network (extended attributes)
 type SimNode struct {
 	core.Node
-	id   int               // simplified node identifier
-	Pos  *Position         // position in the field
-	v    float64           // velocity (in units per epoch)
-	dir  float64           // direction [0,2π(
-	r2   float64           // square of broadcast distance
-	recv chan core.Message // channel for incoming messages
+	id       int               // simplified node identifier
+	Pos      *Position         // position in the field
+	v        float64           // velocity (in units per epoch)
+	dir      float64           // direction [0,2π(
+	r2       float64           // square of broadcast distance
+	traffIn  atomic.Uint64     // data received
+	traffOut atomic.Uint64     // data sent
+	recv     chan core.Message // channel for incoming messages
 }
 
 // NewSimNode creates a new node in the test network
 func NewSimNode(prv *core.PeerPrivate, out chan core.Message, pos *Position, r2 float64) *SimNode {
 	recv := make(chan core.Message)
-	return &SimNode{
+	node := &SimNode{
 		Node: *core.NewNode(prv, recv, out, true),
 		r2:   r2,
 		Pos:  pos,
 		recv: recv,
 	}
+	node.traffIn.Store(0)
+	return node
 }
 
 // Start the node
@@ -95,6 +100,7 @@ func (n *SimNode) CanReach(peer *SimNode) bool {
 // Receive a message and process it
 func (n *SimNode) Receive(msg core.Message) {
 	if n.IsRunning() {
+		n.traffIn.Add(uint64(msg.Size()))
 		n.recv <- msg
 	}
 }

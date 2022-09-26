@@ -4,9 +4,7 @@
         "learnIntv": 10,
         "outdated": 60,
         "beaconIntv": 1,
-        "ttlBeacon":  5,
-        "maxReteachs": 3,
-        "rateReteach": 0.1
+        "ttlBeacon":  5
     },
     "environment": {
         "class": "wall",
@@ -31,13 +29,15 @@
         "deathRate": 0.2
     },
     "render": {
-        "mode": ""
+        "mode": "svg",
+        "file": "rt/out.svg"
     },
     "options": {
         "events": [1,2,10],
         "showEvents": false,
         "stopOnLoop": true,
         "stopAt": 150,
+        "MaxRepeat": 3,
         "statistics": "rt/stat.csv",
         "tableDump": "rt/routing_table.bin"
     }

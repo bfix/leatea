@@ -432,7 +432,13 @@ func (tbl *ForwardTable) NewLearn() *LEArnMsg {
 // Learn from announcements in a TEAch message
 func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 	tbl.Lock()
+	var key string
+	var peer *PeerID
 	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("key=%s", peer.Key())
+			log.Printf("key=%v", key)
+		}
 		if Debug {
 			tbl.check("learn", msg.Sender(), msg.Announce)
 		}
@@ -444,14 +450,15 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 	now := TimeNow()
 	for _, announce := range msg.Announce {
 		// ignore announcements about ourself
-		if announce.Peer.Equal(tbl.self) {
+		peer = announce.Peer
+		if peer.Equal(tbl.self) {
 			continue
 		}
 		// get the timestamp of the announcement
 		origin := TimeFromAge(announce.Age)
 
 		// get corresponding forward entry
-		key := announce.Peer.Key()
+		key = peer.Key()
 		entry, ok := tbl.recs[key]
 		if !ok {
 			//----------------------------------------------------------
@@ -819,11 +826,9 @@ func (tbl *ForwardTable) Start() {
 // 'isLocked' indicates that the call is executed in a locked state;
 // the caller is responsible for setting the flag correctly to avoid
 // dead-locks.
-func (tbl *ForwardTable) Stop(isLocked bool) {
-	if !isLocked {
-		tbl.Lock()
-		defer tbl.Unlock()
-	}
+func (tbl *ForwardTable) Stop() {
+	tbl.Lock()
+	defer tbl.Unlock()
 	tbl.recs = nil
 }
 

@@ -148,6 +148,7 @@ func (e *DumpEntry) Age() float64 {
 type DumpNode struct {
 	ID      uint16       `order:"big"`
 	Running bool         ``
+	Traffic uint64       `order:"big"`
 	NumTbl  uint16       `order:"big"`
 	Tbl     []*DumpEntry `size:"NumTbl"`
 }
@@ -187,6 +188,7 @@ func (n *Network) DumpRouting(fname string) {
 		dn := &DumpNode{
 			ID:      uint16(node.id),
 			Running: node.IsRunning(),
+			Traffic: node.traffIn.Load(),
 			NumTbl:  uint16(len(fw)),
 			Tbl:     fw,
 		}

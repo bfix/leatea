@@ -33,23 +33,27 @@ type EventHandler struct {
 	sync.Mutex
 
 	changed bool
+	redraw  bool
 	getID   func(*core.PeerID) int
 }
 
 func NewEventHandler(getID func(*core.PeerID) int) *EventHandler {
 	return &EventHandler{
 		changed: false,
+		redraw:  false,
 		getID:   getID,
 	}
 }
 
-func (hdlr *EventHandler) Changed() bool {
+func (hdlr *EventHandler) State() (changed, redraw bool) {
 	hdlr.Lock()
 	defer hdlr.Unlock()
 
-	rc := hdlr.changed
+	changed = hdlr.changed
 	hdlr.changed = false
-	return rc
+	redraw = hdlr.redraw
+	hdlr.redraw = false
+	return
 }
 
 func (hdlr *EventHandler) printEntry(f *core.Entry) string {
@@ -84,7 +88,7 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 			log.Printf("[%s] %08X started as %d (%d running)",
 				ev.Peer, ev.Peer.Tag(), val[0], val[1])
 		}
-		redraw = true
+		hdlr.redraw = true
 
 	//------------------------------------------------------------------
 	case sim.EvNodeRemoved:
@@ -93,7 +97,7 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 			log.Printf("[%s] %d stopped (%d running)",
 				ev.Peer, val[0], val[1])
 		}
-		redraw = true
+		hdlr.redraw = true
 
 	//------------------------------------------------------------------
 	case core.EvNeighborAdded:
@@ -117,8 +121,8 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 			log.Printf("[%d] neighbor %d expired",
 				hdlr.getID(ev.Peer), hdlr.getID(ev.Ref))
 		}
-		redraw = true
 		hdlr.changed = true
+		hdlr.redraw = true
 
 	//------------------------------------------------------------------
 	case core.EvForwardLearned:

@@ -43,6 +43,17 @@ type PeerID struct {
 	str64 string             // string representation (base64)
 }
 
+// Create a new PeerID from binary data
+func NewPeerID(data []byte) *PeerID {
+	p := new(PeerID)
+	p.Data = make([]byte, p.Size())
+	copy(p.Data, data)
+	p.tag = binary.BigEndian.Uint32(data[:4])
+	p.str64 = base64.StdEncoding.EncodeToString(data)
+	p.str32 = base32.StdEncoding.EncodeToString(data)[:8]
+	return p
+}
+
 // Size of a peerid (used for serialization).
 func (p *PeerID) Size() uint {
 	return 32
@@ -53,9 +64,6 @@ func (p *PeerID) Tag() uint32 {
 	if p == nil {
 		return 0
 	}
-	if p.tag == 0 {
-		p.tag = binary.BigEndian.Uint32(p.Data[:4])
-	}
 	return p.tag
 }
 
@@ -64,9 +72,6 @@ func (p *PeerID) Key() string {
 	if p == nil {
 		return ""
 	}
-	if len(p.str64) == 0 {
-		p.str64 = base64.StdEncoding.EncodeToString(p.Data)
-	}
 	return p.str64
 }
 
@@ -74,9 +79,6 @@ func (p *PeerID) Key() string {
 func (p *PeerID) String() string {
 	if p == nil {
 		return "(none)"
-	}
-	if len(p.str32) == 0 {
-		p.str32 = base32.StdEncoding.EncodeToString(p.Data)[:8]
 	}
 	return p.str32
 }
@@ -104,11 +106,7 @@ func (p *PeerID) Clone() *PeerID {
 	if p == nil {
 		return nil
 	}
-	data := make([]byte, p.Size())
-	copy(data, p.Data)
-	return &PeerID{
-		Data: data,
-	}
+	return NewPeerID(p.Data)
 }
 
 //----------------------------------------------------------------------
@@ -140,8 +138,5 @@ func (p *PeerPrivate) Size() uint {
 // of the node)
 func (p *PeerPrivate) Public() *PeerID {
 	pub := p.prv.Public()
-	return &PeerID{
-		Data: pub.Bytes(),
-		pub:  pub,
-	}
+	return NewPeerID(pub.Bytes())
 }

@@ -90,13 +90,14 @@ type RenderCfg struct {
 
 // Option for comtrol flags/values
 type Option struct {
-	MaxRepeat  int    `json:"maxRepeat"`
-	StopOnLoop bool   `json:"stopOnLoop"`
-	StopAt     int    `json:"stopAt"`
-	Events     []int  `json:"events"`
-	ShowEvents bool   `json:"showEvents"`
-	Statistics string `json:"statistics"`
-	TableDump  string `json:"tableDump"`
+	MaxRepeat   int    `json:"maxRepeat"`
+	StopOnLoop  bool   `json:"stopOnLoop"`
+	StopAt      int    `json:"stopAt"`
+	Events      []int  `json:"events"`
+	ShowEvents  bool   `json:"showEvents"`
+	Statistics  string `json:"statistics"`
+	TableDump   string `json:"tableDump"`
+	EpochStatus bool   `json:"epochStatus"`
 }
 
 // Config for test configuration data
@@ -130,9 +131,10 @@ var Cfg = &Config{
 		DeathRate:  0.,
 	},
 	Options: &Option{
-		MaxRepeat:  0,
-		StopOnLoop: false,
-		Events:     nil,
+		MaxRepeat:   0,
+		StopOnLoop:  false,
+		Events:      nil,
+		EpochStatus: true,
 	},
 	Render: &RenderCfg{
 		Mode: "none",

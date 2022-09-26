@@ -21,8 +21,10 @@
 package sim
 
 import (
+	"context"
 	"leatea/core"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -40,40 +42,44 @@ const (
 type Network struct {
 	env Environment // model of the environment
 
-	index map[string]int   // node index map
-	nodes map[int]*SimNode // list of nodes
-	lock  sync.RWMutex     // manage access to nodes
+	// Node management
+	index    map[string]int   // node index map
+	nodes    map[int]*SimNode // list of nodes
+	nodeLock sync.RWMutex     // manage access to nodes
 
-	running  int               // number of running nodes
-	started  int               // number of started nodes
-	removals int               // number of pending removals
-	queue    chan core.Message // "ether" for message transport
-	trafOut  uint64            // total "send" traffic
-	trafIn   uint64            // total "receive" traffic
-	active   bool              // simulation running?
-	check    bool              // sanity check running?
-	cb       core.Listener     // listener for network events
+	// Transport layer
+	queue chan core.Message // "ether" for message transport
+
+	// State of the network
+	active   atomic.Bool  // simulation running?
+	check    atomic.Bool  // sanity check running?
+	statLock sync.RWMutex // manage access to status fields
+	running  int          // number of running nodes
+	started  int          // number of started nodes
+	removals int          // number of pending removals
+
+	// Listener for network events
+	cb core.Listener
 }
 
-// NewNetwork creates a new network of 'numNodes' randomly distributed nodes
-// in an area of 'width x height'. All nodes have the same squared broadcast
-// range r2.
-func NewNetwork(env Environment) *Network {
+// NewNetwork creates a new network of 'numNodes' in a given environment.
+func NewNetwork(env Environment, numNodes int) *Network {
 	n := new(Network)
 	n.env = env
-	n.queue = make(chan core.Message, 10)
+	n.queue = make(chan core.Message)
 	n.nodes = make(map[int]*SimNode)
 	n.index = make(map[string]int)
 	n.running = 0
 	n.started = 0
 	n.removals = 0
+	n.active.Store(false)
 	return n
 }
 
 // GetShortID returns a short identifier for a node.
 func (n *Network) GetShortID(p *core.PeerID) int {
-	n.lock.RLock()
-	defer n.lock.RUnlock()
+	n.nodeLock.RLock()
+	defer n.nodeLock.RUnlock()
 
 	// handle nil receiver
 	if p == nil {
@@ -88,8 +94,8 @@ func (n *Network) GetShortID(p *core.PeerID) int {
 }
 
 // Run the network simulation
-func (n *Network) Run(cb core.Listener) {
-	n.active = true
+func (n *Network) Run(ctx context.Context, cb core.Listener) {
+	n.active.Store(true)
 
 	// create and run nodes.
 	n.cb = cb
@@ -102,23 +108,28 @@ func (n *Network) Run(cb core.Listener) {
 		// run node (delayed)
 		go func(i int) {
 			time.Sleep(delay)
-			n.started++
-			if n.active {
+			if n.active.Load() {
 				// register node with environment and get an integer identifier.
 				idx := n.env.Register(i, node)
 				// add node to network
-				n.lock.Lock()
+				n.nodeLock.Lock()
 				n.index[node.PeerID().Key()] = idx
 				n.nodes[idx] = node
+				n.nodeLock.Unlock()
+
+				// update status
+				n.statLock.Lock()
+				n.started++
 				n.running++
-				n.lock.Unlock()
+				running := n.running
+				n.statLock.Unlock()
 
 				// notify listener
 				if cb != nil {
 					cb(&core.Event{
 						Type: EvNodeAdded,
 						Peer: node.PeerID(),
-						Val:  []int{idx, n.running},
+						Val:  []int{idx, running},
 					})
 				}
 				// run node
@@ -129,36 +140,40 @@ func (n *Network) Run(cb core.Listener) {
 		go func() {
 			// only some peers stop working
 			if Random.Float64() < Cfg.Node.DeathRate {
+				n.statLock.Lock()
 				n.removals++
+				n.statLock.Unlock()
 				ttl := Vary(Cfg.Node.PeerTTL) + delay + 2*time.Minute
 				time.Sleep(ttl)
-				if n.active {
+				if n.active.Load() {
 					// stop node
 					n.StopNode(node)
 				}
+				n.statLock.Lock()
 				n.removals--
+				n.statLock.Unlock()
 			}
 		}()
 	}
 	// simulate transport layer
-	n.check = false
-	for n.active {
+	n.check.Store(false)
+	for n.active.Load() {
 		// wait for broadcasted message.
 		msg := <-n.queue
-		mSize := uint64(msg.Size())
-		n.trafOut += mSize
 		// lookup sender in node table
 		if sender, _ := n.getNode(msg.Sender()); sender != nil {
+			// add message to sender output
+			sender.traffOut.Add(uint64(msg.Size()))
+
 			// process all nodes that are in broadcast reach of the sender
-			n.lock.RLock()
+			n.nodeLock.RLock()
 			for _, node := range n.nodes {
 				if node.IsRunning() && n.env.Connectivity(node, sender) && !node.PeerID().Equal(sender.PeerID()) {
 					// active node in reach receives message
-					n.trafIn += mSize
 					go node.Receive(msg)
 				}
 			}
-			n.lock.RUnlock()
+			n.nodeLock.RUnlock()
 		}
 		// call sanity check (not stacking)
 		go n.sanityCheck()
@@ -169,23 +184,27 @@ func (n *Network) IsActive() bool {
 	if n == nil {
 		return false
 	}
-	return n.active
+	return n.active.Load()
 }
 
 func (n *Network) Settled() bool {
 	if n == nil {
 		return false
 	}
+	n.statLock.RLock()
+	defer n.statLock.RUnlock()
 	return n.started == Cfg.Env.NumNodes && n.removals == 0
 }
 
 func (n *Network) Stats() (int, int, int) {
+	n.statLock.RLock()
+	defer n.statLock.RUnlock()
 	return n.running, n.started, n.removals
 }
 
 func (n *Network) Nodes() (list []*SimNode) {
-	n.lock.RLock()
-	defer n.lock.RUnlock()
+	n.nodeLock.RLock()
+	defer n.nodeLock.RUnlock()
 
 	for _, node := range n.nodes {
 		list = append(list, node)
@@ -205,19 +224,23 @@ func (n *Network) StopNodeByID(p *core.PeerID) int {
 func (n *Network) StopNode(node *SimNode) int {
 	if node.IsRunning() {
 		// stop running node
+		n.statLock.Lock()
 		n.running--
+		running := n.running
 		node.Stop()
+		n.statLock.Unlock()
 
 		// notify listener
 		if n.cb != nil {
 			n.cb(&core.Event{
 				Type: EvNodeRemoved,
 				Peer: node.PeerID(),
-				Val:  []int{node.id, n.running},
+				Val:  []int{node.id, running},
 			})
 		}
+		return running
 	}
-	return n.running
+	return -1
 }
 
 // Stop the network (message exchange)
@@ -231,7 +254,7 @@ func (n *Network) Stop() int {
 		}
 	}
 	// stop network
-	n.active = false
+	n.active.Store(false)
 
 	// discard pending messages in queue
 	discard := 0
@@ -249,8 +272,8 @@ loop:
 }
 
 func (n *Network) getNode(p *core.PeerID) (node *SimNode, idx int) {
-	n.lock.RLock()
-	defer n.lock.RUnlock()
+	n.nodeLock.RLock()
+	defer n.nodeLock.RUnlock()
 
 	if p == nil {
 		return
@@ -267,16 +290,11 @@ func (n *Network) getNode(p *core.PeerID) (node *SimNode, idx int) {
 // Analysis helpers
 //----------------------------------------------------------------------
 
-// Traffic returns traffic volumes (in and out)
-func (n *Network) Traffic() (in, out uint64) {
-	return n.trafIn, n.trafOut
-}
-
 // RoutingTable returns the routing table for the whole
 // network and the average number of hops.
 func (n *Network) RoutingTable() (rt *RoutingTable) {
-	n.lock.RLock()
-	defer n.lock.RUnlock()
+	n.nodeLock.RLock()
+	defer n.nodeLock.RUnlock()
 
 	// create new routing table
 	rt = NewRoutingTable()
@@ -308,8 +326,8 @@ func (n *Network) RoutingTable() (rt *RoutingTable) {
 
 // Render the network directly.
 func (n *Network) Render(c Canvas) {
-	n.lock.RLock()
-	defer n.lock.RUnlock()
+	n.nodeLock.RLock()
+	defer n.nodeLock.RUnlock()
 
 	// render nodes and connections
 	for i1, node1 := range n.nodes {
@@ -331,11 +349,11 @@ func (n *Network) Render(c Canvas) {
 			r1 := node1.IsRunning()
 			r2 := node2.IsRunning()
 			//			if i2 >= i1 || (n.active && !(node2.IsRunning() || node1.IsRunning())) {
-			if i2 >= i1 || (n.active && !(r1 || r2)) {
+			if i2 >= i1 || (n.active.Load() && !(r1 || r2)) {
 				continue
 			}
 			clr := ClrBlue
-			if n.active && !(node2.IsRunning() && node1.IsRunning()) {
+			if n.active.Load() && !(node2.IsRunning() && node1.IsRunning()) {
 				clr = ClrRed
 			}
 			c.Line(node1.Pos.X, node1.Pos.Y, node2.Pos.X, node2.Pos.Y, 0.15, clr)
@@ -346,8 +364,9 @@ func (n *Network) Render(c Canvas) {
 }
 
 func (n *Network) sanityCheck() {
-	if n.check {
+	if n.check.Load() {
 		return
 	}
-	n.check = false
+	// do the sanity check...
+	n.check.Store(false)
 }

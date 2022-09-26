@@ -3,6 +3,8 @@
 /work/
 /doc/rfc
 /doc/paper/*.aux
+/doc/paper/*.bbl
+/doc/paper/*.blg
 /doc/paper/*.log
 /doc/paper/*.pdf
 /doc/paper/*.synctex.gz

@@ -22,6 +22,7 @@ package core
 
 import (
 	"fmt"
+	"sync/atomic"
 	"time"
 )
 
@@ -29,12 +30,18 @@ import (
 
 // Node represents a node in the network
 type Node struct {
-	ForwardTable // forward table as base type
+	// ForwardTable as base type
+	ForwardTable
 
-	prv    *PeerPrivate // private signing key
-	inCh   chan Message // channel for incoming messages
-	outCh  chan Message // channel for outgoing messages
-	active bool         // node running?
+	prv   *PeerPrivate // private signing key
+	inCh  chan Message // channel for incoming messages
+	outCh chan Message // channel for outgoing messages
+
+	// Node running?
+	// I know: "Share memory by communicating; don't communicate by
+	// sharing memory.", but: just a signal whether the receiver is
+	// still alive seems an excusable exception.
+	active atomic.Bool
 }
 
 // NewNode creates a new node with a given private signing key and an input /
@@ -72,8 +79,8 @@ func (n *Node) Start(notify Listener) {
 	// broadcast LEARN message periodically
 	learn := time.NewTicker(time.Duration(cfg.LearnIntv) * time.Second)
 	beacon := time.NewTicker(time.Duration(cfg.BeaconIntv) * time.Second)
-	n.active = true
-	for n.active {
+	n.active.Store(true)
+	for n.active.Load() {
 		select {
 		case <-beacon.C:
 			// send out beacon message
@@ -102,23 +109,20 @@ func (n *Node) Start(notify Listener) {
 
 // Stop a running node
 func (n *Node) Stop() {
-	n.Lock()
-	defer n.Unlock()
-
 	// flag as removed
-	n.active = false
-	n.ForwardTable.Stop(true)
+	n.active.Store(false)
+	n.ForwardTable.Stop()
 }
 
 // IsRunning returns true if the node is active
 func (n *Node) IsRunning() bool {
-	return n.active
+	return n.active.Load()
 }
 
 // Receive handles an incoming message
 func (n *Node) Receive(msg Message) {
 	// stop receiving messages on a non-running node
-	if !n.active {
+	if !n.active.Load() {
 		return
 	}
 	// add the sender as direct neighbor to the
