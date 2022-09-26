@@ -10,12 +10,14 @@
         "class": "rand",
         "width": 100,
         "height": 100,
-        "numNodes": 1000,
+        "numNodes": 200,
         "cooldown": 5
     },
     "node":{
-		"reach2": 50,
-		"bootup": 60
+		"reach2": 250,
+		"bootup": 60,
+		"peerTTL": 600,
+        "deathRate": 0.0
     },
     "render": {
         "mode": "none"
@@ -24,6 +26,7 @@
         "events": [],
         "showEvents": true,
         "statistics": "rt/stat.csv",
-        "tableDump": "rt/routing_table.bin"
+        "tableDump": "rt/routing_table.bin",
+        "stopAt": 50
     }
 }
