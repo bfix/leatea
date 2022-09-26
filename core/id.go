@@ -34,7 +34,7 @@ import (
 // PeerID is the identifier for a node in the network. It is the binary
 // representation of the public Ed25519 key of a node.
 type PeerID struct {
-	Data []byte `size:"(Size)"` // binary representation
+	Data []byte `size:"(Size)" init:"Init"` // binary representation
 
 	// transient
 	pub   *ed25519.PublicKey // Ed25519 pubkey
@@ -52,7 +52,7 @@ func NewPeerID(data []byte) *PeerID {
 	return p
 }
 
-// Initialize transient attributes
+// Initialize transient attributes based on Data
 func (p *PeerID) Init() {
 	if p != nil {
 		p.tag = binary.BigEndian.Uint32(p.Data[:4])
