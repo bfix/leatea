@@ -35,6 +35,7 @@ const (
 	EvNeighborRelayed = 11 // dormant neighbor revived as relay
 	EvRelayRevived    = 12 // dormant relay revived (with new forward)
 	EvRelayUpdated    = 13 // relay updated
+	EvLoopDetect      = 14 // loop construction detected
 )
 
 // Event from network if something interesting happens

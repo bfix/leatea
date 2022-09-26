@@ -572,8 +572,14 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 			}
 			// possible loop construction?
 			if entry.NextHop.Equal(sender) && announce.NextHop == tbl.self.Tag() {
-				log.Printf("LOOP? local %s = %s, remote %s = %s",
-					tbl.self, entry, sender, announce)
+				if tbl.listener != nil {
+					tbl.listener(&Event{
+						Type: EvLoopDetect,
+						Peer: tbl.self,
+						Ref:  sender,
+						Val:  []any{entry, announce},
+					})
+				}
 				continue
 			}
 			// update relay with newer relay

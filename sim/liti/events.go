@@ -62,6 +62,12 @@ func (hdlr *EventHandler) printEntry(f *core.Entry) string {
 		f.Hops, f.Origin.Age().Seconds())
 }
 
+func (hdlr *EventHandler) printForward(f *core.Forward) string {
+	return fmt.Sprintf("{%d,%08X,%d,%.3f}",
+		hdlr.getID(f.Peer), f.NextHop,
+		f.Hops, f.Age.Seconds())
+}
+
 //nolint:gocyclo // life is complex sometimes...
 func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 	hdlr.Lock()
@@ -208,6 +214,17 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 	case core.EvWantToLearn:
 		if show {
 			log.Printf("[%d] broadcasting LEArn", hdlr.getID(ev.Peer))
+		}
+
+	//------------------------------------------------------------------
+	case core.EvLoopDetect:
+		if show {
+			val := core.GetVal[[]any](ev)
+			entry, _ := val[0].(*core.Entry)
+			announce, _ := val[1].(*core.Forward)
+			log.Printf("[%d] %s <- [%d] %s",
+				hdlr.getID(ev.Peer), hdlr.printEntry(entry),
+				hdlr.getID(ev.Ref), hdlr.printForward(announce))
 		}
 	}
 }
