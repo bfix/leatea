@@ -48,10 +48,18 @@ func NewPeerID(data []byte) *PeerID {
 	p := new(PeerID)
 	p.Data = make([]byte, p.Size())
 	copy(p.Data, data)
-	p.tag = binary.BigEndian.Uint32(data[:4])
-	p.str64 = base64.StdEncoding.EncodeToString(data)
-	p.str32 = base32.StdEncoding.EncodeToString(data)[:8]
+	p.Init()
 	return p
+}
+
+// Initialize transient attributes
+func (p *PeerID) Init() {
+	if p != nil {
+		p.tag = binary.BigEndian.Uint32(p.Data[:4])
+		p.str64 = base64.StdEncoding.EncodeToString(p.Data)
+		p.str32 = base32.StdEncoding.EncodeToString(p.Data)[:8]
+		p.pub = ed25519.NewPublicKeyFromBytes(p.Data)
+	}
 }
 
 // Size of a peerid (used for serialization).
