@@ -58,7 +58,9 @@ func (p *PeerID) Init() {
 		p.tag = binary.BigEndian.Uint32(p.Data[:4])
 		p.str64 = base64.StdEncoding.EncodeToString(p.Data)
 		p.str32 = base32.StdEncoding.EncodeToString(p.Data)[:8]
-		p.pub = ed25519.NewPublicKeyFromBytes(p.Data)
+		if p.pub == nil {
+			p.pub = ed25519.NewPublicKeyFromBytes(p.Data)
+		}
 	}
 }
 
@@ -109,14 +111,6 @@ func (p *PeerID) Bytes() []byte {
 	return Clone(p.Data)
 }
 
-// Clone a peer identifier.
-func (p *PeerID) Clone() *PeerID {
-	if p == nil {
-		return nil
-	}
-	return NewPeerID(p.Data)
-}
-
 //----------------------------------------------------------------------
 
 // PeerPrivate is the binary representation of the long-term signing key
@@ -146,5 +140,10 @@ func (p *PeerPrivate) Size() uint {
 // of the node)
 func (p *PeerPrivate) Public() *PeerID {
 	pub := p.prv.Public()
-	return NewPeerID(pub.Bytes())
+	id := &PeerID{
+		Data: Clone(p.Data),
+		pub:  pub,
+	}
+	id.Init()
+	return id
 }

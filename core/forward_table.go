@@ -203,7 +203,7 @@ func EntryFromForward(f *Forward, sender *PeerID) *Entry {
 // The age of the entry is calculated from Origin relative to TimeNow()
 func (e *Entry) Target() *Forward {
 	return &Forward{
-		Peer:    e.Peer.Clone(),
+		Peer:    e.Peer,
 		Hops:    e.Hops,
 		NextHop: e.NextHop.Tag(),
 		Age:     e.Origin.Age(),
@@ -844,7 +844,7 @@ func (tbl *ForwardTable) Forward(target *PeerID) (*PeerID, int) {
 			return nil, 0
 		}
 		// return forward information
-		return entry.NextHop.Clone(), int(entry.Hops) + 1
+		return entry.NextHop, int(entry.Hops) + 1
 	}
 	// target not in table
 	return nil, 0
@@ -883,7 +883,7 @@ func (tbl *ForwardTable) Neighbors() (list []*PeerID) {
 	// collect neighbors from the table
 	for _, entry := range tbl.recs {
 		if entry.IsA(KindNeighbor, StateActive) {
-			list = append(list, entry.Peer.Clone())
+			list = append(list, entry.Peer)
 		}
 	}
 	return
