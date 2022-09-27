@@ -21,17 +21,58 @@
 package main
 
 import (
+	"encoding/base32"
+	"encoding/binary"
 	"flag"
-	"leatea/sim"
+	"io"
+	"leatea/core"
 	"log"
 	"os"
-
-	"github.com/bfix/gospel/data"
 )
 
+type LogEntry struct {
+	Type    uint32
+	Peer    [32]byte
+	Ref     [32]byte
+	Target  [32]byte
+	NextHop [32]byte
+	Hops    uint32
+}
+
+func (e *LogEntry) WithForward() bool {
+	return e.Type == core.EvForwardChanged
+}
+
+type Forward struct {
+	next string
+	hops int16
+}
+
+type Node struct {
+	self     string
+	forwards map[string]*Forward
+}
+
+func NewNode(self string) *Node {
+	node := new(Node)
+	node.self = self
+	node.forwards = make(map[string]*Forward)
+	return node
+}
+
+func (n *Node) SetForward(target, next string, hops int16) {
+	forward, ok := n.forwards[target]
+	if !ok {
+		forward = new(Forward)
+		n.forwards[target] = forward
+	}
+	forward.next = next
+	forward.hops = hops
+}
+
 var (
-	dump  *sim.Dump
-	index = make(map[int]*sim.DumpNode)
+	index = make(map[string]*Node)
+	seq   = make(map[string]uint32)
 )
 
 // run application
@@ -40,28 +81,69 @@ func main() {
 	log.Println("(c) 2022, Bernd Fix     >Y<")
 
 	// parse arguments
-	var dumpFile string
-	flag.StringVar(&dumpFile, "i", "", "routing table dump (binary)")
+	var eventLog string
+	flag.StringVar(&eventLog, "i", "", "event log (binary)")
 	flag.Parse()
 
-	// read dump
-	f, err := os.Open(dumpFile)
+	// read event log and reconstruct forward tables of node step by step
+	f, err := os.Open(eventLog)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer f.Close()
-	fi, _ := f.Stat()
-	dump = new(sim.Dump)
-	if err := data.UnmarshalStream(f, &dump, int(fi.Size())); err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("Number of nodes: %d", dump.NumNodes)
+	ev := new(LogEntry)
+	flag := make([]byte, 1)
+	for k := 1; ; k++ {
+		// read and handle next log entry
+		if err := binary.Read(f, binary.BigEndian, &ev.Type); err != nil {
+			if err == io.EOF {
+				break
+			}
+			log.Fatal(err)
+		}
+		var inSeq uint32
+		_ = binary.Read(f, binary.BigEndian, &inSeq)
 
-	for _, node := range dump.Nodes {
-		index[int(node.ID)] = node
+		_, _ = f.Read(ev.Peer[:])
+		self := base32.StdEncoding.EncodeToString(ev.Peer[:5])[:8]
+		lastSeq, ok := seq[self]
+		if ok && lastSeq > inSeq {
+			log.Fatalf("*** Sequence error in log entry #%d", k)
+		}
+		seq[self] = inSeq
+		node, ok := index[self]
+		if !ok {
+			node = NewNode(self)
+			index[self] = node
+		}
+		_, _ = f.Read(ev.Ref[:])
+		ref := base32.StdEncoding.EncodeToString(ev.Ref[:5])[:8]
+
+		//log.Printf("[%s < %s] Seq=%d, Type=%d", self, ref, inSeq, ev.Type)
+
+		switch ev.Type {
+		case core.EvForwardChanged, core.EvForwardLearned:
+			_, _ = f.Read(ev.Target[:])
+			_, _ = f.Read(flag)
+			next := ""
+			if flag[0] == 1 {
+				_, _ = f.Read(ev.NextHop[:])
+				next = base32.StdEncoding.EncodeToString(ev.NextHop[:5])[:8]
+			}
+			var hops int16
+			_ = binary.Read(f, binary.BigEndian, &hops)
+			tgt := base32.StdEncoding.EncodeToString(ev.Target[:5])[:8]
+			node.SetForward(tgt, next, hops)
+
+		case core.EvNeighborAdded:
+			node.SetForward(ref, "", 0)
+
+		case core.EvNeighborExpired, core.EvRelayRemoved:
+			node.SetForward(ref, "", -1)
+			delete(index, ref)
+		}
 	}
 
 	// run analysis
-	analyzeLoops()
-	analyzeBroken()
+	analyzeRoutes()
 }
