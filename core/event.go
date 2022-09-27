@@ -40,7 +40,7 @@ const (
 
 // Event from network if something interesting happens
 type Event struct {
-	Type int     // event tpe (see consts)
+	Type int     // event type (see consts)
 	Peer *PeerID // peer identifier
 	Ref  *PeerID // reference peer (optinal)
 	Val  any     // additional data
