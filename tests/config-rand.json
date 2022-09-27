@@ -10,23 +10,27 @@
         "class": "rand",
         "width": 100,
         "height": 100,
-        "numNodes": 200,
+        "numNodes": 50,
+        "_numNodes": "50 100 200 500 1000",
         "cooldown": 5
     },
     "node":{
-		"reach2": 250,
+		"reach2": 500,
+        "_reach2": "500 250 130 80 40",
 		"bootup": 60,
 		"peerTTL": 600,
         "deathRate": 0.0
     },
     "render": {
-        "mode": "none"
+        "mode": "svg",
+        "file": "rt/out.svg",
+        "dynamic": false
     },
     "options": {
         "events": [],
         "showEvents": true,
-        "statistics": "rt/stat.csv",
-        "tableDump": "rt/routing_table.bin",
+        "eventLog": "rt/events.bin",
+        "epochStatus": true,
         "stopAt": 50
     }
 }
