@@ -21,6 +21,7 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -69,7 +70,7 @@ func (n *Node) send(msg Message) {
 }
 
 // Start the node (with periodic tasks and message handling)
-func (n *Node) Start(notify Listener) {
+func (n *Node) Start(ctx context.Context, notify Listener) {
 	// remember listener for events
 	n.listener = notify
 
@@ -82,6 +83,11 @@ func (n *Node) Start(notify Listener) {
 	n.active.Store(true)
 	for n.active.Load() {
 		select {
+		case <-ctx.Done():
+			// termination requested
+			n.active.Store(false)
+			return
+
 		case <-beacon.C:
 			// send out beacon message
 			msg := NewBeaconMsg(n.self)
