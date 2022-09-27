@@ -23,14 +23,8 @@ package sim
 import (
 	"encoding/json"
 	"leatea/core"
-	"math/rand"
 	"os"
 )
-
-// Random generator (deterministic) for reproducible tests
-func init() {
-	rand.Seed(19031962)
-}
 
 // WallDef definition in environment
 type WallDef struct {
@@ -85,11 +79,14 @@ type RenderCfg struct {
 
 // Option for comtrol flags/values
 type Option struct {
-	MaxRepeat   int    `json:"maxRepeat"`
-	StopOnLoop  bool   `json:"stopOnLoop"`
-	StopAt      int    `json:"stopAt"`
-	Events      []int  `json:"events"`
-	ShowEvents  bool   `json:"showEvents"`
+	MaxRepeat  int  `json:"maxRepeat"`
+	StopOnLoop bool `json:"stopOnLoop"`
+	StopAt     int  `json:"stopAt"`
+
+	Events     []int  `json:"events"`
+	ShowEvents bool   `json:"showEvents"`
+	EventLog   string `json:"eventLog"`
+
 	Statistics  string `json:"statistics"`
 	TableDump   string `json:"tableDump"`
 	EpochStatus bool   `json:"epochStatus"`
