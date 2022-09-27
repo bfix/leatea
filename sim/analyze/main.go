@@ -97,6 +97,7 @@ func main() {
 		// read and handle next log entry
 		if err := binary.Read(f, binary.BigEndian, &ev.Type); err != nil {
 			if err == io.EOF {
+				log.Printf("%d log entries read.", k-1)
 				break
 			}
 			log.Fatal(err)
