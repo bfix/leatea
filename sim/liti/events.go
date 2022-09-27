@@ -21,10 +21,12 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
 	"leatea/core"
 	"leatea/sim"
 	"log"
+	"os"
 	"strings"
 	"sync"
 )
@@ -34,14 +36,27 @@ type EventHandler struct {
 
 	changed bool
 	redraw  bool
-	getID   func(*core.PeerID) int
+	log     *os.File
 }
 
-func NewEventHandler(getID func(*core.PeerID) int) *EventHandler {
-	return &EventHandler{
+func NewEventHandler() *EventHandler {
+	hdlr := &EventHandler{
 		changed: false,
 		redraw:  false,
-		getID:   getID,
+	}
+	logName := sim.Cfg.Options.EventLog
+	if len(logName) > 0 {
+		var err error
+		if hdlr.log, err = os.Create(logName); err != nil {
+			log.Fatal(err)
+		}
+	}
+	return hdlr
+}
+
+func (hdlr *EventHandler) Close() {
+	if hdlr.log != nil {
+		hdlr.log.Close()
 	}
 }
 
@@ -57,15 +72,13 @@ func (hdlr *EventHandler) State() (changed, redraw bool) {
 }
 
 func (hdlr *EventHandler) printEntry(f *core.Entry) string {
-	return fmt.Sprintf("{%d,%d,%d,%.3f}",
-		hdlr.getID(f.Peer), hdlr.getID(f.NextHop),
-		f.Hops, f.Origin.Age().Seconds())
+	return fmt.Sprintf("{%s,%s,%d,%.3f}",
+		f.Peer, f.NextHop, f.Hops, f.Origin.Age().Seconds())
 }
 
 func (hdlr *EventHandler) printForward(f *core.Forward) string {
-	return fmt.Sprintf("{%d,%08X,%d,%.3f}",
-		hdlr.getID(f.Peer), f.NextHop,
-		f.Hops, f.Age.Seconds())
+	return fmt.Sprintf("{%s,%08X,%d,%.3f}",
+		f.Peer, f.NextHop, f.Hops, f.Age.Seconds())
 }
 
 //nolint:gocyclo // life is complex sometimes...
@@ -108,25 +121,24 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 	//------------------------------------------------------------------
 	case core.EvNeighborAdded:
 		if show {
-			log.Printf("[%d] neighbor %d added",
-				hdlr.getID(ev.Peer), hdlr.getID(ev.Ref))
+			log.Printf("[%s] neighbor %s added", ev.Peer, ev.Ref)
 		}
+		hdlr.LogBytes(ev)
 		hdlr.changed = true
 
 	//------------------------------------------------------------------
 	case core.EvNeighborUpdated:
 		if show {
-			log.Printf("[%d] neighbor %d updated",
-				hdlr.getID(ev.Peer), hdlr.getID(ev.Ref))
+			log.Printf("[%s] neighbor %s updated", ev.Peer, ev.Ref)
 		}
 		hdlr.changed = true
 
 	//------------------------------------------------------------------
 	case core.EvNeighborExpired:
 		if show {
-			log.Printf("[%d] neighbor %d expired",
-				hdlr.getID(ev.Peer), hdlr.getID(ev.Ref))
+			log.Printf("[%s] neighbor %s expired", ev.Peer, ev.Ref)
 		}
+		hdlr.LogBytes(ev)
 		hdlr.changed = true
 		hdlr.redraw = true
 
@@ -134,58 +146,56 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 	case core.EvForwardLearned:
 		if show {
 			e := core.GetVal[*core.Entry](ev)
-			log.Printf("[%d < %d] learned %s",
-				hdlr.getID(ev.Peer), hdlr.getID(ev.Ref), hdlr.printEntry(e))
+			log.Printf("[%s < %s] learned %s",
+				ev.Peer, ev.Ref, hdlr.printEntry(e))
 		}
+		hdlr.LogBytes(ev)
 		hdlr.changed = true
 
 	//------------------------------------------------------------------
 	case core.EvForwardChanged:
 		if show {
-			fw := core.GetVal[[3]*core.Entry](ev)
-			log.Printf("[%d < %d] %s < %s > %s",
-				hdlr.getID(ev.Peer), hdlr.getID(ev.Ref),
-				hdlr.printEntry(fw[0]), hdlr.printEntry(fw[1]), hdlr.printEntry(fw[2]))
+			val := core.GetVal[[3]*core.Entry](ev)
+			log.Printf("[%s < %s] %s < %s > %s",
+				ev.Peer, ev.Ref,
+				hdlr.printEntry(val[0]), hdlr.printEntry(val[1]), hdlr.printEntry(val[2]))
 		}
+		hdlr.LogBytes(ev)
 		hdlr.changed = true
 
 	//------------------------------------------------------------------
 	case core.EvShorterRoute:
 		if show {
-			log.Printf("[%d] shorter path to %d learned",
-				hdlr.getID(ev.Peer), hdlr.getID(ev.Ref))
+			log.Printf("[%s] shorter path to %s learned", ev.Peer, ev.Ref)
 		}
 		hdlr.changed = true
 
 	//------------------------------------------------------------------
 	case core.EvRelayRemoved:
 		if show {
-			log.Printf("[%d] forward to %d removed",
-				hdlr.getID(ev.Peer), hdlr.getID(ev.Ref))
+			log.Printf("[%s] forward to %s removed", ev.Peer, ev.Ref)
 		}
+		hdlr.LogBytes(ev)
 		hdlr.changed = true
 
 	//------------------------------------------------------------------
 	case core.EvRelayRevived:
 		if show {
-			log.Printf("[%d] revived relay to %d",
-				hdlr.getID(ev.Peer), hdlr.getID(ev.Ref))
+			log.Printf("[%s] revived relay to %s", ev.Peer, ev.Ref)
 		}
 		hdlr.changed = true
 
 	//------------------------------------------------------------------
 	case core.EvNeighborRelayed:
 		if show {
-			log.Printf("[%d] revived neighbor as relay to %d",
-				hdlr.getID(ev.Peer), hdlr.getID(ev.Ref))
+			log.Printf("[%s] revived neighbor as relay to %s", ev.Peer, ev.Ref)
 		}
 		hdlr.changed = true
 
 	//------------------------------------------------------------------
 	case core.EvLearning:
 		if show {
-			log.Printf("[%d] learning from %d",
-				hdlr.getID(ev.Peer), hdlr.getID(ev.Ref))
+			log.Printf("[%s] learning from %s", ev.Peer, ev.Ref)
 		}
 
 	//------------------------------------------------------------------
@@ -194,8 +204,8 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 			val := core.GetVal[[]any](ev)
 			msg, _ := val[0].(*core.TEAchMsg)
 			counts, _ := val[1].([4]int)
-			log.Printf("[%d] teaching: %d removed, %d unfiltered, %d pending, %d skipped",
-				hdlr.getID(ev.Peer), counts[0], counts[1], counts[2], counts[3])
+			log.Printf("[%s] teaching: %d removed, %d unfiltered, %d pending, %d skipped",
+				ev.Peer, counts[0], counts[1], counts[2], counts[3])
 			announced := make([]string, 0)
 			for _, ann := range msg.Announce {
 				e := &core.Entry{
@@ -206,14 +216,14 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 				}
 				announced = append(announced, hdlr.printEntry(e))
 			}
-			log.Printf("[%d] TEAch [%s]",
-				hdlr.getID(ev.Peer), strings.Join(announced, ","))
+			log.Printf("[%s] TEAch [%s]",
+				ev.Peer, strings.Join(announced, ","))
 		}
 
 	//------------------------------------------------------------------
 	case core.EvWantToLearn:
 		if show {
-			log.Printf("[%d] broadcasting LEArn", hdlr.getID(ev.Peer))
+			log.Printf("[%s] broadcasting LEArn", ev.Peer)
 		}
 
 	//------------------------------------------------------------------
@@ -222,9 +232,49 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 			val := core.GetVal[[]any](ev)
 			entry, _ := val[0].(*core.Entry)
 			announce, _ := val[1].(*core.Forward)
-			log.Printf("[%d] %s <- [%d] %s",
-				hdlr.getID(ev.Peer), hdlr.printEntry(entry),
-				hdlr.getID(ev.Ref), hdlr.printForward(announce))
+			log.Printf("[%s] %s <- [%s] %s",
+				ev.Peer, hdlr.printEntry(entry),
+				ev.Ref, hdlr.printForward(announce))
 		}
+	}
+}
+
+func (hdlr *EventHandler) writeEntry(e *core.Entry) {
+	_, _ = hdlr.log.Write(e.Peer.Data)
+	if e.NextHop == nil {
+		_, _ = hdlr.log.Write([]byte{0})
+	} else {
+		_, _ = hdlr.log.Write([]byte{1})
+		_, _ = hdlr.log.Write(e.NextHop.Data)
+	}
+	_ = binary.Write(hdlr.log, binary.BigEndian, e.Hops)
+}
+
+func (hdlr *EventHandler) LogBytes(ev *core.Event) {
+	if hdlr.log == nil {
+		return
+	}
+	_ = binary.Write(hdlr.log, binary.BigEndian, uint32(ev.Type))
+	_ = binary.Write(hdlr.log, binary.BigEndian, ev.Seq)
+	_, _ = hdlr.log.Write(ev.Peer.Data)
+	_, _ = hdlr.log.Write(ev.Ref.Data)
+	switch ev.Type {
+
+	case core.EvForwardChanged:
+		val := core.GetVal[[3]*core.Entry](ev)
+		hdlr.writeEntry(val[2])
+
+	case core.EvForwardLearned:
+		e := core.GetVal[*core.Entry](ev)
+		hdlr.writeEntry(e)
+
+	case core.EvNeighborAdded:
+		// no more data
+
+	case core.EvNeighborExpired:
+		// no more data
+
+	case core.EvRelayRemoved:
+		// no more data
 	}
 }

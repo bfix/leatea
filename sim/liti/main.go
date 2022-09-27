@@ -36,15 +36,12 @@ import (
 
 // shared variable
 var (
-	ctx     context.Context    // execution context
-	cancel  context.CancelFunc // kill switch
-	netw    *sim.Network       // Network instance
-	changed bool               // routing modified?
-	redraw  bool               // graph modified?
-	rt      *sim.RoutingTable  // compiled routing table
-	routes  [][]int            // list of routes
-	csv     *os.File           // statistics output
-	evHdlr  *EventHandler      // event handler
+	netw    *sim.Network      // Network instance
+	changed bool              // routing modified?
+	redraw  bool              // graph modified?
+	rt      *sim.RoutingTable // compiled routing table
+	csv     *os.File          // statistics output
+	evHdlr  *EventHandler     // event handler
 )
 
 // run application
@@ -107,11 +104,12 @@ func main() {
 
 	//------------------------------------------------------------------
 	// Create event handler
-	evHdlr = NewEventHandler(netw.GetShortID)
+	evHdlr = NewEventHandler()
+	defer evHdlr.Close()
 
 	//------------------------------------------------------------------
 	// create base context
-	ctx, cancel = context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
 
 	//------------------------------------------------------------------
 	// Run test network
@@ -130,7 +128,7 @@ func main() {
 		}
 		// run simulation in go routine to keep main routine
 		// available for canvas.
-		go run(e)
+		go run(ctx, cancel, e)
 
 		// run render loop
 		c.Render(func(c sim.Canvas, forced bool) {
@@ -138,15 +136,6 @@ func main() {
 				c.Start()
 				// render network
 				netw.Render(c)
-				// render routes
-				for _, route := range routes {
-					from := rt.List[route[0]].Node
-					for _, hop := range route[1:] {
-						to := rt.List[hop].Node
-						c.Line(from.Pos.X, from.Pos.Y, to.Pos.X, to.Pos.Y, 0.3, sim.ClrRed)
-						from = to
-					}
-				}
 				redraw = false
 			}
 		})
@@ -156,7 +145,7 @@ func main() {
 		//--------------------------------------------------------------
 
 		// run simulation
-		run(e)
+		run(ctx, cancel, e)
 
 		if c != nil {
 			// draw final network graph if canvas is not dynamic
@@ -179,7 +168,7 @@ func main() {
 	log.Println("Done.")
 }
 
-func run(env sim.Environment) {
+func run(ctx context.Context, cancel context.CancelFunc, env sim.Environment) {
 	//------------------------------------------------------------------
 	// prepare monitoring
 	sigCh := make(chan os.Signal, 5)
@@ -244,6 +233,7 @@ loop:
 						return
 					}
 					// show status
+					rt = netw.RoutingTable()
 					if sim.Cfg.Options.EpochStatus {
 						rt = netw.RoutingTable()
 						loops, broken, _ := status(epoch, rt)
@@ -280,7 +270,6 @@ loop:
 	//------------------------------------------------------------------
 	// print final statistics
 	log.Println("Network routing table constructed - checking routes:")
-	rt = netw.RoutingTable()
 	status(epoch, rt)
 
 	// dump routing on demand
