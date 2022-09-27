@@ -86,8 +86,8 @@ func (m *WallModel) Connectivity(n1, n2 *SimNode) bool {
 // Placement decides where to place i.th node with calculated reach (interface impl)
 func (m *WallModel) Placement(i int) (r2 float64, pos *Position) {
 	pos = &Position{
-		X: rand.Float64() * Cfg.Env.Width,  //nolint:gosec // deterministic testing
-		Y: rand.Float64() * Cfg.Env.Height, //nolint:gosec // deterministic testing
+		X: rndFloat(Cfg.Env.Width),
+		Y: rndFloat(Cfg.Env.Height),
 	}
 	r2 = Cfg.Node.Reach2
 	return
@@ -165,8 +165,8 @@ func (m *RndModel) Connectivity(n1, n2 *SimNode) bool {
 // Placement decides where to place i.th node with calculated reach (interface impl)
 func (m *RndModel) Placement(i int) (r2 float64, pos *Position) {
 	pos = &Position{
-		X: rand.Float64() * Cfg.Env.Width,  //nolint:gosec // deterministic testing
-		Y: rand.Float64() * Cfg.Env.Height, //nolint:gosec // deterministic testing
+		X: rndFloat(Cfg.Env.Width),
+		Y: rndFloat(Cfg.Env.Height),
 	}
 	r2 = Cfg.Node.Reach2
 	return
@@ -331,49 +331,6 @@ func (m *LinkModel) Epoch(epoch int) (events []*core.Event) {
 	for _, out := range list {
 		log.Println(out)
 	}
-	/*
-		// show all routes
-		for i1, n1 := range m.nodes {
-			if !n1.n.IsRunning() {
-				continue
-			}
-			for i2, n2 := range m.nodes {
-				if !n2.n.IsRunning() {
-					continue
-				}
-				if i1 == i2 {
-					continue
-				}
-				var route []int
-				from := n1.n
-				to := n2.n.PeerID()
-				ttl := len(m.nodes)
-				hops := 0
-				for {
-					route = append(route, from.id)
-					next, steps := from.Forward(to)
-					if steps == 0 {
-						route = append(route, -1)
-						break
-					}
-					if next == nil {
-						if steps == 1 {
-							route = append(route, i2)
-						} else {
-							route = append(route, -2)
-						}
-						break
-					}
-					from = m.nodes[m.ids[next.Key()]].n
-					if hops++; hops > ttl {
-						route = append(route, -3)
-						break
-					}
-				}
-				log.Printf("[%d --> %d]: %v", i1, i2, route)
-			}
-		}
-	*/
 	return
 }
 
@@ -440,4 +397,12 @@ func BuildEnvironment(env *EnvironCfg) Environment {
 		return mdl
 	}
 	return nil
+}
+
+func rndFloat(f float64) float64 {
+	return rand.Float64() * f //nolint:gosec // deterministic testing
+}
+
+func init() {
+	rand.Seed(1962031967)
 }
