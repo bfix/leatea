@@ -37,7 +37,7 @@ var (
 	ClrRed   = &color.RGBA{255, 0, 0, 0}
 	ClrRedTr = &color.RGBA{255, 0, 0, 224}
 	ClrBlack = &color.RGBA{0, 0, 0, 0}
-	ClrGray  = &color.RGBA{240, 240, 240, 0}
+	ClrGray  = &color.RGBA{127, 127, 127, 0}
 	ClrBlue  = &color.RGBA{0, 0, 255, 0}
 	ClrGreen = &color.RGBA{0, 255, 0, 0}
 )
