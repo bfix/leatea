@@ -133,7 +133,7 @@ func NewPeerPrivate() *PeerPrivate {
 
 // Size of a peer private key (used for local serialization).
 func (p *PeerPrivate) Size() uint {
-	return 32
+	return 64
 }
 
 // Public returns the peerid (binary representation of the public Ed25519 key
@@ -141,7 +141,7 @@ func (p *PeerPrivate) Size() uint {
 func (p *PeerPrivate) Public() *PeerID {
 	pub := p.prv.Public()
 	id := &PeerID{
-		Data: Clone(p.Data),
+		Data: pub.Bytes(),
 		pub:  pub,
 	}
 	id.Init()
