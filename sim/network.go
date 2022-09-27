@@ -134,7 +134,7 @@ func (n *Network) Run(ctx context.Context, cb core.Listener) {
 					})
 				}
 				// run node
-				node.Start(cb)
+				node.Start(ctx, cb)
 			}
 		}(i)
 		// shutdown node (delayed)
@@ -159,25 +159,31 @@ func (n *Network) Run(ctx context.Context, cb core.Listener) {
 	// simulate transport layer
 	n.check.Store(false)
 	for n.active.Load() {
-		// wait for broadcasted message.
-		msg := <-n.queue
-		// lookup sender in node table
-		if sender, _ := n.getNode(msg.Sender()); sender != nil {
-			// add message to sender output
-			sender.traffOut.Add(uint64(msg.Size()))
+		select {
+		// requested termination
+		case <-ctx.Done():
+			return
 
-			// process all nodes that are in broadcast reach of the sender
-			n.nodeLock.RLock()
-			for _, node := range n.nodes {
-				if node.IsRunning() && n.env.Connectivity(node, sender) && !node.PeerID().Equal(sender.PeerID()) {
-					// active node in reach receives message
-					go node.Receive(msg)
+		// wait for broadcasted message.
+		case msg := <-n.queue:
+			// lookup sender in node table
+			if sender, _ := n.getNode(msg.Sender()); sender != nil {
+				// add message to sender output
+				sender.traffOut.Add(uint64(msg.Size()))
+
+				// process all nodes that are in broadcast reach of the sender
+				n.nodeLock.RLock()
+				for _, node := range n.nodes {
+					if node.IsRunning() && n.env.Connectivity(node, sender) && !node.PeerID().Equal(sender.PeerID()) {
+						// active node in reach receives message
+						go node.Receive(msg)
+					}
 				}
+				n.nodeLock.RUnlock()
 			}
-			n.nodeLock.RUnlock()
+			// call sanity check (not stacking)
+			go n.sanityCheck()
 		}
-		// call sanity check (not stacking)
-		go n.sanityCheck()
 	}
 }
 

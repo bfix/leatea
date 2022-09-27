@@ -21,8 +21,10 @@
 package sim
 
 import (
+	"context"
 	"fmt"
 	"leatea/core"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -58,9 +60,9 @@ func NewSimNode(prv *core.PeerPrivate, out chan core.Message, pos *Position, r2 
 }
 
 // Start the node
-func (n *SimNode) Start(cb core.Listener) {
+func (n *SimNode) Start(ctx context.Context, cb core.Listener) {
 	// run base node
-	n.Node.Start(cb)
+	n.Node.Start(ctx, cb)
 }
 
 // Stop the node
@@ -117,6 +119,6 @@ func (n *SimNode) String() string {
 func (n *SimNode) Draw(c Canvas) {
 	//r := math.Sqrt(n.r2)
 	c.Circle(n.Pos.X, n.Pos.Y, 0.3, 0, nil, ClrRed)
-	//c.Circle(n.pos.X, n.pos.Y, r, 0.03, ClrGray, nil)
+	c.Circle(n.Pos.X, n.Pos.Y, math.Sqrt(n.r2), 0.03, ClrGray, nil)
 	c.Text(n.Pos.X, n.Pos.Y+1.3, 1, n.PeerID().String())
 }
