@@ -25,6 +25,7 @@ import (
 	"log"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/bfix/gospel/data"
@@ -338,6 +339,9 @@ type ForwardTable struct {
 	// listener for events
 	listener Listener
 
+	// sequence number
+	seq atomic.Uint32
+
 	// sanity checker (optional)
 	check func(string, ...any)
 }
@@ -349,6 +353,7 @@ func NewForwardTable(self *PeerID, debug bool) *ForwardTable {
 		recs:  make(map[string]*Entry),
 		check: nil,
 	}
+	tbl.seq.Store(0)
 	if debug {
 		tbl.check = tbl.sanityCheck
 	}
@@ -399,6 +404,7 @@ func (tbl *ForwardTable) AddNeighbor(node *PeerID) {
 		if tbl.listener != nil {
 			tbl.listener(&Event{
 				Type: EvNeighborUpdated,
+				Seq:  tbl.nextSeq(),
 				Peer: tbl.self,
 				Ref:  node,
 			})
@@ -418,6 +424,7 @@ func (tbl *ForwardTable) AddNeighbor(node *PeerID) {
 	if tbl.listener != nil {
 		tbl.listener(&Event{
 			Type: EvNeighborAdded,
+			Seq:  tbl.nextSeq(),
 			Peer: tbl.self,
 			Ref:  node,
 		})
@@ -489,6 +496,7 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 			if tbl.listener != nil {
 				tbl.listener(&Event{
 					Type: EvForwardLearned,
+					Seq:  tbl.nextSeq(),
 					Peer: tbl.self,
 					Ref:  sender,
 					Val:  e,
@@ -546,6 +554,7 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 				if tbl.listener != nil {
 					tbl.listener(&Event{
 						Type: EvRelayRemoved,
+						Seq:  tbl.nextSeq(),
 						Peer: tbl.self,
 						Ref:  entry.Peer,
 					})
@@ -575,6 +584,7 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 				if tbl.listener != nil {
 					tbl.listener(&Event{
 						Type: EvLoopDetect,
+						Seq:  tbl.nextSeq(),
 						Peer: tbl.self,
 						Ref:  sender,
 						Val:  []any{entry, announce},
@@ -594,6 +604,7 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 			if tbl.listener != nil {
 				tbl.listener(&Event{
 					Type: evType,
+					Seq:  tbl.nextSeq(),
 					Peer: tbl.self,
 					Ref:  entry.Peer,
 				})
@@ -613,6 +624,7 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 			if tbl.listener != nil {
 				tbl.listener(&Event{
 					Type: EvNeighborRelayed,
+					Seq:  tbl.nextSeq(),
 					Peer: tbl.self,
 					Ref:  entry.Peer,
 				})
@@ -627,6 +639,7 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 			annEntry := EntryFromForward(announce, sender)
 			tbl.listener(&Event{
 				Type: EvForwardChanged,
+				Seq:  tbl.nextSeq(),
 				Peer: tbl.self,
 				Ref:  sender,
 				Val:  [3]*Entry{oldEntry, annEntry, entry},
@@ -667,6 +680,7 @@ func (tbl *ForwardTable) cleanup() {
 		if tbl.listener != nil {
 			tbl.listener(&Event{
 				Type: EvNeighborExpired,
+				Seq:  tbl.nextSeq(),
 				Peer: tbl.self,
 				Ref:  entry.Peer,
 			})
@@ -686,6 +700,7 @@ func (tbl *ForwardTable) cleanup() {
 				if tbl.listener != nil {
 					tbl.listener(&Event{
 						Type: EvRelayRemoved,
+						Seq:  tbl.nextSeq(),
 						Peer: tbl.self,
 						Ref:  fw.Peer,
 					})
@@ -815,6 +830,11 @@ func (tbl *ForwardTable) candidates(m *LEArnMsg) (list []*Forward, counts [4]int
 		list = append(list, forward)
 	}
 	return
+}
+
+// Next sequence number for event
+func (tbl *ForwardTable) nextSeq() uint32 {
+	return tbl.seq.Add(1)
 }
 
 //======================================================================

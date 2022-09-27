@@ -41,6 +41,7 @@ const (
 // Event from network if something interesting happens
 type Event struct {
 	Type int     // event type (see consts)
+	Seq  uint32  // sequence number (per node)
 	Peer *PeerID // peer identifier
 	Ref  *PeerID // reference peer (optinal)
 	Val  any     // additional data
