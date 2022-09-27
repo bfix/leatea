@@ -117,9 +117,6 @@ func (rt *RoutingTable) Render(canvas Canvas) {
 	for _, entry := range rt.List {
 		// draw node
 		nodeFrom := entry.Node
-		if !nodeFrom.IsRunning() {
-			continue
-		}
 		nodeFrom.Draw(canvas)
 
 		// draw connections
