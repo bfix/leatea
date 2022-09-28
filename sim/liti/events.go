@@ -29,6 +29,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 type EventHandler struct {
@@ -37,6 +38,7 @@ type EventHandler struct {
 	changed bool
 	redraw  bool
 	log     *os.File
+	seq     atomic.Uint32
 }
 
 func NewEventHandler() *EventHandler {
@@ -44,6 +46,7 @@ func NewEventHandler() *EventHandler {
 		changed: false,
 		redraw:  false,
 	}
+	hdlr.seq.Store(0)
 	logName := sim.Cfg.Options.EventLog
 	if len(logName) > 0 {
 		var err error
@@ -83,6 +86,10 @@ func (hdlr *EventHandler) printForward(f *core.Forward) string {
 
 //nolint:gocyclo // life is complex sometimes...
 func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
+	// get a global sequence number
+	gs := hdlr.seq.Add(1)
+
+	// serialize event handling
 	hdlr.Lock()
 	defer hdlr.Unlock()
 
@@ -123,7 +130,7 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 		if show {
 			log.Printf("[%s] neighbor %s added", ev.Peer, ev.Ref)
 		}
-		hdlr.LogBytes(ev)
+		hdlr.WriteLog(ev, gs)
 		hdlr.changed = true
 
 	//------------------------------------------------------------------
@@ -138,7 +145,7 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 		if show {
 			log.Printf("[%s] neighbor %s expired", ev.Peer, ev.Ref)
 		}
-		hdlr.LogBytes(ev)
+		hdlr.WriteLog(ev, gs)
 		hdlr.changed = true
 		hdlr.redraw = true
 
@@ -149,7 +156,7 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 			log.Printf("[%s < %s] learned %s",
 				ev.Peer, ev.Ref, hdlr.printEntry(e))
 		}
-		hdlr.LogBytes(ev)
+		hdlr.WriteLog(ev, gs)
 		hdlr.changed = true
 
 	//------------------------------------------------------------------
@@ -160,7 +167,7 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 				ev.Peer, ev.Ref,
 				hdlr.printEntry(val[0]), hdlr.printEntry(val[1]), hdlr.printEntry(val[2]))
 		}
-		hdlr.LogBytes(ev)
+		hdlr.WriteLog(ev, gs)
 		hdlr.changed = true
 
 	//------------------------------------------------------------------
@@ -175,7 +182,7 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 		if show {
 			log.Printf("[%s] forward to %s removed", ev.Peer, ev.Ref)
 		}
-		hdlr.LogBytes(ev)
+		hdlr.WriteLog(ev, gs)
 		hdlr.changed = true
 
 	//------------------------------------------------------------------
@@ -250,12 +257,12 @@ func (hdlr *EventHandler) writeEntry(e *core.Entry) {
 	_ = binary.Write(hdlr.log, binary.BigEndian, e.Hops)
 }
 
-func (hdlr *EventHandler) LogBytes(ev *core.Event) {
+func (hdlr *EventHandler) WriteLog(ev *core.Event, gs uint32) {
 	if hdlr.log == nil {
 		return
 	}
 	_ = binary.Write(hdlr.log, binary.BigEndian, uint32(ev.Type))
-	_ = binary.Write(hdlr.log, binary.BigEndian, ev.Seq)
+	_ = binary.Write(hdlr.log, binary.BigEndian, gs)
 	_, _ = hdlr.log.Write(ev.Peer.Data)
 	_, _ = hdlr.log.Write(ev.Ref.Data)
 	switch ev.Type {
