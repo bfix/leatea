@@ -28,15 +28,18 @@ import (
 	"leatea/core"
 	"log"
 	"os"
+	"sort"
 )
 
 type LogEntry struct {
-	Type    uint32
-	Peer    [32]byte
-	Ref     [32]byte
-	Target  [32]byte
-	NextHop [32]byte
-	Hops    uint32
+	Type     uint32
+	Seq      uint32
+	Peer     [32]byte
+	Ref      [32]byte
+	Target   [32]byte
+	WithNext uint32
+	NextHop  [32]byte
+	Hops     uint32
 }
 
 func (e *LogEntry) WithForward() bool {
@@ -72,7 +75,6 @@ func (n *Node) SetForward(target, next string, hops int16) {
 
 var (
 	index = make(map[string]*Node)
-	seq   = make(map[string]uint32)
 )
 
 // run application
@@ -85,16 +87,17 @@ func main() {
 	flag.StringVar(&eventLog, "i", "", "event log (binary)")
 	flag.Parse()
 
-	// read event log and reconstruct forward tables of node step by step
+	// read event log
 	f, err := os.Open(eventLog)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer f.Close()
-	ev := new(LogEntry)
+	entries := make([]*LogEntry, 0)
 	flag := make([]byte, 1)
 	for k := 1; ; k++ {
 		// read and handle next log entry
+		ev := new(LogEntry)
 		if err := binary.Read(f, binary.BigEndian, &ev.Type); err != nil {
 			if err == io.EOF {
 				log.Printf("%d log entries read.", k-1)
@@ -102,39 +105,47 @@ func main() {
 			}
 			log.Fatal(err)
 		}
-		var inSeq uint32
-		_ = binary.Read(f, binary.BigEndian, &inSeq)
-
+		_ = binary.Read(f, binary.BigEndian, &ev.Seq)
 		_, _ = f.Read(ev.Peer[:])
 		self := base32.StdEncoding.EncodeToString(ev.Peer[:5])[:8]
-		lastSeq, ok := seq[self]
-		if ok && lastSeq > inSeq {
-			log.Fatalf("*** Sequence error in log entry #%d", k)
-		}
-		seq[self] = inSeq
-		node, ok := index[self]
-		if !ok {
-			node = NewNode(self)
-			index[self] = node
+		if _, ok := index[self]; !ok {
+			index[self] = NewNode(self)
 		}
 		_, _ = f.Read(ev.Ref[:])
-		ref := base32.StdEncoding.EncodeToString(ev.Ref[:5])[:8]
-
-		//log.Printf("[%s < %s] Seq=%d, Type=%d", self, ref, inSeq, ev.Type)
 
 		switch ev.Type {
 		case core.EvForwardChanged, core.EvForwardLearned:
 			_, _ = f.Read(ev.Target[:])
 			_, _ = f.Read(flag)
-			next := ""
+			ev.WithNext = 0
 			if flag[0] == 1 {
+				ev.WithNext = 1
 				_, _ = f.Read(ev.NextHop[:])
-				next = base32.StdEncoding.EncodeToString(ev.NextHop[:5])[:8]
 			}
 			var hops int16
 			_ = binary.Read(f, binary.BigEndian, &hops)
+		}
+		// append to list
+		entries = append(entries, ev)
+	}
+	// sort entries by sequence
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].Seq < entries[j].Seq
+	})
+
+	// reconstruct forward tables of node step by step
+	for _, ev := range entries {
+		self := base32.StdEncoding.EncodeToString(ev.Peer[:5])[:8]
+		node := index[self]
+		ref := base32.StdEncoding.EncodeToString(ev.Ref[:5])[:8]
+		switch ev.Type {
+		case core.EvForwardChanged, core.EvForwardLearned:
+			next := ""
+			if ev.WithNext == 1 {
+				next = base32.StdEncoding.EncodeToString(ev.NextHop[:5])[:8]
+			}
 			tgt := base32.StdEncoding.EncodeToString(ev.Target[:5])[:8]
-			node.SetForward(tgt, next, hops)
+			node.SetForward(tgt, next, int16(ev.Hops))
 
 		case core.EvNeighborAdded:
 			node.SetForward(ref, "", 0)
