@@ -148,7 +148,7 @@ func main() {
 		// run simulation
 		run(ctx, cancel, e)
 
-		if c != nil {
+		if c != nil && rt != nil {
 			// draw final network graph if canvas is not dynamic
 			if err := c.Open(); err != nil {
 				log.Fatal(err)
