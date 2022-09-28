@@ -957,14 +957,72 @@ listening to TEACH messages sent by neighbors (as a repsonse to a LEARN
 message sent by another peer that is not necessarily a neighboring peer
 for the learner.
 
-\section{Performance}
+\section{Ad-hoc network simulations}
 \label{sec:measure}
 
 \paragraph{}
 The reference implementation was used to simulate ad-hoc networks of
 different size and environmental impacts (like walls blocking direct
 communication between ``near'' peers). The results for these simulations
-is presented here:
+is presented here.
+
+\subsection{Simulation environment}
+
+\paragraph{}
+The simulation environment\footnote{Server with 96 cores (AMD EPYC 7451)
+and 256GB memory; all resources mainly dedicated to the simulation.}
+runs a given number of nodes concurrently; nodes appear
+randomly\footnote{Distributed on a 100$\times$100 square with an initial
+delay (exponential distribution).}; peer and route discovery starts once
+neighbors detect each other. All peers have the same sender/receiver
+characteristics, adjusted to peer density in the simulation.
+
+\paragraph{}
+The CPU and memory requirements of the simulations are shown in figure
+\ref{fig:resource}; they are relatively constant once all peers have
+started. The spike in CPU usage at the start of the simulation is caused
+by initializing all peers with an EdDSA key pair \cite{ed25519}; the
+public EdDSA key is used as the peer identifier.
+
+\begin{figure}
+  \centering
+  \includegraphics[width=.49\textwidth]{monitor-50.png}\hfill
+  \includegraphics[width=.49\textwidth]{monitor-100.png}\hfill
+  \includegraphics[width=.49\textwidth]{monitor-200.png}\hfill
+  \includegraphics[width=.49\textwidth]{monitor-500.png}\hfill
+  \includegraphics[width=.49\textwidth]{monitor-1000.png}\hfill
+  \includegraphics[width=.49\textwidth]{monitor-1000.png}\hfill
+  \begin{tikzpicture}
+    \begin{semilogxaxis}[
+      scale=1,
+      axis y line*=left,
+      ymin=-0.1, ymax=6000,
+      ylabel = {\%CPU},
+      xlabel = {Peers}
+     ]
+	  \addplot [color=red] coordinates {
+        (50,8)(100,38)(200,150)(500,1100)(1000,5000)
+      };
+    \end{semilogxaxis}
+    \begin{semilogxaxis}[
+      scale=1,
+      ylabel = {RAM (MB)},
+      axis y line*=right,
+      ymin=-0.1, ymax=400,
+    ]
+	  \addplot [color=blue] coordinates {
+        (50,8)(100,20)(200,30)(500,85)(1000,375)
+      };
+    \end{semilogxaxis}
+  \end{tikzpicture}\hfill
+  \caption{CPU / memory usage during simulations}
+  \label{fig:resource}
+\end{figure}
+
+\paragraph{}
+As expected CPU and memory requirements grow exponentially limiting the
+number of peers in a network simulation.
+
 
 \subsection{Network 1}
 
