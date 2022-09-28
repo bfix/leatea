@@ -90,6 +90,7 @@ type Option struct {
 	Statistics  string `json:"statistics"`
 	TableDump   string `json:"tableDump"`
 	EpochStatus bool   `json:"epochStatus"`
+	FinalStatus bool   `json:"finalStatus"`
 }
 
 // Config for test configuration data
