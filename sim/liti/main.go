@@ -93,7 +93,10 @@ func main() {
 		log.Fatalf("No environment class '%s' defined.", sim.Cfg.Env.Class)
 	}
 	// get a canvas for drawing
-	c := sim.GetCanvas(sim.Cfg.Render)
+	var c sim.Canvas
+	if sim.Cfg.Options.FinalStatus || sim.Cfg.Render.Dynamic {
+		c = sim.GetCanvas(sim.Cfg.Render)
+	}
 	if c != nil {
 		defer c.Close()
 	}
