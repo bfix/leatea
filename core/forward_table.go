@@ -439,13 +439,7 @@ func (tbl *ForwardTable) NewLearn() *LEArnMsg {
 // Learn from announcements in a TEAch message
 func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 	tbl.Lock()
-	var key string
-	var peer *PeerID
 	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("key=%s", peer.Key())
-			log.Printf("key=%v", key)
-		}
 		if Debug {
 			tbl.check("learn", msg.Sender(), msg.Announce)
 		}
@@ -457,7 +451,7 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 	now := TimeNow()
 	for _, announce := range msg.Announce {
 		// ignore announcements about ourself
-		peer = announce.Peer
+		peer := announce.Peer
 		if peer.Equal(tbl.self) {
 			continue
 		}
@@ -465,7 +459,7 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 		origin := TimeFromAge(announce.Age)
 
 		// get corresponding forward entry
-		key = peer.Key()
+		key := peer.Key()
 		entry, ok := tbl.recs[key]
 		if !ok {
 			//----------------------------------------------------------
