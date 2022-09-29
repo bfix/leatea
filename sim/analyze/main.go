@@ -26,13 +26,16 @@ import (
 	"flag"
 	"io"
 	"leatea/core"
+	"leatea/sim"
 	"log"
+	"math"
 	"os"
 	"sort"
 )
 
 type LogEntry struct {
 	Type     uint32
+	TS       int64
 	Seq      uint32
 	Peer     [32]byte
 	Ref      [32]byte
@@ -40,6 +43,8 @@ type LogEntry struct {
 	WithNext uint32
 	NextHop  [32]byte
 	Hops     uint32
+	TraffIn  uint64
+	TraffOut uint64
 }
 
 func (e *LogEntry) WithForward() bool {
@@ -53,6 +58,8 @@ type Forward struct {
 
 type Node struct {
 	self     string
+	traffIn  uint64
+	traffOut uint64
 	forwards map[string]*Forward
 }
 
@@ -105,16 +112,17 @@ func main() {
 			}
 			log.Fatal(err)
 		}
+		_ = binary.Read(f, binary.BigEndian, &ev.TS)
 		_ = binary.Read(f, binary.BigEndian, &ev.Seq)
 		_, _ = f.Read(ev.Peer[:])
 		self := base32.StdEncoding.EncodeToString(ev.Peer[:5])[:8]
 		if _, ok := index[self]; !ok {
 			index[self] = NewNode(self)
 		}
-		_, _ = f.Read(ev.Ref[:])
 
 		switch ev.Type {
 		case core.EvForwardChanged, core.EvForwardLearned:
+			_, _ = f.Read(ev.Ref[:])
 			_, _ = f.Read(ev.Target[:])
 			_, _ = f.Read(flag)
 			ev.WithNext = 0
@@ -124,6 +132,16 @@ func main() {
 			}
 			var hops int16
 			_ = binary.Read(f, binary.BigEndian, &hops)
+
+		case sim.EvNodeTraffic:
+			_ = binary.Read(f, binary.BigEndian, &ev.TraffIn)
+			_ = binary.Read(f, binary.BigEndian, &ev.TraffOut)
+
+		case core.EvNeighborAdded, core.EvNeighborExpired, core.EvRelayRemoved:
+			_, _ = f.Read(ev.Ref[:])
+
+		default:
+			log.Fatalf("unknown log entry type %d", ev.Type)
 		}
 		// append to list
 		entries = append(entries, ev)
@@ -139,7 +157,7 @@ func main() {
 		node := index[self]
 		ref := base32.StdEncoding.EncodeToString(ev.Ref[:5])[:8]
 		switch ev.Type {
-		case core.EvForwardChanged, core.EvForwardLearned:
+		case core.EvForwardChanged, core.EvForwardLearned, core.EvShorterRoute, core.EvRelayRevived, core.EvNeighborRelayed:
 			next := ""
 			if ev.WithNext == 1 {
 				next = base32.StdEncoding.EncodeToString(ev.NextHop[:5])[:8]
@@ -147,14 +165,40 @@ func main() {
 			tgt := base32.StdEncoding.EncodeToString(ev.Target[:5])[:8]
 			node.SetForward(tgt, next, int16(ev.Hops))
 
+		case sim.EvNodeTraffic:
+			node.traffIn = ev.TraffIn
+			node.traffOut = ev.TraffOut
+
 		case core.EvNeighborAdded:
 			node.SetForward(ref, "", 0)
 
 		case core.EvNeighborExpired, core.EvRelayRemoved:
-			node.SetForward(ref, "", -1)
+			node.SetForward(ref, "", -2)
 			delete(index, ref)
+		default:
+			log.Fatalf("unhandled log entry type %d", ev.Type)
 		}
 	}
+
+	// traffic statistics
+	mIn, mOut := 0., 0.
+	dIn, dOut := 0., 0.
+	for _, node := range index {
+		mIn += float64(node.traffIn)
+		mOut += float64(node.traffOut)
+	}
+	num := float64(len(index))
+	mIn /= num
+	mOut /= num
+	for _, node := range index {
+		dIn += math.Abs(float64(node.traffIn) - mIn)
+		dOut += math.Abs(float64(node.traffOut) - mOut)
+	}
+	dIn /= num
+	dOut /= num
+	log.Printf("Traffic: %s ±%s in, %s ±%s out",
+		sim.Scale(mIn), sim.Scale(dIn),
+		sim.Scale(mOut), sim.Scale(dOut))
 
 	// run analysis
 	analyzeRoutes()

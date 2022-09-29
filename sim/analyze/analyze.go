@@ -94,13 +94,9 @@ func analyzeRoutes() {
 			}
 		}
 	}
-
-	// analze loops
-
-	log.Printf("      -> %d loops found.", loops)
-
-	// check for distinct cycles
+	// check for cycles
 	if loops > 0 {
+		log.Printf("      -> %d loops found.", loops)
 		log.Println("  * finding distinct loops:")
 		routes := make([][]string, 0)
 		for _, l := range loopList {
@@ -157,8 +153,8 @@ func analyzeRoutes() {
 		log.Printf("  Loop analysis complete.")
 	}
 
-	log.Printf("      -> %d routes are broken:", broken)
 	if broken > 0 {
+		log.Printf("      -> %d routes are broken:", broken)
 		for idx, count := range probs {
 			node := index[idx]
 			log.Printf("    %s (%d): %d entries", idx, count, len(node.forwards))

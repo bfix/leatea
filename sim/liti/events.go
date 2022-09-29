@@ -30,6 +30,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type EventHandler struct {
@@ -243,6 +244,15 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 				ev.Peer, hdlr.printEntry(entry),
 				ev.Ref, hdlr.printForward(announce))
 		}
+
+	//------------------------------------------------------------------
+	case sim.EvNodeTraffic:
+		if show {
+			val := core.GetVal[[]uint64](ev)
+			log.Printf("[%s] in=%s, out=%s", ev.Peer,
+				sim.Scale(float64(val[0])), sim.Scale(float64(val[1])))
+		}
+		hdlr.WriteLog(ev, gs)
 	}
 }
 
@@ -262,26 +272,36 @@ func (hdlr *EventHandler) WriteLog(ev *core.Event, gs uint32) {
 		return
 	}
 	_ = binary.Write(hdlr.log, binary.BigEndian, uint32(ev.Type))
+	_ = binary.Write(hdlr.log, binary.BigEndian, time.Now().UnixMicro())
 	_ = binary.Write(hdlr.log, binary.BigEndian, gs)
 	_, _ = hdlr.log.Write(ev.Peer.Data)
-	_, _ = hdlr.log.Write(ev.Ref.Data)
 	switch ev.Type {
 
 	case core.EvForwardChanged:
+		_, _ = hdlr.log.Write(ev.Ref.Data)
 		val := core.GetVal[[3]*core.Entry](ev)
 		hdlr.writeEntry(val[2])
 
 	case core.EvForwardLearned:
+		_, _ = hdlr.log.Write(ev.Ref.Data)
 		e := core.GetVal[*core.Entry](ev)
 		hdlr.writeEntry(e)
 
+	case sim.EvNodeTraffic:
+		val := core.GetVal[[]uint64](ev)
+		_ = binary.Write(hdlr.log, binary.BigEndian, val[0])
+		_ = binary.Write(hdlr.log, binary.BigEndian, val[1])
+
 	case core.EvNeighborAdded:
+		_, _ = hdlr.log.Write(ev.Ref.Data)
 		// no more data
 
 	case core.EvNeighborExpired:
+		_, _ = hdlr.log.Write(ev.Ref.Data)
 		// no more data
 
 	case core.EvRelayRemoved:
+		_, _ = hdlr.log.Write(ev.Ref.Data)
 		// no more data
 	}
 }
