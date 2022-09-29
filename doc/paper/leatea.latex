@@ -978,41 +978,66 @@ neighbors detect each other. All peers have the same sender/receiver
 characteristics, adjusted to peer density in the simulation.
 
 \paragraph{}
-The CPU and memory requirements of the simulations are shown in figure
-\ref{fig:resource}; they are relatively constant once all peers have
-started. The spike in CPU usage at the start of the simulation is caused
-by initializing all peers with an EdDSA key pair \cite{ed25519}; the
-public EdDSA key is used as the peer identifier.
+The CPU and memory requirements of the simulations (50, 100, 200, 500, 1000
+and 2000 peers) are shown in figure \ref{fig:resource}. Please note that the
+simulation for 2000 peers hits the CPU resource limit; message processing (and
+memory managemend / garbage collection) is delayed beyond reasonable limits;
+the results are only included for completeness.
+
+; they are relatively
+constant once all peers have started. The spike in CPU usage at the start of
+the simulation is caused by initializing all peers with an EdDSA key pair
+\cite{ed25519}; the public EdDSA key is used as the peer identifier.
 
 \begin{figure}
   \centering
+  \textbf{50 peers} \hfill \textbf{100 peers} \\
   \includegraphics[width=.49\textwidth]{monitor-50.png}\hfill
-  \includegraphics[width=.49\textwidth]{monitor-100.png}\hfill
+  \includegraphics[width=.49\textwidth]{monitor-100.png}\\
+  \textbf{200 peers} \hfill \textbf{500 peers} \\
   \includegraphics[width=.49\textwidth]{monitor-200.png}\hfill
-  \includegraphics[width=.49\textwidth]{monitor-500.png}\hfill
+  \includegraphics[width=.49\textwidth]{monitor-500.png}\\
+  \textbf{1000 peers} \hfill \textbf{2000 peers} \\
   \includegraphics[width=.49\textwidth]{monitor-1000.png}\hfill
-  \includegraphics[width=.49\textwidth]{monitor-1000.png}\hfill
+  \includegraphics[width=.49\textwidth]{monitor-2000.png}\\
   \begin{tikzpicture}
     \begin{semilogxaxis}[
-      scale=1,
+      scale=0.7,
       axis y line*=left,
       ymin=-0.1, ymax=6000,
       ylabel = {\%CPU},
+      ylabel style={color=red},
       xlabel = {Peers}
      ]
-	  \addplot [color=red] coordinates {
+	  \addplot [color=red,line width=1.1] coordinates {
         (50,8)(100,38)(200,150)(500,1100)(1000,5000)
       };
     \end{semilogxaxis}
     \begin{semilogxaxis}[
-      scale=1,
-      ylabel = {RAM (MB)},
+      scale=0.7,
+      axis x line*=top,
       axis y line*=right,
       ymin=-0.1, ymax=400,
+      ylabel = {RAM (MB)},
+      ylabel style={color=blue},
     ]
-	  \addplot [color=blue] coordinates {
+	  \addplot [color=blue,line width=1.1] coordinates {
         (50,8)(100,20)(200,30)(500,85)(1000,375)
       };
+    \end{semilogxaxis}
+    \begin{semilogxaxis}[
+      scale=0.7,
+      ticks=none,
+      xmin=0, xmax=1200,
+      ymin=-0.1, ymax=1000,
+    ]
+      \addplot[
+        domain=50:1000,
+        samples=25, 
+        color=gray,
+        dotted,
+        line width=2,
+      ] {x*x/850};
     \end{semilogxaxis}
   \end{tikzpicture}\hfill
   \caption{CPU / memory usage during simulations}
@@ -1020,9 +1045,9 @@ public EdDSA key is used as the peer identifier.
 \end{figure}
 
 \paragraph{}
-As expected CPU and memory requirements grow exponentially limiting the
-number of peers in a network simulation.
-
+As expected CPU and memory requirements grow quadratically (see the dotted
+curve in the last graph of figure \ref{fig:resource}) limiting the number
+of peers in a network simulation.
 
 \subsection{Network 1}
 
