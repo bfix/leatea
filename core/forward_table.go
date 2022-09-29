@@ -614,7 +614,7 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 			entry.Pending = true
 			changed = true
 
-			// notify listener if a shorter route was found
+			// notify listener
 			if tbl.listener != nil {
 				tbl.listener(&Event{
 					Type: EvNeighborRelayed,
