@@ -33,6 +33,7 @@ import (
 const (
 	EvNodeAdded   = 100 // node added to network
 	EvNodeRemoved = 101 // node removed from network
+	EvNodeTraffic = 102 // show number of bytes received/sent when peer closes
 )
 
 //----------------------------------------------------------------------
@@ -243,6 +244,11 @@ func (n *Network) StopNode(node *SimNode) int {
 				Type: EvNodeRemoved,
 				Peer: node.PeerID(),
 				Val:  []int{node.id, running},
+			})
+			n.cb(&core.Event{
+				Type: EvNodeTraffic,
+				Peer: node.PeerID(),
+				Val:  []uint64{node.traffIn.Load(), node.traffOut.Load()},
 			})
 		}
 		return running
