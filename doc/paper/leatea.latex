@@ -975,16 +975,19 @@ runs a given number of nodes concurrently; nodes appear
 randomly\footnote{Distributed on a 100$\times$100 square with an initial
 delay (exponential distribution).}; peer and route discovery starts once
 neighbors detect each other. All peers have the same sender/receiver
-characteristics, adjusted to peer density in the simulation.
+characteristics, adjusted to peer density in the simulation\footnote{The
+broadcast range is constant for all peers and is set to a value that does
+not exclude a peer (or group of peers) from the network - all peers are
+technically fully connected.}.
+
+\subsubsection{CPU and memory requirements}
 
 \paragraph{}
 The CPU and memory requirements of the simulations (50, 100, 200, 500, 1000
 and 2000 peers) are shown in figure \ref{fig:resource}. Please note that the
 simulation for 2000 peers hits the CPU resource limit; message processing (and
-memory managemend / garbage collection) is delayed beyond reasonable limits;
-the results are only included for completeness.
-
-; they are relatively
+memory management / garbage collection) is delayed beyond reasonable limits;
+the results are only included for completeness. Ressource consumptionis relatively
 constant once all peers have started. The spike in CPU usage at the start of
 the simulation is caused by initializing all peers with an EdDSA key pair
 \cite{ed25519}; the public EdDSA key is used as the peer identifier.
@@ -1039,7 +1042,7 @@ the simulation is caused by initializing all peers with an EdDSA key pair
         line width=2,
       ] {x*x/850};
     \end{semilogxaxis}
-  \end{tikzpicture}\hfill
+  \end{tikzpicture}
   \caption{CPU / memory usage during simulations}
   \label{fig:resource}
 \end{figure}
@@ -1048,6 +1051,118 @@ the simulation is caused by initializing all peers with an EdDSA key pair
 As expected CPU and memory requirements grow quadratically (see the dotted
 curve in the last graph of figure \ref{fig:resource}) limiting the number
 of peers in a network simulation.
+
+\subsubsection{Network traffic}
+
+\paragraph{}
+The network traffic per peer (and per neighbor) is shown in figure
+\ref{fig:traffic}. The values are scaled per neighbor; the average
+number of neigbors varies between seven and eleven\footnote{A higher
+number of peers makes it more likely for more other peers to show up
+in a single broadcast range. THe simulation parameters are designed 
+that no peer is outside the network or that the peers are grouped in
+``islands'' in a partinioned network} peers. Network traffic is
+moderate even for larger networks (average receiving rate
+is ~3kB for 500 peers, sending is even lower).
+
+\begin{figure}[ht]
+  \centering
+  \textbf{Traffic per peer}\hfill\textbf{Traffic per neighbor}\\
+  \begin{tikzpicture}
+    \begin{semilogxaxis}[
+      scale=0.5,
+      axis y line*=left,
+      xmin=0, xmax=1000,
+      ymin=0, ymax=1000,
+      ylabel = {kB received},
+      ylabel style={color=red},
+      xlabel = {Peers}
+     ]
+      \addplot+[
+        color=red,
+        line width=1.1,
+        error bars/.cd,
+        y dir=both,
+        y explicit,
+      ] coordinates {
+        (50,161.46) +- (0,54.99)
+        (100,202.76) +- (0,68.6)
+        (200,307.25) +- (0,103.11)
+        (500,928.26) +- (0,303.01)
+      };
+    \end{semilogxaxis}
+    \begin{semilogxaxis}[
+      scale=0.5,
+      axis x line*=top,
+      axis y line*=right,
+      xmin=0, xmax=1000,
+      ymin=20, ymax=120,
+      ylabel = {kb sent},
+      ylabel style={color=blue},
+    ]
+      \addplot+[
+        color=blue,
+        line width=1.1,
+        error bars/.cd,
+        y dir=both,
+        y explicit,
+      ] coordinates {
+        (50,24.04) +- (0,2.72)
+        (100,30.96) +- (0,4.76)
+        (200,43.79) +- (0,6.98)
+        (500,84.21) +- (0,14.15)
+      };
+    \end{semilogxaxis}
+  \end{tikzpicture}\hfill
+    \begin{tikzpicture}
+    \begin{semilogxaxis}[
+      scale=0.5,
+      axis y line*=left,
+      xmin=0, xmax=1000,
+      ymin=0, ymax=100,
+      ylabel = {kB received},
+      ylabel style={color=red},
+      xlabel = {Peers}
+     ]
+      \addplot+[
+        color=red,
+        line width=1.1,
+        error bars/.cd,
+        y dir=both,
+        y explicit,
+      ] coordinates {
+        (50,22.68) +- (0,7.72)
+        (100,28.64) +- (0,9.69)
+        (200,40.97) +- (0,13.75)
+        (500,75) +- (0,25.87)
+      };
+    \end{semilogxaxis}
+    \begin{semilogxaxis}[
+      scale=0.5,
+      axis x line*=top,
+      axis y line*=right,
+      xmin=0, xmax=1000,
+      ymin=3, ymax=14,
+      ylabel = {kb sent},
+      ylabel style={color=blue},
+    ]
+      \addplot+[
+        color=blue,
+        line width=1.1,
+        error bars/.cd,
+        y dir=both,
+        y explicit,
+      ] coordinates {
+        (50,3.38) +- (0,0.37)
+        (100,4.33) +- (0,0.65)
+        (200,5.84) +- (0,0.92)
+        (500,8.81) +- (0,1.45)
+      };
+    \end{semilogxaxis}
+  \end{tikzpicture}
+  \caption{Network traffic (per node / per neighbor)}
+  \label{fig:traffic}
+\end{figure}
 
 \subsection{Network 1}
 
@@ -1067,6 +1182,7 @@ in figure \ref{fig:network1graph}.
   \begin{tikzpicture}
     \begin{axis}[
         title={},
+        scale=0.8,
         xlabel={Epoch},
         ylabel={},
         xmin=0, xmax=150,
@@ -1122,7 +1238,6 @@ in figure \ref{fig:network1graph}.
 \end{figure}
 
 \subsection{Network 2}
-
 
 \clearpage
 \section{Bibliography}
