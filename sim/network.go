@@ -229,31 +229,33 @@ func (n *Network) StopNodeByID(p *core.PeerID) int {
 }
 
 // StopNode request
-func (n *Network) StopNode(node *SimNode) int {
+func (n *Network) StopNode(node *SimNode) (running int) {
+	running = -1
 	if node.IsRunning() {
 		// stop running node
 		n.statLock.Lock()
 		n.running--
-		running := n.running
+		running = n.running
 		node.Stop()
 		n.statLock.Unlock()
-
-		// notify listener
+		// notify listener (removal while sim is running)
 		if n.cb != nil {
 			n.cb(&core.Event{
 				Type: EvNodeRemoved,
 				Peer: node.PeerID(),
 				Val:  []int{node.id, running},
 			})
-			n.cb(&core.Event{
-				Type: EvNodeTraffic,
-				Peer: node.PeerID(),
-				Val:  []uint64{node.traffIn.Load(), node.traffOut.Load()},
-			})
 		}
-		return running
 	}
-	return -1
+	// notify listener (traffic info)
+	if n.cb != nil {
+		n.cb(&core.Event{
+			Type: EvNodeTraffic,
+			Peer: node.PeerID(),
+			Val:  []uint64{node.traffIn.Load(), node.traffOut.Load()},
+		})
+	}
+	return
 }
 
 // Stop the network (message exchange)
