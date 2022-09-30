@@ -10,12 +10,12 @@
         "class": "rand",
         "width": 100,
         "height": 100,
-        "numNodes": 50,
+        "numNodes": 100,
         "_numNodes": "50 100 200 500 1000",
         "cooldown": 5
     },
     "node":{
-		"reach2": 500,
+		"reach2": 250,
         "_reach2": "500 250 130 80 40",
 		"bootup": 60,
 		"peerTTL": 600,
@@ -30,7 +30,8 @@
         "events": [],
         "showEvents": true,
         "eventLog": "rt/events.bin",
-        "epochStatus": true,
-        "stopAt": 50
+        "epochStatus": false,
+        "stopAt": 50,
+        "maxRepeat": 10
     }
 }
