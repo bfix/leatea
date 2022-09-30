@@ -22,20 +22,24 @@ package core
 
 // Event types
 const (
-	EvWantToLearn     = 1  // sending out LEARN message
-	EvLearning        = 2  // received TEACH message, learning peers
-	EvTeaching        = 3  // sending out TEACH message
-	EvNeighborExpired = 4  // neighbor expired
-	EvRelayRemoved    = 5  // relay removed from routing table
-	EvShorterRoute    = 6  // shorter path for forward entry found
-	EvForwardChanged  = 7  // change in the forward table
-	EvForwardLearned  = 8  // new forward learned
-	EvNeighborAdded   = 9  // new neighbor added
-	EvNeighborUpdated = 10 // old neighbor updated
-	EvNeighborRelayed = 11 // dormant neighbor revived as relay
-	EvRelayRevived    = 12 // dormant relay revived (with new forward)
-	EvRelayUpdated    = 13 // relay updated
-	EvLoopDetect      = 14 // loop construction detected
+	EvWantToLearn = 1 // sending out LEARN message
+	EvLearning    = 2 // received TEACH message, learning peers
+	EvTeaching    = 3 // sending out TEACH message
+
+	EvForwardLearned = 10 // new forward learned
+	EvForwardChanged = 11 // change in the forward table
+
+	EvNeighborExpired = 20 // neighbor expired
+	EvNeighborAdded   = 21 // new neighbor added
+	EvNeighborUpdated = 22 // old neighbor updated
+	EvNeighborRelayed = 23 // dormant neighbor revived as relay
+
+	EvRelayRemoved = 30 // relay removed from routing table
+	EvRelayRevived = 31 // dormant relay revived (with new forward)
+	EvRelayUpdated = 32 // relay updated
+	EvShorterRoute = 33 // shorter path for forward entry found
+
+	EvLoopDetect = 40 // loop construction detected
 )
 
 // Event from network if something interesting happens
