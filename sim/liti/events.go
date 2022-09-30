@@ -139,6 +139,7 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 		if show {
 			log.Printf("[%s] neighbor %s updated", ev.Peer, ev.Ref)
 		}
+		hdlr.WriteLog(ev, gs)
 		hdlr.changed = true
 
 	//------------------------------------------------------------------
@@ -292,16 +293,8 @@ func (hdlr *EventHandler) WriteLog(ev *core.Event, gs uint32) {
 		_ = binary.Write(hdlr.log, binary.BigEndian, val[0])
 		_ = binary.Write(hdlr.log, binary.BigEndian, val[1])
 
-	case core.EvNeighborAdded:
+	case core.EvNeighborAdded, core.EvNeighborUpdated,
+		core.EvNeighborExpired, core.EvRelayRemoved:
 		_, _ = hdlr.log.Write(ev.Ref.Data)
-		// no more data
-
-	case core.EvNeighborExpired:
-		_, _ = hdlr.log.Write(ev.Ref.Data)
-		// no more data
-
-	case core.EvRelayRemoved:
-		_, _ = hdlr.log.Write(ev.Ref.Data)
-		// no more data
 	}
 }
