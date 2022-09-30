@@ -102,6 +102,7 @@ func main() {
 	defer f.Close()
 	entries := make([]*LogEntry, 0)
 	flag := make([]byte, 1)
+	perf := 0
 	for k := 1; ; k++ {
 		// read and handle next log entry
 		ev := new(LogEntry)
@@ -112,6 +113,7 @@ func main() {
 			}
 			log.Fatal(err)
 		}
+		//log.Printf("type=%d", ev.Type)
 		_ = binary.Read(f, binary.BigEndian, &ev.TS)
 		_ = binary.Read(f, binary.BigEndian, &ev.Seq)
 		_, _ = f.Read(ev.Peer[:])
@@ -136,8 +138,10 @@ func main() {
 		case sim.EvNodeTraffic:
 			_ = binary.Read(f, binary.BigEndian, &ev.TraffIn)
 			_ = binary.Read(f, binary.BigEndian, &ev.TraffOut)
+			perf++
 
-		case core.EvNeighborAdded, core.EvNeighborExpired, core.EvRelayRemoved:
+		case core.EvNeighborAdded, core.EvNeighborExpired,
+			core.EvNeighborUpdated, core.EvRelayRemoved:
 			_, _ = f.Read(ev.Ref[:])
 
 		default:
@@ -169,7 +173,7 @@ func main() {
 			node.traffIn = ev.TraffIn
 			node.traffOut = ev.TraffOut
 
-		case core.EvNeighborAdded:
+		case core.EvNeighborAdded, core.EvNeighborUpdated:
 			node.SetForward(ref, "", 0)
 
 		case core.EvNeighborExpired, core.EvRelayRemoved:
@@ -187,7 +191,7 @@ func main() {
 		mIn += float64(node.traffIn)
 		mOut += float64(node.traffOut)
 	}
-	num := float64(len(index))
+	num := float64(perf)
 	mIn /= num
 	mOut /= num
 	for _, node := range index {
@@ -196,7 +200,8 @@ func main() {
 	}
 	dIn /= num
 	dOut /= num
-	log.Printf("Traffic: %s ±%s in, %s ±%s out",
+	log.Printf("Traffic (%d peers): %s ±%s in, %s ±%s out",
+		perf,
 		sim.Scale(mIn), sim.Scale(dIn),
 		sim.Scale(mOut), sim.Scale(dOut))
 
