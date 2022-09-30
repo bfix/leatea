@@ -395,13 +395,14 @@ func (tbl *ForwardTable) AddNeighbor(node *PeerID) {
 		// entry exists: update entry
 		// next hop and hop count need to be reset in case
 		// the old entry was a relay.
+		wasRelay := (entry.Kind() == KindRelay)
 		entry.NextHop = nil
 		entry.Hops = 0
 		entry.Origin = now
 		entry.Changed = now
 
 		// notify listener
-		if tbl.listener != nil {
+		if wasRelay && tbl.listener != nil {
 			tbl.listener(&Event{
 				Type: EvNeighborUpdated,
 				Seq:  tbl.nextSeq(),
