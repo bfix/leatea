@@ -183,15 +183,24 @@ func main() {
 			log.Fatalf("unhandled log entry type %d", ev.Type)
 		}
 	}
-
-	// traffic statistics
+	if perf != len(index) {
+		log.Fatal("missing performance data")
+	}
+	// traffic statistics and mean number of neighbors
 	mIn, mOut := 0., 0.
 	dIn, dOut := 0., 0.
+	neighbors := 0
 	for _, node := range index {
 		mIn += float64(node.traffIn)
 		mOut += float64(node.traffOut)
+		for _, f := range node.forwards {
+			if f.next == "" {
+				neighbors++
+			}
+		}
 	}
 	num := float64(perf)
+	meanNb := float64(neighbors) / num
 	mIn /= num
 	mOut /= num
 	for _, node := range index {
@@ -200,8 +209,16 @@ func main() {
 	}
 	dIn /= num
 	dOut /= num
-	log.Printf("Traffic (%d peers): %s ±%s in, %s ±%s out",
+	log.Printf("Traffic per peer (%d peers): %s ±%s in, %s ±%s out",
 		perf,
+		sim.Scale(mIn), sim.Scale(dIn),
+		sim.Scale(mOut), sim.Scale(dOut))
+	dIn /= meanNb
+	dOut /= meanNb
+	mIn /= meanNb
+	mOut /= meanNb
+	log.Printf("Traffic per neighbor: (%.2f neighbors): %s ±%s in, %s ±%s out",
+		meanNb,
 		sim.Scale(mIn), sim.Scale(dIn),
 		sim.Scale(mOut), sim.Scale(dOut))
 
