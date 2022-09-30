@@ -264,9 +264,7 @@ func (n *Network) Stop() int {
 	remain := len(n.nodes)
 	for _, node := range n.nodes {
 		remain--
-		if node.IsRunning() {
-			n.StopNode(node)
-		}
+		n.StopNode(node)
 	}
 	// stop network
 	n.active.Store(false)
