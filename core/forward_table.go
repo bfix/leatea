@@ -388,7 +388,10 @@ func (tbl *ForwardTable) AddNeighbor(node *PeerID) {
 		}
 		tbl.Unlock()
 	}()
-
+	// check for active table
+	if tbl.recs == nil {
+		return
+	}
 	// check if entry exists
 	now := TimeNow()
 	if entry, ok := tbl.recs[node.Key()]; ok {
@@ -446,7 +449,10 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 		}
 		tbl.Unlock()
 	}()
-
+	// check for active table
+	if tbl.recs == nil {
+		return
+	}
 	// process all announcements
 	sender := msg.Sender()
 	now := TimeNow()
@@ -595,7 +601,7 @@ func (tbl *ForwardTable) Learn(msg *TEAchMsg) {
 			entry.Pending = true
 			changed = true
 
-			// notify listener if a shorter route was found
+			// notify listener
 			if tbl.listener != nil {
 				tbl.listener(&Event{
 					Type: evType,
