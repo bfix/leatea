@@ -111,10 +111,11 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 	//------------------------------------------------------------------
 	case sim.EvNodeAdded:
 		if show {
-			val := core.GetVal[[]int](ev)
+			val := core.GetVal[*sim.NodeAddedVal](ev)
 			log.Printf("[%s] %08X started as %d (%d running)",
-				ev.Peer, ev.Peer.Tag(), val[0], val[1])
+				ev.Peer, ev.Peer.Tag(), val.Idx, val.Running)
 		}
+		hdlr.WriteLog(ev, gs)
 		hdlr.redraw = true
 
 	//------------------------------------------------------------------
@@ -124,6 +125,7 @@ func (hdlr *EventHandler) HandleEvent(ev *core.Event) {
 			log.Printf("[%s] %d stopped (%d running)",
 				ev.Peer, val[0], val[1])
 		}
+		hdlr.WriteLog(ev, gs)
 		hdlr.redraw = true
 
 	//------------------------------------------------------------------
@@ -277,6 +279,20 @@ func (hdlr *EventHandler) WriteLog(ev *core.Event, gs uint32) {
 	_ = binary.Write(hdlr.log, binary.BigEndian, gs)
 	_, _ = hdlr.log.Write(ev.Peer.Data)
 	switch ev.Type {
+
+	case sim.EvNodeAdded:
+		val := core.GetVal[*sim.NodeAddedVal](ev)
+		_ = binary.Write(hdlr.log, binary.BigEndian, val.X)
+		_ = binary.Write(hdlr.log, binary.BigEndian, val.Y)
+		_ = binary.Write(hdlr.log, binary.BigEndian, val.R2)
+		_ = binary.Write(hdlr.log, binary.BigEndian, val.Idx)
+		_ = binary.Write(hdlr.log, binary.BigEndian, val.Running)
+		_ = binary.Write(hdlr.log, binary.BigEndian, val.Pending)
+
+	case sim.EvNodeRemoved:
+		val := core.GetVal[[]int](ev)
+		_ = binary.Write(hdlr.log, binary.BigEndian, uint16(val[1]))
+		_ = binary.Write(hdlr.log, binary.BigEndian, uint16(val[2]))
 
 	case core.EvForwardChanged:
 		_, _ = hdlr.log.Write(ev.Ref.Data)

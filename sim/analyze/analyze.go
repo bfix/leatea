@@ -33,73 +33,109 @@ import (
 // Analyze routes for loops and broken routes
 // ----------------------------------------------------------------------
 
-type loop struct {
+func route(fromNode, toNode *Node) (hops int, route []string) {
+	ttl := len(nodes)
+	hops = 0
+	from := fromNode.self
+	to := toNode.self
+	for {
+		route = append(route, from)
+		hops++
+		forward, ok := fromNode.forwards[to]
+		if !ok {
+			hops = 0
+			return
+		}
+		if forward.next == "" {
+			route = append(route, to)
+			return
+		}
+		if forward.hops < 0 {
+			hops = 0
+			return
+		}
+		from = forward.next
+		fromNode = nodes[from]
+		if ttl--; ttl < 0 {
+			hops = -1
+			return
+		}
+	}
+}
+
+type Loop struct {
 	from, to string
 	head     []string
 	cycle    []string
 }
 
-func analyzeRoutes() {
-	log.Printf("Analyzing routes between %d peers:", len(index))
+type Result struct {
+	loops     int
+	broken    int
+	success   int
+	totalHops int
+	bestTo    *Node
+	bestFrom  *Node
+	bestHops  int
+	bestRoute []string
+	loopList  []*Loop
+	probs     map[string]int
+}
+
+func analyzeRoutes() (res *Result) {
+	res = new(Result)
+	res.probs = make(map[string]int)
 
 	// find longest broken route
-	var (
-		bestTo, bestFrom *Node
-		bestHops         = 0
-		bestRoute        []string
-		loopList         []*loop
-	)
-	broken := 0
-	loops := 0
-	success := 0
-	totalHops := 0
-	probs := make(map[string]int)
-
-	for _, from := range index {
-		for _, to := range index {
+	for _, from := range nodes {
+		for _, to := range nodes {
 			if from.self == to.self {
 				continue
 			}
 			hops, route := route(from, to)
 			if hops == -1 {
-				loops++
+				res.loops++
 				// analyze loop
 				num := len(route)
-				l := &loop{from: from.self, to: to.self}
+				l := &Loop{from: from.self, to: to.self}
 			loop:
 				for i, hop := range route {
 					for j := i + 1; j < num; j++ {
 						if hop == route[j] {
 							l.head = route[:i]
 							l.cycle = route[i:j]
-							loopList = append(loopList, l)
+							res.loopList = append(res.loopList, l)
 							break loop
 						}
 					}
 				}
 			} else if hops == 0 {
-				broken++
+				res.broken++
 				idx := route[len(route)-1]
-				v := probs[idx]
-				probs[idx] = v + 1
-				if len(route) > bestHops {
-					bestHops = len(route)
-					bestRoute = route
-					bestFrom = from
-					bestTo = to
+				v := res.probs[idx]
+				res.probs[idx] = v + 1
+				if len(route) > res.bestHops {
+					res.bestHops = len(route)
+					res.bestRoute = route
+					res.bestFrom = from
+					res.bestTo = to
 				}
 			} else {
-				totalHops += hops
-				success++
+				res.totalHops += hops
+				res.success++
 			}
 		}
 	}
+	return
+}
+
+func analyzeLoops(res *Result) {
 	// check for cycles
-	if loops > 0 {
-		log.Printf("      -> %d loops found.", loops)
+	if res.loops > 0 {
+		log.Printf("      -> %d loops found.", res.loops)
 		log.Println("  * finding distinct loops:")
 		routes := make([][]string, 0)
-		for _, l := range loopList {
+		for _, l := range res.loopList {
 			cl := len(l.cycle)
 			found := false
 		search:
@@ -152,18 +188,20 @@ func analyzeRoutes() {
 		}
 		log.Printf("  Loop analysis complete.")
 	}
+}
 
-	if broken > 0 {
-		log.Printf("      -> %d routes are broken:", broken)
-		for idx, count := range probs {
-			node := index[idx]
+func analyzeBroken(res *Result) {
+	if res.broken > 0 {
+		log.Printf("      -> %d routes are broken:", res.broken)
+		for idx, count := range res.probs {
+			node := nodes[idx]
 			log.Printf("    %s (%d): %d entries", idx, count, len(node.forwards))
 		}
 
 		// show route
-		log.Printf("  Broken route %s -> %s: %v", bestFrom.self, bestTo.self, bestRoute)
-		last := bestRoute[len(bestRoute)-1]
-		node := index[last]
+		log.Printf("  Broken route %s -> %s: %v", res.bestFrom.self, res.bestTo.self, res.bestRoute)
+		last := res.bestRoute[len(res.bestRoute)-1]
+		node := nodes[last]
 		log.Printf("  Break at %s: Tbl = %s", last, listForwards(last))
 		log.Println("  Neighbors:")
 		for tgt, entry := range node.forwards {
@@ -171,59 +209,14 @@ func analyzeRoutes() {
 				log.Printf("    %s: Tbl = %s", tgt, listForwards(tgt))
 			}
 		}
-		log.Printf("  Target %s: Tbl = %s", bestTo.self, listForwards(bestTo.self))
+		log.Printf("  Target %s: Tbl = %s", res.bestTo.self, listForwards(res.bestTo.self))
 		log.Printf("  Broken route analysis complete.")
 	}
 	log.Printf("Route analysis complete:")
-
-	num := len(index)
-	total := num * (num - 1)
-	if total > 0 {
-		perc := func(n int) float64 {
-			return float64(100*n) / float64(total)
-		}
-		log.Printf("  * Loops: %d (%.2f%%)", loops, perc(loops))
-		log.Printf("  * Broken: %d (%.2f%%)", broken, perc(broken))
-		log.Printf("  * Success: %d (%.2f%%)", success, perc(success))
-		if success > 0 {
-			mean := float64(totalHops) / float64(success)
-			log.Printf("  * Hops (routg): %.2f (%d)", mean, success)
-		}
-	}
-}
-
-func route(fromNode, toNode *Node) (hops int, route []string) {
-	ttl := len(index)
-	hops = 0
-	from := fromNode.self
-	to := toNode.self
-	for {
-		route = append(route, from)
-		hops++
-		forward, ok := fromNode.forwards[to]
-		if !ok {
-			hops = 0
-			return
-		}
-		if forward.next == "" {
-			route = append(route, to)
-			return
-		}
-		if forward.hops < 0 {
-			hops = 0
-			return
-		}
-		from = forward.next
-		fromNode = index[from]
-		if ttl--; ttl < 0 {
-			hops = -1
-			return
-		}
-	}
 }
 
 func listForwards(id string) string {
-	node := index[id]
+	node := nodes[id]
 	entries := make([]string, 0)
 	for tgt, e := range node.forwards {
 		s := fmt.Sprintf("{%s,%s,%d}", tgt, e.next, e.hops)
