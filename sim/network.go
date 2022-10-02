@@ -36,6 +36,14 @@ const (
 	EvNodeTraffic = 102 // show number of bytes received/sent when peer closes
 )
 
+// NodeAddedVal for event value on EvNodeAdded
+type NodeAddedVal struct {
+	Idx      uint16
+	Running  uint16
+	Pending  uint16
+	X, Y, R2 float64
+}
+
 //----------------------------------------------------------------------
 // Network simulation to test the LEATEA algorithm
 //----------------------------------------------------------------------
@@ -131,7 +139,14 @@ func (n *Network) Run(ctx context.Context, cb core.Listener) {
 					cb(&core.Event{
 						Type: EvNodeAdded,
 						Peer: node.PeerID(),
-						Val:  []int{idx, running},
+						Val: &NodeAddedVal{
+							Idx:     uint16(idx),
+							Running: uint16(running),
+							Pending: uint16(n.removals),
+							X:       node.Pos.X,
+							Y:       node.Pos.Y,
+							R2:      node.r2,
+						},
 					})
 				}
 				// run node
@@ -243,7 +258,7 @@ func (n *Network) StopNode(node *SimNode) (running int) {
 			n.cb(&core.Event{
 				Type: EvNodeRemoved,
 				Peer: node.PeerID(),
-				Val:  []int{node.id, running},
+				Val:  []int{node.id, running, n.removals},
 			})
 		}
 	}
